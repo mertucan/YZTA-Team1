@@ -4,13 +4,17 @@ Takım 1
 
 # Ürün İle İlgili Bilgiler
 
-## Takım Elemanları
+## Team Members
 
-- Mert Ekber Uçan: Product Owner
-- Sudenaz Kalaycık: Scrum Master
-- Şevval Özer: Developer
-- Fatma Kaplan: Developer
-- Barış Uyumaz: Developer
+| Profil (Click to view GitHub) | Name | Title |
+| :---: | :--- | :--- |
+| <a href="https://github.com/Fatmaa35"><img src="https://github.com/Fatmaa35.png" width="50" style="border-radius: 50%;"></a> | Fatma Kaplan | Scrum Master
+| <a href="https://github.com/mertucan"><img src="https://github.com/mertucan.png" width="50" style="border-radius: 50%;"></a> | Mert Ucan |Product Owner
+| <a href="https://github.com/sudenazkalaycik"><img src="https://github.com/sudenazkalaycik.png" width="50" style="border-radius: 50%;"></a> | Sudenaz Kalaycık| Developer
+| <a href="https://github.com/barisuyumaz"><img src="https://github.com/barisuyumaz.png" width="50" style="border-radius: 50%;"></a> | Barış Uyumaz | Developer |
+| <a href="https://github.com/sevvalozer"><img src="https://github.com/sevvalozer.png" width="50" style="border-radius: 50%;"></a> | Şevval Özer | Developer |
+
+<br>
 
 ## Ürün İsmi
 
