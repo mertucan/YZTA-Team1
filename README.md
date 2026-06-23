@@ -6,7 +6,7 @@ Takım 1
 
 ## Team Members
 
-| Profil (Click to view GitHub) | Name | Title |
+| Profil | Name | Title |
 | :---: | :--- | :--- |
 | <a href="https://github.com/Fatmaa35"><img src="https://github.com/Fatmaa35.png" width="50" style="border-radius: 50%;"></a> | Fatma Kaplan | Scrum Master
 | <a href="https://github.com/mertucan"><img src="https://github.com/mertucan.png" width="50" style="border-radius: 50%;"></a> | Mert Ucan |Product Owner
