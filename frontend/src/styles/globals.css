@@ -1,0 +1,42 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f4f6fa;
+  --surface: #ffffff;
+  --surface2: #f8f9fc;
+  --surface3: #eef1f8;
+  --border: #e2e6f0;
+  --border2: #cdd3e3;
+  --text: #1a1d2e;
+  --text2: #5a6080;
+  --text3: #9ba3c0;
+  --accent: #3b6ef7;
+  --accent-bg: #eef2ff;
+  --accent2: #2a55d4;
+  --green: #16a05e;
+  --green-bg: #edfaf3;
+  --green-border: #b6e8d0;
+  --amber: #c47f00;
+  --amber-bg: #fffbeb;
+  --amber-border: #fde68a;
+  --red: #d63030;
+  --red-bg: #fff1f1;
+  --red-border: #fecaca;
+  --purple: #7c3aed;
+  --purple-bg: #f5f3ff;
+  --radius: 10px;
+  --mono: 'JetBrains Mono', monospace;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 8px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05);
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+button { font-family: inherit; cursor: pointer; }
+input, select { font-family: inherit; }
