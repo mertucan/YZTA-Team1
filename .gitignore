@@ -1,29 +1,66 @@
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor and IDE files
+.vscode/
+.idea/
+.agents/
+*.swp
+*.swo
+*~
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Build output
+dist/
+build/
+.next/
+.nuxt/
+coverage/
+frontend/dist/
+frontend/.vite/
+
 # Python
 __pycache__/
 *.py[cod]
-*.pyo
+*$py.class
 .venv/
 venv/
 env/
 *.egg-info/
-dist/
-build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# Env files
-.env
-.env.local
-.env.*.local
+# Mobile
+*.apk
+*.aab
+*.ipa
+.dart_tool/
+.gradle/
 
-# Node
-node_modules/
-frontend/dist/
-frontend/.vite/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-*.swp
+# Local databases
+*.sqlite
+*.sqlite3
+*.db
+tmp/
+temp/
+reports/
+htmlcov/
