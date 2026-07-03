@@ -4,9 +4,9 @@ Takım 1
 
 # Ürün İle İlgili Bilgiler
 
-## Team Members
+## Takım Üyeleri
 
-| Profil | Name | Title |
+| Profil | İsim | Rol |
 | :---: | :--- | :--- |
 | <a href="https://github.com/Fatmaa35"><img src="https://github.com/Fatmaa35.png" width="50" style="border-radius: 50%;"></a> | Fatma Kaplan | Scrum Master
 | <a href="https://github.com/mertucan"><img src="https://github.com/mertucan.png" width="50" style="border-radius: 50%;"></a> | Mert Ucan |Product Owner
