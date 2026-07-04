@@ -1,7 +1,21 @@
 import { useEffect, useState } from "react";
 import { getIngredients, createIngredient, deleteIngredient } from "../api/ingredients";
 
-const emptyForm = { name: "", unit: "kg", stock: 0, calories: 0 };
+const emptyForm = { name: "", unit: "kg", stock: 0, calories: 0, protein: 0, iron: 0, price: 0, expiry_date: "" };
+
+const daysUntil = (dateStr) => {
+  if (!dateStr) return null;
+  const diff = new Date(dateStr) - new Date(new Date().toDateString());
+  return Math.round(diff / 86400000);
+};
+
+const expiryStyle = (days) => {
+  if (days === null) return { color: "var(--text3)", label: "—" };
+  if (days < 0) return { color: "var(--red)", label: "Süresi geçti" };
+  if (days <= 3) return { color: "var(--red)", label: `${days} gün` };
+  if (days <= 7) return { color: "var(--amber)", label: `${days} gün` };
+  return { color: "var(--green)", label: `${days} gün` };
+};
 
 export default function Ingredients() {
   const [items, setItems]     = useState([]);
@@ -13,15 +27,19 @@ export default function Ingredients() {
 
   const handleAdd = async () => {
     if (!form.name) return;
-    await createIngredient(form);
+    await createIngredient({ ...form, expiry_date: form.expiry_date || null });
     setForm(emptyForm);
     refresh();
   };
 
   const fields = [
-    { label: "Malzeme Adı",  key: "name",     type: "text",   placeholder: "Örn: Pirinç" },
-    { label: "Stok Miktarı", key: "stock",    type: "number", placeholder: "0" },
-    { label: "Kalori",       key: "calories", type: "number", placeholder: "0" },
+    { label: "Malzeme Adı",  key: "name",        type: "text",   placeholder: "Örn: Pirinç" },
+    { label: "Stok Miktarı", key: "stock",       type: "number", placeholder: "0" },
+    { label: "Fiyat (TL)",   key: "price",       type: "number", placeholder: "0" },
+    { label: "Kalori",       key: "calories",    type: "number", placeholder: "0" },
+    { label: "Protein (g)",  key: "protein",     type: "number", placeholder: "0" },
+    { label: "Demir (mg)",   key: "iron",        type: "number", placeholder: "0" },
+    { label: "Son Kul. Tarihi", key: "expiry_date", type: "date", placeholder: "" },
   ];
 
   return (
@@ -33,7 +51,7 @@ export default function Ingredients() {
 
       <div style={card}>
         <div style={cardHd}>➕ Yeni Malzeme Ekle</div>
-        <div style={{ padding: 18, display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr auto", gap: 10, alignItems: "end" }}>
+        <div style={{ padding: 18, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, alignItems: "end" }}>
           {fields.map(({ label, key, type, placeholder }) => (
             <div key={key}>
               <div style={fieldLabel}>{label}</div>
@@ -48,7 +66,7 @@ export default function Ingredients() {
               {["kg", "lt", "adet", "paket", "kutu"].map((u) => <option key={u}>{u}</option>)}
             </select>
           </div>
-          <button onClick={handleAdd} style={btnPrimary}>Ekle</button>
+          <button onClick={handleAdd} style={{ ...btnPrimary, alignSelf: "end" }}>Ekle</button>
         </div>
       </div>
 
@@ -57,18 +75,26 @@ export default function Ingredients() {
         {loading ? <div style={{ padding: 24, color: "var(--text3)" }}>Yükleniyor...</div> : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr>{["Malzeme", "Birim", "Stok", "Kalori", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
+              <tr>{["Malzeme", "Birim", "Stok", "Fiyat", "Kalori", "Protein", "Demir", "SKT", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
             </thead>
             <tbody>
-              {items.map((i) => (
-                <tr key={i.id}>
-                  <td style={td}><span style={{ fontWeight: 500, color: "var(--text)" }}>{i.name}</span></td>
-                  <td style={td}>{i.unit}</td>
-                  <td style={{ ...td, fontFamily: "var(--mono)", fontWeight: 600, color: i.stock < 20 ? "var(--red)" : i.stock < 50 ? "var(--amber)" : "var(--green)" }}>{i.stock}</td>
-                  <td style={td}>{i.calories} kcal</td>
-                  <td style={td}><button onClick={() => deleteIngredient(i.id).then(refresh)} style={btnSm}>Sil</button></td>
-                </tr>
-              ))}
+              {items.map((i) => {
+                const days = daysUntil(i.expiry_date);
+                const exp  = expiryStyle(days);
+                return (
+                  <tr key={i.id}>
+                    <td style={td}><span style={{ fontWeight: 500, color: "var(--text)" }}>{i.name}</span></td>
+                    <td style={td}>{i.unit}</td>
+                    <td style={{ ...td, fontFamily: "var(--mono)", fontWeight: 600, color: i.stock < 20 ? "var(--red)" : i.stock < 50 ? "var(--amber)" : "var(--green)" }}>{i.stock}</td>
+                    <td style={td}>{i.price?.toFixed(2)} TL</td>
+                    <td style={td}>{i.calories} kcal</td>
+                    <td style={td}>{i.protein} g</td>
+                    <td style={td}>{i.iron} mg</td>
+                    <td style={{ ...td, fontWeight: 600, color: exp.color }}>{exp.label}</td>
+                    <td style={td}><button onClick={() => deleteIngredient(i.id).then(refresh)} style={btnSm}>Sil</button></td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
