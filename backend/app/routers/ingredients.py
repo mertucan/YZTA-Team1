@@ -21,13 +21,13 @@ def get_ingredient(ingredient_id: int):
 
 @router.post("/", response_model=Ingredient, status_code=201)
 def create_ingredient(payload: IngredientCreate):
-    res = get_db().table("ingredients").insert(payload.model_dump()).execute()
+    res = get_db().table("ingredients").insert(payload.model_dump(mode="json")).execute()
     return res.data[0]
 
 
 @router.patch("/{ingredient_id}", response_model=Ingredient)
 def update_ingredient(ingredient_id: int, payload: IngredientUpdate):
-    updates = payload.model_dump(exclude_none=True)
+    updates = payload.model_dump(mode="json", exclude_none=True)
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
     res = get_db().table("ingredients").update(updates).eq("id", ingredient_id).execute()

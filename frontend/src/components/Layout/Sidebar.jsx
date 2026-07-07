@@ -1,33 +1,90 @@
-import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, NavLink } from "react-router-dom";
 import { modules } from "../../modules";
+
+const CATERING_SESSION_KEY = "catering_mock_session";
 
 const recordItems = [
   { to: "/ingredients", icon: "📦", label: "Malzeme Deposu" },
-  { to: "/meals",       icon: "🍽️", label: "Yemekler" },
-  { to: "/students",    icon: "🎓", label: "Öğrenciler" },
-  { to: "/absences",    icon: "✈️", label: "Devamsızlık" },
+  { to: "/meals", icon: "🍽️", label: "Yemekler" },
+  { to: "/students", icon: "🎓", label: "Öğrenciler" },
+  { to: "/absences", icon: "✈️", label: "Devamsızlık" },
 ];
+
+const cateringItems = [
+  { to: "/modules/catering-management/universities", icon: "🏢", label: "Üniversiteler" },
+  { to: "/modules/catering-management/users", icon: "👥", label: "Kullanıcılar" },
+  { to: "/modules/catering-management/menu-assignments", icon: "📅", label: "Menü Atamaları" },
+];
+
+const roleLabels = {
+  SUPER_ADMIN: "Süper Admin",
+  CATERING_ADMIN: "Catering Yöneticisi",
+  UNIVERSITY_ADMIN: "Üniversite Yöneticisi",
+  DIETITIAN: "Diyetisyen",
+  CHEF: "Şef",
+};
+
+function readCateringSession() {
+  try {
+    const raw = localStorage.getItem(CATERING_SESSION_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
 
 export default function Sidebar() {
   const [recordsOpen, setRecordsOpen] = useState(true);
+  const [cateringSession, setCateringSession] = useState(() => readCateringSession());
+
+  useEffect(() => {
+    const refresh = () => setCateringSession(readCateringSession());
+    window.addEventListener("storage", refresh);
+    window.addEventListener("catering-session-changed", refresh);
+    return () => {
+      window.removeEventListener("storage", refresh);
+      window.removeEventListener("catering-session-changed", refresh);
+    };
+  }, []);
+
+  const isCateringUser = Boolean(cateringSession);
+  const user = cateringSession?.user;
+  const role = user?.role_name;
+  const dashboardRoute = isCateringUser ? "/modules/catering-management" : "/dashboard";
+  const logoRoute = isCateringUser ? dashboardRoute : "/";
+
+  const visibleModules = useMemo(() => {
+    if (!isCateringUser) return modules;
+    return modules.filter((mod) => !["health-tracker", "student-health-flags", "catering-management"].includes(mod.id));
+  }, [isCateringUser]);
+
+  const displayName = user?.full_name || user?.email || "Yönetici";
+  const displayRole = role ? (roleLabels[role] || role) : "Yemekhane Müdürü";
+  const initials = displayName
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <aside style={s.sidebar}>
-      <div style={s.logo}>
+      <Link to={logoRoute} style={s.logo}>
         <div style={s.logoIcon}>🎓</div>
         <div>
           <div style={s.logoText}>YemekhanAI</div>
           <div style={s.logoSub}>Üniversite Beslenme Sistemi</div>
         </div>
-      </div>
+      </Link>
 
       <nav style={s.nav}>
-        <NavLink to="/dashboard" style={navStyle} end>
+        <NavLink to={dashboardRoute} style={navStyle} end>
           <span style={s.ico}>🏠</span> Dashboard
         </NavLink>
 
-        <button onClick={() => setRecordsOpen((o) => !o)} style={s.groupBtn}>
+        <button onClick={() => setRecordsOpen((open) => !open)} style={s.groupBtn}>
           <span style={{ ...s.sectionLabel, flex: 1 }}>Kayıtlar</span>
           <span style={{ fontSize: 10, color: "var(--text3)" }}>{recordsOpen ? "▾" : "▸"}</span>
         </button>
@@ -37,12 +94,29 @@ export default function Sidebar() {
           </NavLink>
         ))}
 
-        {modules.length > 0 && (
+        {isCateringUser && (
+          <>
+            <div style={{ ...s.sectionLabel, padding: "14px 8px 5px" }}>Catering Yönetimi</div>
+            {cateringItems.map((item) => (
+              <NavLink key={item.to} to={item.to} style={navStyle}>
+                <span style={s.ico}>{item.icon}</span> {item.label}
+              </NavLink>
+            ))}
+            {role === "SUPER_ADMIN" && (
+              <NavLink to="/modules/catering-management/companies" style={navStyle}>
+                <span style={s.ico}>🔑</span> Firmalar & Lisanslar
+              </NavLink>
+            )}
+          </>
+        )}
+
+        {visibleModules.length > 0 && (
           <>
             <div style={{ ...s.sectionLabel, padding: "14px 8px 5px" }}>Modüller</div>
-            {modules.map((mod) => (
+            {visibleModules.map((mod) => (
               <NavLink key={mod.id} to={mod.route} style={navStyle}>
-                <span style={s.ico}>{mod.icon}</span> {mod.label}
+                <span style={s.ico}>{mod.icon}</span>{" "}
+                {mod.id === "catering-management" ? "Catering Yönetimi Giriş" : mod.label}
               </NavLink>
             ))}
           </>
@@ -50,11 +124,11 @@ export default function Sidebar() {
       </nav>
 
       <div style={s.foot}>
-        <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px" }}>
-          <div style={s.avatar}>Y</div>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 500 }}>Yönetici</div>
-            <div style={{ fontSize: 10, color: "var(--text3)" }}>Yemekhane Müdürü</div>
+        <div style={s.userCard}>
+          <div style={s.avatar}>{initials || "Y"}</div>
+          <div style={{ minWidth: 0 }}>
+            <div style={s.userName}>{displayName}</div>
+            <div style={s.userRole}>{displayRole}</div>
           </div>
         </div>
       </div>
@@ -73,15 +147,18 @@ const navStyle = ({ isActive }) => ({
 const subNavStyle = ({ isActive }) => ({ ...navStyle({ isActive }), paddingLeft: 24 });
 
 const s = {
-  sidebar:      { width: 230, background: "var(--surface)", borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 10, boxShadow: "var(--shadow)" },
-  logo:         { padding: "18px 16px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 10 },
-  logoIcon:     { width: 34, height: 34, background: "var(--accent)", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17 },
-  logoText:     { fontSize: 15, fontWeight: 600 },
-  logoSub:      { fontSize: 10, color: "var(--text3)", marginTop: 1 },
-  nav:          { padding: "10px 8px", flex: 1, overflowY: "auto" },
+  sidebar: { width: 230, background: "var(--surface)", borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 10, boxShadow: "var(--shadow)" },
+  logo: { padding: "18px 16px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "var(--text)" },
+  logoIcon: { width: 34, height: 34, background: "var(--accent)", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17 },
+  logoText: { fontSize: 15, fontWeight: 600 },
+  logoSub: { fontSize: 10, color: "var(--text3)", marginTop: 1 },
+  nav: { padding: "10px 8px", flex: 1, overflowY: "auto" },
   sectionLabel: { fontSize: 10, fontWeight: 600, color: "var(--text3)", letterSpacing: ".07em", textTransform: "uppercase" },
-  groupBtn:     { display: "flex", alignItems: "center", width: "100%", background: "none", border: "none", cursor: "pointer", padding: "10px 8px 5px", textAlign: "left" },
-  ico:          { fontSize: 16, width: 20, textAlign: "center" },
-  foot:         { padding: "12px 8px", borderTop: "1px solid var(--border)" },
-  avatar:       { width: 30, height: 30, borderRadius: "50%", background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff" },
+  groupBtn: { display: "flex", alignItems: "center", width: "100%", background: "none", border: "none", cursor: "pointer", padding: "10px 8px 5px", textAlign: "left" },
+  ico: { fontSize: 16, width: 20, textAlign: "center" },
+  foot: { padding: "12px 8px", borderTop: "1px solid var(--border)" },
+  userCard: { display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: 8, background: "var(--surface2)" },
+  avatar: { width: 30, height: 30, borderRadius: "50%", background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0 },
+  userName: { fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  userRole: { fontSize: 10, color: "var(--text3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
 };

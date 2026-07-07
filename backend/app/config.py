@@ -1,9 +1,9 @@
 from pathlib import Path
+from typing import Optional
 
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
-
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 
@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     supabase_service_role_key: str = Field(
         validation_alias=AliasChoices("SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SECRET_KEY"),
     )
+    gemini_api_key: Optional[str] = None
+    gemini_model: str = "gemini-2.5-flash"
 
 
 settings = Settings()

@@ -1,0 +1,1421 @@
+.catering-management-scope {
+  --primary-color: var(--accent, #3b6ef7);
+  --primary-hover: var(--accent2, #2a55d4);
+  --primary-light: var(--accent-bg, #eef2ff);
+  
+  --bg-dark-sidebar: #0f172a; /* Slate-900 */
+  --bg-dark-hover: #1e293b; /* Slate-800 */
+  
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  
+  --border-color: #e2e8f0;
+  --bg-main: var(--bg, #f4f6fa);
+  --bg-card: var(--surface, #ffffff);
+  
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --danger-color: #ef4444;
+  --info-color: #3b82f6;
+
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--text-primary);
+  background: transparent;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+.catering-management-scope,
+.catering-management-scope * {
+  box-sizing: border-box;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+/* Spinner */
+.catering-management-scope .loading-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: var(--bg-main);
+  color: var(--text-secondary);
+}
+
+.catering-management-scope .spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--border-color);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Auth Login */
+.catering-management-scope .login-shell {
+  min-height: calc(100vh - 140px);
+  display: grid;
+  place-items: center;
+  background: transparent;
+  padding: 16px;
+}
+
+.catering-management-scope .login-panel {
+  width: 100%;
+  max-width: 520px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius, 10px);
+  padding: 32px;
+  box-shadow: var(--shadow-md, 0 2px 8px rgba(0,0,0,0.08));
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.catering-management-scope .login-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.catering-management-scope .logo-shield {
+  background: var(--primary-light);
+  color: var(--primary-color);
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 8px;
+}
+
+.catering-management-scope .login-header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.catering-management-scope .login-header p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.catering-management-scope .login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.catering-management-scope .input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.catering-management-scope .input-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.catering-management-scope input,
+.catering-management-scope select,
+.catering-management-scope textarea {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0 14px;
+  font-size: 14px;
+  background: #ffffff;
+  color: var(--text-primary);
+}
+
+.catering-management-scope input:focus,
+.catering-management-scope select:focus,
+.catering-management-scope textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+/* Buttons */
+.catering-management-scope .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.catering-management-scope .btn-primary {
+  background: var(--primary-color);
+  color: #ffffff;
+}
+
+.catering-management-scope .btn-primary:hover {
+  background: var(--primary-hover);
+}
+
+.catering-management-scope .btn-primary:disabled {
+  background: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.catering-management-scope .btn-logout {
+  background: transparent;
+  color: #ef4444;
+  justify-content: flex-start;
+  margin-top: auto;
+  padding: 10px 12px;
+}
+
+.catering-management-scope .btn-logout:hover {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+/* App Layout */
+.catering-management-scope .app-shell {
+  min-height: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.catering-management-scope .sidebar {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius, 10px);
+  box-shadow: var(--shadow, 0 1px 3px rgba(0,0,0,0.06));
+}
+
+.catering-management-scope .sidebar .brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--primary-color);
+  min-width: 220px;
+}
+
+.catering-management-scope .sidebar .brand strong {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary) !important;
+}
+
+.catering-management-scope .user-profile-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface2, #f8f9fc) !important;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.catering-management-scope .user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--primary-color);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+
+.catering-management-scope .user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.catering-management-scope .user-info strong {
+  font-size: 13px;
+}
+
+.catering-management-scope .nav-menu {
+  display: flex;
+  flex-direction: row !important;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px !important;
+  flex: 1;
+}
+
+.catering-management-scope .nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  border: none;
+  cursor: pointer;
+}
+
+.catering-management-scope .nav-item:hover, .catering-management-scope .nav-item.active {
+  background: var(--primary-light);
+  color: var(--primary-color);
+}
+
+.catering-management-scope .nav-item.active {
+  border-left: 0;
+  box-shadow: inset 0 -2px 0 var(--primary-color);
+}
+
+/* Content Area */
+.catering-management-scope .content {
+  padding: 0;
+  overflow: visible;
+  position: relative;
+}
+
+.catering-management-scope .content-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+}
+
+.catering-management-scope .content-header h1 {
+  margin: 0 0 6px 0;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.catering-management-scope .content-header p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+/* Alerts */
+.catering-management-scope .alert {
+  padding: 14px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.catering-management-scope .alert-danger {
+  background: #fef2f2;
+  color: var(--danger-color);
+  border: 1px solid #fee2e2;
+}
+
+.catering-management-scope .alert-success {
+  background: #f0fdf4;
+  color: var(--success-color);
+  border: 1px solid #dcfce7;
+}
+
+.catering-management-scope .close-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+}
+
+/* Dashboard Cards */
+.catering-management-scope .metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.catering-management-scope .metric-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.catering-management-scope .metric-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+}
+
+.catering-management-scope .metric-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.catering-management-scope .metric-val {
+  font-size: 32px;
+  font-weight: 800;
+}
+
+.catering-management-scope .metric-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Pill status */
+.catering-management-scope .pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.catering-management-scope .pill-active, .catering-management-scope .pill-success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.catering-management-scope .pill-inactive, .catering-management-scope .pill-danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.catering-management-scope .pill-warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.catering-management-scope .pill-archived {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+/* Badge role */
+.catering-management-scope .badge {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.catering-management-scope .badge-role.super_admin {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.catering-management-scope .badge-role.catering_admin {
+  background: #eff6ff;
+  color: #1e40af;
+}
+
+.catering-management-scope .badge-role.university_admin {
+  background: #f5f3ff;
+  color: #5b21b6;
+}
+
+.catering-management-scope .badge-role.dietitian {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.catering-management-scope .badge-role.warehouse_staff, .catering-management-scope .badge-role.purchasing_staff {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.catering-management-scope .badge-plan {
+  background: #f5f3ff;
+  color: #5b21b6;
+  border: 1px solid #ddd6fe;
+}
+
+/* Data Tables */
+.catering-management-scope .table-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  overflow: hidden;
+}
+
+.catering-management-scope table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.catering-management-scope th,
+.catering-management-scope td {
+  padding: 16px 20px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 14px;
+}
+
+.catering-management-scope th {
+  background: #f8fafc;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.catering-management-scope tr:last-child td {
+  border-bottom: none;
+}
+
+.catering-management-scope tr:hover td {
+  background: #fafafa;
+}
+
+.catering-management-scope .actions-col {
+  width: 100px;
+  text-align: right;
+}
+
+.catering-management-scope .actions-col-wide {
+  width: 240px;
+  text-align: right;
+}
+
+/* Icon Buttons */
+.catering-management-scope .icon-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.catering-management-scope .icon-btn:hover {
+  background: var(--border-color);
+}
+
+.catering-management-scope .btn-edit:hover {
+  color: var(--info-color);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.catering-management-scope .btn-delete:hover {
+  color: var(--danger-color);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.catering-management-scope .btn-license {
+  color: var(--warning-color);
+}
+
+.catering-management-scope .btn-license:hover {
+  background: rgba(245, 158, 11, 0.08);
+}
+
+/* Modals */
+.catering-management-scope .modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.3);
+  backdrop-filter: blur(4px);
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.catering-management-scope .modal-card {
+  width: 100%;
+  max-width: 580px;
+  background: var(--bg-card);
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+  overflow: hidden;
+  animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.catering-management-scope .modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.catering-management-scope .modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.catering-management-scope .modal-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.catering-management-scope .input-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.catering-management-scope .checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.catering-management-scope .checkbox-group input {
+  width: 18px;
+  height: 18px;
+  min-height: auto;
+  accent-color: var(--primary-color);
+}
+
+.catering-management-scope .checkbox-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.catering-management-scope .license-fieldset {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.catering-management-scope .license-fieldset legend {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary-color);
+  padding: 0 8px;
+}
+
+.catering-management-scope .border-success { border-color: var(--success-color); }
+.catering-management-scope .border-warning { border-color: var(--warning-color); }
+.catering-management-scope .border-danger { border-color: var(--danger-color); }
+
+.catering-management-scope .text-success { color: var(--success-color); }
+.catering-management-scope .text-warning { color: var(--warning-color); }
+.catering-management-scope .text-danger { color: var(--danger-color); }
+
+.catering-management-scope .mt-large { margin-top: 24px; }
+.catering-management-scope .text-center { text-align: center; }
+.catering-management-scope .mono { font-family: monospace; font-size: 12px; }
+
+/* Responsive adjustments */
+@media (max-width: 860px) {
+  .catering-management-scope .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .catering-management-scope .sidebar {
+    border-right: none;
+    border-bottom: 1px solid #1e293b;
+  }
+
+  .catering-management-scope .metrics {
+    grid-template-columns: 1fr;
+  }
+  
+  .catering-management-scope .input-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Auth Tabs styling */
+.catering-management-scope .auth-tabs {
+  display: flex;
+  background: var(--bg-main);
+  border-radius: 8px;
+  padding: 4px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.catering-management-scope .auth-tab-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.catering-management-scope .auth-tab-btn.active {
+  background: #ffffff;
+  color: var(--primary-color);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Sidebar Section Headers */
+.catering-management-scope .sidebar-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 6px 2px;
+}
+
+/* Navigation items container adjustment */
+.catering-management-scope .sidebar-section {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Badges */
+.catering-management-scope .badge-count {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.catering-management-scope .badge-count.red {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+.catering-management-scope .badge-count.orange {
+  background: #fffbeb;
+  color: #f59e0b;
+}
+
+.catering-management-scope .badge-count.green {
+  background: #ecfdf5;
+  color: #10b981;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* Brand subheader */
+.catering-management-scope .brand-sub {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.catering-management-scope .sidebar .brand {
+  flex-direction: row;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.catering-management-scope .sidebar .user-info strong,
+.catering-management-scope .sidebar .user-info span {
+  color: var(--text-primary) !important;
+}
+
+.catering-management-scope .sidebar > div:last-child {
+  margin-left: auto !important;
+  margin-top: 0 !important;
+  flex-direction: row !important;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Main Dashboard layout */
+.catering-management-scope .dashboard-grid-content {
+  display: grid;
+  grid-template-columns: 2fr 1.1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+/* Metric Cards colors */
+.catering-management-scope .metric-card.m-blue { border-top: 4px solid #3b82f6; }
+.catering-management-scope .metric-card.m-orange { border-top: 4px solid #f59e0b; }
+.catering-management-scope .metric-card.m-red { border-top: 4px solid #ef4444; }
+.catering-management-scope .metric-card.m-purple { border-top: 4px solid #a855f7; }
+
+/* AI Warnings */
+.catering-management-scope .ai-alerts-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.catering-management-scope .ai-alert-card {
+  border-radius: 12px;
+  padding: 16px 20px;
+  border-left: 5px solid transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.catering-management-scope .ai-alert-card.a-red {
+  background: #fff5f5;
+  border-color: #ef4444;
+}
+.catering-management-scope .ai-alert-card.a-orange {
+  background: #fffaf0;
+  border-color: #f59e0b;
+}
+.catering-management-scope .ai-alert-card.a-yellow {
+  background: #fefdf0;
+  border-color: #eab308;
+}
+.catering-management-scope .ai-alert-card.a-green {
+  background: #f0fdf4;
+  border-color: #10b981;
+}
+
+.catering-management-scope .ai-alert-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.catering-management-scope .ai-alert-header.a-red { color: #c53030; }
+.catering-management-scope .ai-alert-header.a-orange { color: #c05621; }
+.catering-management-scope .ai-alert-header.a-yellow { color: #854d0e; }
+.catering-management-scope .ai-alert-header.a-green { color: #166534; }
+
+.catering-management-scope .ai-alert-body {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Critical list list style */
+.catering-management-scope .critical-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 8px 0;
+}
+
+.catering-management-scope .critical-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.catering-management-scope .critical-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--bg-main);
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+}
+
+.catering-management-scope .critical-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.catering-management-scope .critical-detail strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.catering-management-scope .critical-detail span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.catering-management-scope .critical-value {
+  margin-left: auto;
+  font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.catering-management-scope .critical-value.red { color: #ef4444; }
+.catering-management-scope .critical-value.orange { color: #f59e0b; }
+.catering-management-scope .critical-value.yellow { color: #eab308; }
+.catering-management-scope .critical-value.green { color: #10b981; }
+
+.catering-management-scope .critical-value span {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* Savings layout */
+.catering-management-scope .savings-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.catering-management-scope .savings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.catering-management-scope .savings-row.total {
+  border-top: 1px solid var(--border-color);
+  padding-top: 12px;
+  font-weight: 700;
+  color: var(--primary-color);
+  font-size: 16px;
+}
+
+.catering-management-scope .savings-val {
+  font-weight: 700;
+  color: #10b981;
+}
+
+/* Header pill & breadcrumbs */
+.catering-management-scope .header-breadcrumb-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.catering-management-scope .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.catering-management-scope .btn-ai-sparkle {
+  background: #f0fdf4;
+  color: #10b981;
+  border: 1px solid #dcfce7;
+}
+
+.catering-management-scope .btn-ai-sparkle:hover {
+  background: #dcfce7;
+}
+
+/* Custom view sub-tabs layout for catering */
+.catering-management-scope .catering-tabs-container {
+  display: flex;
+  gap: 12px;
+  border-bottom: 2px solid var(--border-color);
+  margin-bottom: 28px;
+  padding-bottom: 2px;
+}
+
+.catering-management-scope .catering-tab {
+  background: transparent;
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -3px;
+  border-radius: 4px 4px 0 0;
+}
+
+.catering-management-scope .catering-tab:hover {
+  color: var(--text-primary);
+  background: rgba(0,0,0,0.02);
+}
+
+.catering-management-scope .catering-tab.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+/* Placeholder Screens */
+.catering-management-scope .placeholder-view {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 60px 40px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.catering-management-scope .placeholder-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  color: var(--primary-color);
+  display: grid;
+  place-items: center;
+  font-size: 32px;
+  animation: pulse 2s infinite;
+}
+
+.catering-management-scope .placeholder-view h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.catering-management-scope .placeholder-view p {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-secondary);
+  max-width: 480px;
+  line-height: 1.6;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+@media (max-width: 1100px) {
+  .catering-management-scope .dashboard-grid-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Sol menü aynı navigasyonu verdiği için içerikteki ikinci catering sekmesini gizle */
+.catering-management-scope .catering-tabs-container {
+  display: none;
+  border-bottom: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.catering-management-scope .catering-tab,
+.catering-management-scope .catering-tab.active {
+  border-bottom: 0;
+}
+
+/* Catering overview dashboard */
+.catering-management-scope .catering-dash-header {
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.catering-management-scope .catering-dash-header span {
+  display: block;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  margin-bottom: 6px;
+}
+
+.catering-management-scope .catering-dash-header h1 {
+  color: var(--text);
+}
+
+.catering-management-scope .catering-dash-filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.catering-management-scope .catering-dash-filters button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.catering-management-scope .catering-dash-shell {
+  background: transparent;
+  color: var(--text);
+  min-height: 0;
+}
+
+.catering-management-scope .catering-dash-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.catering-management-scope .catering-dash-metric {
+  position: relative;
+  overflow: hidden;
+  min-height: 116px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 10px);
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.catering-management-scope .catering-dash-metric.student {
+  border-top: 3px solid var(--accent);
+}
+
+.catering-management-scope .catering-dash-metric.menu {
+  border-top: 3px solid var(--blue, #2563eb);
+}
+
+.catering-management-scope .catering-dash-metric.compact {
+  background: var(--surface);
+  border-top: 3px solid var(--green, #059669);
+}
+
+.catering-management-scope .catering-dash-metric::after {
+  content: "";
+  position: absolute;
+  right: -42px;
+  top: 20px;
+  width: 142px;
+  height: 142px;
+  border: 28px solid var(--accent-bg);
+  border-radius: 50%;
+}
+
+.catering-management-scope .catering-dash-metric span,
+.catering-management-scope .catering-dash-metric small {
+  display: block;
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.catering-management-scope .catering-dash-metric strong {
+  display: block;
+  color: var(--text);
+  font-size: 32px;
+  line-height: 1;
+  margin: 18px 0 8px;
+}
+
+.catering-management-scope .catering-dash-metric.compact strong {
+  font-size: 22px;
+  margin: 6px 0 2px;
+}
+
+.catering-management-scope .catering-dash-metric-art {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent-bg);
+  color: var(--accent);
+  z-index: 1;
+}
+
+.catering-management-scope .catering-dash-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 18px;
+}
+
+.catering-management-scope .catering-dash-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 10px);
+  padding: 18px;
+  min-height: 270px;
+  box-shadow: var(--shadow);
+}
+
+.catering-management-scope .catering-dash-panel.wide {
+  min-height: 355px;
+}
+
+.catering-management-scope .catering-dash-panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.catering-management-scope .catering-dash-panel h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.catering-management-scope .catering-dash-panel-head span {
+  color: var(--text2);
+  font-size: 12px;
+}
+
+.catering-management-scope .capacity-chart {
+  height: 300px;
+}
+
+.catering-management-scope .capacity-chart svg {
+  width: 100%;
+  height: 100%;
+}
+
+.catering-management-scope .capacity-chart line {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.catering-management-scope .capacity-chart text {
+  fill: var(--text3);
+  font-size: 10px;
+}
+
+.catering-management-scope .chart-area {
+  fill: var(--accent-bg);
+}
+
+.catering-management-scope .chart-line {
+  fill: none;
+  stroke-width: 3;
+}
+
+.catering-management-scope .chart-line.student {
+  stroke: var(--accent);
+}
+
+.catering-management-scope .chart-line.user {
+  stroke: var(--pink, #db2777);
+  stroke-dasharray: 4 5;
+}
+
+.catering-management-scope .role-wave svg {
+  width: 100%;
+  height: 220px;
+}
+
+.catering-management-scope .role-wave-fill {
+  fill: var(--accent-bg);
+}
+
+.catering-management-scope .role-wave-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 5;
+}
+
+.catering-management-scope .role-wave circle {
+  fill: var(--accent);
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 45%, transparent));
+}
+
+.catering-management-scope .role-wave-footer {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-radius: 6px;
+  padding: 11px 14px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.catering-management-scope .donut-layout {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  min-height: 205px;
+}
+
+.catering-management-scope .donut {
+  width: 150px;
+  height: 150px;
+  transform: rotate(-90deg);
+  flex: 0 0 auto;
+}
+
+.catering-management-scope .donut circle {
+  fill: none;
+  stroke-width: 22;
+}
+
+.catering-management-scope .donut circle:first-child {
+  stroke: var(--surface3);
+}
+
+.catering-management-scope .donut text {
+  transform: rotate(90deg);
+  transform-origin: 60px 60px;
+  fill: var(--text2);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.catering-management-scope .donut .donut-center-value {
+  font-size: 16px;
+  fill: var(--text);
+}
+
+.catering-management-scope .donut-legend {
+  flex: 1;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.catering-management-scope .donut-legend div {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  color: var(--text2);
+  font-size: 12px;
+}
+
+.catering-management-scope .donut-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.catering-management-scope .donut-legend span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catering-management-scope .donut-legend b {
+  color: var(--text3);
+}
+
+.catering-management-scope .chart-empty {
+  min-height: 205px;
+  display: grid;
+  place-items: center;
+  color: var(--text3);
+  border: 1px dashed var(--border2, var(--border));
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.catering-management-scope .menu-bars {
+  height: 220px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 18px;
+  align-items: end;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--border) 70%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 70%, transparent) 1px, transparent 1px);
+  background-size: 100% 49px, 20% 100%;
+}
+
+.catering-management-scope .menu-bar-col {
+  display: grid;
+  gap: 8px;
+  align-items: end;
+  height: 100%;
+}
+
+.catering-management-scope .menu-bar-track {
+  height: 180px;
+  display: flex;
+  align-items: end;
+}
+
+.catering-management-scope .menu-bar-track span {
+  width: 100%;
+  max-width: 32px;
+  margin: 0 auto;
+  display: block;
+  border-radius: 2px 2px 0 0;
+  background: linear-gradient(180deg, var(--accent), var(--accent2));
+}
+
+.catering-management-scope .menu-bar-col small {
+  text-align: center;
+  color: var(--text3);
+  font-size: 11px;
+}
+
+@media (max-width: 1200px) {
+  .catering-management-scope .catering-dash-metrics,
+  .catering-management-scope .catering-dash-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .catering-management-scope .catering-dash-shell {
+    padding: 18px;
+  }
+
+  .catering-management-scope .catering-dash-metrics,
+  .catering-management-scope .catering-dash-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .catering-management-scope .donut-layout {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
