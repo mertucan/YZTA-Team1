@@ -15,9 +15,23 @@ import {
   X,
 } from "./icons.jsx";
 import { useEffect, useMemo, useState } from "react";
-import { Routes, Route, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  Navigate,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 
-import { API_BASE_URL, CATERING_SESSION_KEY, apiDelete, apiGet, apiPost, apiPut } from "./api";
+import {
+  API_BASE_URL,
+  CATERING_SESSION_KEY,
+  apiDelete,
+  apiGet,
+  apiPost,
+  apiPut,
+} from "./api";
 import { isSupabaseConfigured, supabase } from "./supabase";
 import { useRealtimeData } from "./hooks/useRealtimeData";
 import { RealtimeIndicator } from "./components/RealtimeIndicator";
@@ -33,28 +47,70 @@ const ROLE_LABELS = {
   STUDENT: "Öğrenci",
   SYSTEM_SUPPORT: "Sistem Destek",
   WAREHOUSE_STAFF: "Depo Görevlisi",
-  PURCHASING_STAFF: "Satın Alma Sorumlusu"
+  PURCHASING_STAFF: "Satın Alma Sorumlusu",
 };
 
-
 const ROLE_ACCESS = {
-  dashboard: ["SUPER_ADMIN", "CATERING_ADMIN", "UNIVERSITY_ADMIN", "DIETITIAN", "CHEF", "FINANCE_MANAGER", "OPERATIONS_MANAGER", "STUDENT", "SYSTEM_SUPPORT", "WAREHOUSE_STAFF", "PURCHASING_STAFF"],
+  dashboard: [
+    "SUPER_ADMIN",
+    "CATERING_ADMIN",
+    "UNIVERSITY_ADMIN",
+    "DIETITIAN",
+    "CHEF",
+    "FINANCE_MANAGER",
+    "OPERATIONS_MANAGER",
+    "STUDENT",
+    "SYSTEM_SUPPORT",
+    "WAREHOUSE_STAFF",
+    "PURCHASING_STAFF",
+  ],
   universities: ["SUPER_ADMIN", "CATERING_ADMIN", "UNIVERSITY_ADMIN"],
-  users: ["SUPER_ADMIN", "CATERING_ADMIN", "UNIVERSITY_ADMIN", "SYSTEM_SUPPORT"],
-  menuAssignments: ["SUPER_ADMIN", "CATERING_ADMIN", "UNIVERSITY_ADMIN", "DIETITIAN", "CHEF"],
+  users: [
+    "SUPER_ADMIN",
+    "CATERING_ADMIN",
+    "UNIVERSITY_ADMIN",
+    "SYSTEM_SUPPORT",
+  ],
+  menuAssignments: [
+    "SUPER_ADMIN",
+    "CATERING_ADMIN",
+    "UNIVERSITY_ADMIN",
+    "DIETITIAN",
+    "CHEF",
+  ],
   companies: ["SUPER_ADMIN", "CATERING_ADMIN", "FINANCE_MANAGER"],
-  inventory: ["SUPER_ADMIN", "CATERING_ADMIN", "CHEF", "WAREHOUSE_STAFF", "OPERATIONS_MANAGER", "PURCHASING_STAFF"],
+  inventory: [
+    "SUPER_ADMIN",
+    "CATERING_ADMIN",
+    "CHEF",
+    "WAREHOUSE_STAFF",
+    "OPERATIONS_MANAGER",
+    "PURCHASING_STAFF",
+  ],
   meals: ["SUPER_ADMIN", "CATERING_ADMIN", "DIETITIAN", "CHEF"],
   aiMenu: ["SUPER_ADMIN", "CATERING_ADMIN", "DIETITIAN", "CHEF"],
   allergies: ["SUPER_ADMIN", "DIETITIAN", "UNIVERSITY_ADMIN", "STUDENT"],
   holidays: ["SUPER_ADMIN", "CATERING_ADMIN", "UNIVERSITY_ADMIN", "STUDENT"],
   dorms: ["SUPER_ADMIN", "UNIVERSITY_ADMIN", "STUDENT"],
-  reports: ["SUPER_ADMIN", "CATERING_ADMIN", "FINANCE_MANAGER", "OPERATIONS_MANAGER", "SYSTEM_SUPPORT"],
-  yokUniv: ["SUPER_ADMIN", "CATERING_ADMIN", "UNIVERSITY_ADMIN", "SYSTEM_SUPPORT"]
+  reports: [
+    "SUPER_ADMIN",
+    "CATERING_ADMIN",
+    "FINANCE_MANAGER",
+    "OPERATIONS_MANAGER",
+    "SYSTEM_SUPPORT",
+  ],
+  yokUniv: [
+    "SUPER_ADMIN",
+    "CATERING_ADMIN",
+    "UNIVERSITY_ADMIN",
+    "SYSTEM_SUPPORT",
+  ],
 };
 
 function roleCan(role, key) {
-  return Boolean(role && (role === "SUPER_ADMIN" || ROLE_ACCESS[key]?.includes(role)));
+  return Boolean(
+    role && (role === "SUPER_ADMIN" || ROLE_ACCESS[key]?.includes(role)),
+  );
 }
 
 function getCateringRouteKey(pathname) {
@@ -86,7 +142,8 @@ function getPasswordStrength(password) {
   const suggestions = [];
 
   if (password.length < 8) suggestions.push("8+ karakter kullan");
-  if (!(/[a-z]/.test(password) && /[A-Z]/.test(password))) suggestions.push("Büyük/küçük harf ekle");
+  if (!(/[a-z]/.test(password) && /[A-Z]/.test(password)))
+    suggestions.push("Büyük/küçük harf ekle");
   if (!/\d/.test(password)) suggestions.push("Rakam ekle");
   if (!/[^A-Za-z0-9]/.test(password)) suggestions.push("Sembol ekle");
 
@@ -102,27 +159,53 @@ function PasswordStrength({ password }) {
   const strength = getPasswordStrength(password);
   return (
     <div style={{ display: "grid", gap: 7, marginTop: -4 }}>
-      <div style={{ height: 7, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 5 }}>
+      <div
+        style={{
+          height: 7,
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: 5,
+        }}
+      >
         {[1, 2, 3, 4].map((level) => (
           <span
             key={level}
             style={{
               borderRadius: 999,
-              background: strength.score >= level ? strength.color : "var(--surface3)",
+              background:
+                strength.score >= level ? strength.color : "var(--surface3)",
               transition: "background .18s ease",
             }}
           />
         ))}
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 11, color: "var(--text3)" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 12,
+          fontSize: 11,
+          color: "var(--text3)",
+        }}
+      >
         <strong style={{ color: strength.color }}>{strength.label}</strong>
-        <span>{strength.suggestions.slice(0, 2).join(" · ") || "Bu şifre gayet iyi görünüyor."}</span>
+        <span>
+          {strength.suggestions.slice(0, 2).join(" · ") ||
+            "Bu şifre gayet iyi görünüyor."}
+        </span>
       </div>
     </div>
   );
 }
 
-const DASH_COLORS = ["#22d3ee", "#38bdf8", "#2563eb", "#c026d3", "#f472b6", "#10b981"];
+const DASH_COLORS = [
+  "#22d3ee",
+  "#38bdf8",
+  "#2563eb",
+  "#c026d3",
+  "#f472b6",
+  "#10b981",
+];
 const WEEK_DAYS = ["Pzt", "Sal", "Çar", "Per", "Cum"];
 
 function formatTRNumber(value) {
@@ -130,60 +213,95 @@ function formatTRNumber(value) {
 }
 
 function DashboardMetricCard({ tone, label, value, sub, children }) {
-  return <article className={`catering-dash-metric ${tone}`}>
-    <div>
-      <span>{label}</span>
-      <strong>{value}</strong>
-      {sub && <small>{sub}</small>}
-    </div>
-    {children && <div className="catering-dash-metric-art">{children}</div>}
-  </article>;
+  return (
+    <article className={`catering-dash-metric ${tone}`}>
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+        {sub && <small>{sub}</small>}
+      </div>
+      {children && <div className="catering-dash-metric-art">{children}</div>}
+    </article>
+  );
 }
 
 function DashboardPanel({ title, meta, children, className = "" }) {
-  return <section className={`catering-dash-panel ${className}`}>
-    <div className="catering-dash-panel-head">
-      <h3>{title}</h3>
-      {meta && <span>{meta}</span>}
-    </div>
-    {children}
-  </section>;
+  return (
+    <section className={`catering-dash-panel ${className}`}>
+      <div className="catering-dash-panel-head">
+        <h3>{title}</h3>
+        {meta && <span>{meta}</span>}
+      </div>
+      {children}
+    </section>
+  );
 }
 
 function CapacityLineChart({ totalStudents, activeUsers }) {
   const maxValue = Math.max(totalStudents, activeUsers, 1);
-  const studentPoints = [0, 0, 0, 0, 0, Math.max(6, 290 * (totalStudents / maxValue))];
+  const studentPoints = [
+    0,
+    0,
+    0,
+    0,
+    0,
+    Math.max(6, 290 * (totalStudents / maxValue)),
+  ];
   const userY = 294 - Math.max(2, 290 * (activeUsers / maxValue));
-  const studentPath = studentPoints.map((value, index) => {
-    const x = 24 + index * 154;
-    const y = 294 - value;
-    return `${index === 0 ? "M" : "L"}${x},${y}`;
-  }).join(" ");
+  const studentPath = studentPoints
+    .map((value, index) => {
+      const x = 24 + index * 154;
+      const y = 294 - value;
+      return `${index === 0 ? "M" : "L"}${x},${y}`;
+    })
+    .join(" ");
   const areaPath = `${studentPath} L794,294 L24,294 Z`;
 
-  return <div className="capacity-chart">
-    <svg viewBox="0 0 820 320" preserveAspectRatio="none">
-      {[0, 1, 2, 3, 4].map((row) => <line key={row} x1="24" x2="794" y1={36 + row * 64} y2={36 + row * 64} />)}
-      {[0, 1, 2, 3, 4].map((row) => {
-        const value = Math.round(maxValue - (maxValue / 4) * row);
-        return <text key={row} x="0" y={40 + row * 64}>{formatTRNumber(value)}</text>;
-      })}
-      <path className="chart-area" d={areaPath} />
-      <path className="chart-line student" d={studentPath} />
-      <path className="chart-line user" d={`M24,${userY} L794,${userY}`} />
-    </svg>
-  </div>;
+  return (
+    <div className="capacity-chart">
+      <svg viewBox="0 0 820 320" preserveAspectRatio="none">
+        {[0, 1, 2, 3, 4].map((row) => (
+          <line
+            key={row}
+            x1="24"
+            x2="794"
+            y1={36 + row * 64}
+            y2={36 + row * 64}
+          />
+        ))}
+        {[0, 1, 2, 3, 4].map((row) => {
+          const value = Math.round(maxValue - (maxValue / 4) * row);
+          return (
+            <text key={row} x="0" y={40 + row * 64}>
+              {formatTRNumber(value)}
+            </text>
+          );
+        })}
+        <path className="chart-area" d={areaPath} />
+        <path className="chart-line student" d={studentPath} />
+        <path className="chart-line user" d={`M24,${userY} L794,${userY}`} />
+      </svg>
+    </div>
+  );
 }
 
 function RoleWaveChart({ activeUsers }) {
-  return <div className="role-wave">
-    <svg viewBox="0 0 420 190" preserveAspectRatio="none">
-      <path className="role-wave-fill" d="M0,128 C45,155 78,105 126,92 C171,80 178,116 220,82 C252,56 269,20 315,34 C356,47 352,113 420,74 L420,190 L0,190 Z" />
-      <path className="role-wave-line" d="M0,128 C45,155 78,105 126,92 C171,80 178,116 220,82 C252,56 269,20 315,34 C356,47 352,113 420,74" />
-      <circle cx="288" cy="36" r="12" />
-    </svg>
-    <div className="role-wave-footer">Aktif kullanıcı: {activeUsers}</div>
-  </div>;
+  return (
+    <div className="role-wave">
+      <svg viewBox="0 0 420 190" preserveAspectRatio="none">
+        <path
+          className="role-wave-fill"
+          d="M0,128 C45,155 78,105 126,92 C171,80 178,116 220,82 C252,56 269,20 315,34 C356,47 352,113 420,74 L420,190 L0,190 Z"
+        />
+        <path
+          className="role-wave-line"
+          d="M0,128 C45,155 78,105 126,92 C171,80 178,116 220,82 C252,56 269,20 315,34 C356,47 352,113 420,74"
+        />
+        <circle cx="288" cy="36" r="12" />
+      </svg>
+      <div className="role-wave-footer">Aktif kullanıcı: {activeUsers}</div>
+    </div>
+  );
 }
 
 function DonutChart({ items, total, center, emptyText }) {
@@ -192,34 +310,55 @@ function DonutChart({ items, total, center, emptyText }) {
   }
 
   let offset = 25;
-  return <div className="donut-layout">
-    <svg className="donut" viewBox="0 0 120 120">
-      <circle cx="60" cy="60" r="42" />
-      {items.map((item, index) => {
-        const dash = (item.value / total) * 264;
-        const node = <circle
-          key={item.name}
-          cx="60"
-          cy="60"
-          r="42"
-          stroke={DASH_COLORS[index % DASH_COLORS.length]}
-          strokeDasharray={`${dash} ${264 - dash}`}
-          strokeDashoffset={offset}
-        />;
-        offset -= dash;
-        return node;
-      })}
-      {center && <text x="60" y="58" textAnchor="middle">{center.title}</text>}
-      {center && <text x="60" y="76" textAnchor="middle" className="donut-center-value">{center.value}</text>}
-    </svg>
-    <div className="donut-legend">
-      {items.slice(0, 5).map((item, index) => <div key={item.name}>
-        <i style={{ background: DASH_COLORS[index % DASH_COLORS.length] }} />
-        <span>{item.name}</span>
-        <b>{Math.round((item.value / total) * 100)}%</b>
-      </div>)}
+  return (
+    <div className="donut-layout">
+      <svg className="donut" viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="42" />
+        {items.map((item, index) => {
+          const dash = (item.value / total) * 264;
+          const node = (
+            <circle
+              key={item.name}
+              cx="60"
+              cy="60"
+              r="42"
+              stroke={DASH_COLORS[index % DASH_COLORS.length]}
+              strokeDasharray={`${dash} ${264 - dash}`}
+              strokeDashoffset={offset}
+            />
+          );
+          offset -= dash;
+          return node;
+        })}
+        {center && (
+          <text x="60" y="58" textAnchor="middle">
+            {center.title}
+          </text>
+        )}
+        {center && (
+          <text
+            x="60"
+            y="76"
+            textAnchor="middle"
+            className="donut-center-value"
+          >
+            {center.value}
+          </text>
+        )}
+      </svg>
+      <div className="donut-legend">
+        {items.slice(0, 5).map((item, index) => (
+          <div key={item.name}>
+            <i
+              style={{ background: DASH_COLORS[index % DASH_COLORS.length] }}
+            />
+            <span>{item.name}</span>
+            <b>{Math.round((item.value / total) * 100)}%</b>
+          </div>
+        ))}
+      </div>
     </div>
-  </div>;
+  );
 }
 
 function MenuBars({ menuAssignments }) {
@@ -233,75 +372,177 @@ function MenuBars({ menuAssignments }) {
   const values = counts.some(Boolean) ? counts : fallback;
   const max = Math.max(...values, 1);
 
-  return <div className="menu-bars">
-    {values.map((value, index) => <div key={WEEK_DAYS[index]} className="menu-bar-col">
-      <div className="menu-bar-track">
-        <span style={{ height: `${Math.max(12, (value / max) * 100)}%` }} />
-      </div>
-      <small>{WEEK_DAYS[index]}</small>
-    </div>)}
-  </div>;
+  return (
+    <div className="menu-bars">
+      {values.map((value, index) => (
+        <div key={WEEK_DAYS[index]} className="menu-bar-col">
+          <div className="menu-bar-track">
+            <span style={{ height: `${Math.max(12, (value / max) * 100)}%` }} />
+          </div>
+          <small>{WEEK_DAYS[index]}</small>
+        </div>
+      ))}
+    </div>
+  );
 }
 
-function CateringDashboard({ dashboard, universities, users, menuAssignments }) {
-  const totalStudents = universities.reduce((sum, university) => sum + Number(university.student_count || 0), 0);
+function CateringDashboard({
+  dashboard,
+  universities,
+  users,
+  menuAssignments,
+  dateFilter,
+  onDateFilterToggle,
+  companyFilter,
+  onCompanyFilterChange,
+  companies,
+  currentUser,
+}) {
+  const totalStudents = universities.reduce(
+    (sum, university) => sum + Number(university.student_count || 0),
+    0,
+  );
   const activeUsers = users.filter((user) => user.is_active).length;
   const inactiveUsers = Math.max(users.length - activeUsers, 0);
-  const activeMenus = menuAssignments.filter((menu) => menu.status === "ACTIVE").length;
-  const publishedMenus = menuAssignments.filter((menu) => menu.is_published).length;
+  const activeMenus = menuAssignments.filter(
+    (menu) => menu.status === "ACTIVE",
+  ).length;
+  const publishedMenus = menuAssignments.filter(
+    (menu) => menu.is_published,
+  ).length;
+  const universityCount =
+    companyFilter === "all"
+      ? (dashboard?.total_universities ?? universities.length)
+      : universities.length;
   const universityItems = universities
     .filter((university) => Number(university.student_count || 0) > 0)
-    .map((university) => ({ name: university.university_name, value: Number(university.student_count || 0) }))
+    .map((university) => ({
+      name: university.university_name,
+      value: Number(university.student_count || 0),
+    }))
     .sort((a, b) => b.value - a.value);
   const userItems = [
     { name: "Aktif", value: activeUsers },
-    { name: "Pasif", value: inactiveUsers }
+    { name: "Pasif", value: inactiveUsers },
   ].filter((item) => item.value > 0);
 
-  return <>
-    <header className="content-header catering-dash-header">
-      <div>
-        <span>CATERING CRM</span>
-        <h1>Genel Bakış</h1>
-      </div>
-      <div className="catering-dash-filters">
-        <button type="button"><Calendar size={14} /> Son 30 gün</button>
-        <button type="button">Tüm firmalar</button>
-        <button type="button">Lisans {dashboard?.active_license ? "aktif" : "pasif"}</button>
-      </div>
-    </header>
+  return (
+    <>
+      <header className="content-header catering-dash-header">
+        <div>
+          <span>CATERING CRM</span>
+          <h1>Genel Bakış</h1>
+        </div>
+        <div className="catering-dash-filters">
+          <button
+            type="button"
+            className={dateFilter === "30d" ? "active" : ""}
+            onClick={onDateFilterToggle}
+          >
+            <Calendar size={14} />{" "}
+            {dateFilter === "30d" ? "Son 30 gün" : "Tüm zamanlar"}
+          </button>
+          {currentUser?.role_name === "SUPER_ADMIN" && companies?.length > 0 ? (
+            <select
+              className="dash-company-select"
+              value={companyFilter}
+              onChange={(e) => onCompanyFilterChange(e.target.value)}
+            >
+              <option value="all">Tüm firmalar</option>
+              {companies.map((c) => (
+                <option key={c.id} value={String(c.id)}>
+                  {c.company_name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <button type="button" style={{ cursor: "default", opacity: 0.7 }}>
+              {companies?.[0]?.company_name || "Tüm firmalar"}
+            </button>
+          )}
+          <button type="button">
+            Lisans {dashboard?.active_license ? "aktif" : "pasif"}
+          </button>
+        </div>
+      </header>
 
-    <div className="catering-dash-shell">
-      <div className="catering-dash-metrics">
-        <DashboardMetricCard tone="student" label="Toplam Öğrenci" value={formatTRNumber(totalStudents)} sub={`${universities.length} Üniversite kaydı`} />
-        <DashboardMetricCard tone="menu" label="Aktif Menü" value={formatTRNumber(activeMenus)} sub={`${publishedMenus} yayınlanan menü`} />
-        <DashboardMetricCard tone="compact" label="Kullanıcılar" value={`${activeUsers}`} sub={`${activeUsers} aktif`}>
-          <Users size={24} />
-        </DashboardMetricCard>
-        <DashboardMetricCard tone="compact" label="Lisans" value={dashboard?.active_license ? "Aktif" : "Pasif"} sub={dashboard?.license_days_left != null ? `${dashboard.license_days_left} gün kaldı` : "Süre bilgisi yok"}>
-          <Award size={24} />
-        </DashboardMetricCard>
-      </div>
+      <div className="catering-dash-shell">
+        <div className="catering-dash-metrics">
+          <DashboardMetricCard
+            tone="student"
+            label="Toplam Öğrenci"
+            value={formatTRNumber(totalStudents)}
+            sub={`${universityCount} Üniversite kaydı`}
+          />
+          <DashboardMetricCard
+            tone="menu"
+            label="Aktif Menü"
+            value={formatTRNumber(activeMenus)}
+            sub={`${publishedMenus} yayınlanan menü`}
+          />
+          <DashboardMetricCard
+            tone="compact"
+            label="Kullanıcılar"
+            value={`${activeUsers}`}
+            sub={`${activeUsers} aktif`}
+          >
+            <Users size={24} />
+          </DashboardMetricCard>
+          <DashboardMetricCard
+            tone="compact"
+            label="Lisans"
+            value={dashboard?.active_license ? "Aktif" : "Pasif"}
+            sub={
+              dashboard?.license_days_left != null
+                ? `${dashboard.license_days_left} gün kaldı`
+                : "Süre bilgisi yok"
+            }
+          >
+            <Award size={24} />
+          </DashboardMetricCard>
+        </div>
 
-      <div className="catering-dash-grid">
-        <DashboardPanel title="Öğrenci Kapasitesi ve Aktif Kullanıcı" className="wide">
-          <CapacityLineChart totalStudents={totalStudents} activeUsers={activeUsers} />
-        </DashboardPanel>
-        <DashboardPanel title="Roller ve Kullanıcılar">
-          <RoleWaveChart activeUsers={activeUsers} />
-        </DashboardPanel>
-        <DashboardPanel title="Üniversite Dağılımı" meta={`${formatTRNumber(totalStudents)} Öğrenci`}>
-          <DonutChart items={universityItems} total={totalStudents} emptyText="Üniversite/Öğrenci verisi yok." />
-        </DashboardPanel>
-        <DashboardPanel title="Kullanıcı Durumu" meta={`${users.length} kullanıcı`}>
-          <DonutChart items={userItems} total={Math.max(users.length, 1)} center={{ title: "Aktif", value: activeUsers }} emptyText="Kullanıcı verisi yok." />
-        </DashboardPanel>
-        <DashboardPanel title="Menü Atamaları / Gün">
-          <MenuBars menuAssignments={menuAssignments} />
-        </DashboardPanel>
+        <div className="catering-dash-grid">
+          <DashboardPanel
+            title="Öğrenci Kapasitesi ve Aktif Kullanıcı"
+            className="wide"
+          >
+            <CapacityLineChart
+              totalStudents={totalStudents}
+              activeUsers={activeUsers}
+            />
+          </DashboardPanel>
+          <DashboardPanel title="Roller ve Kullanıcılar">
+            <RoleWaveChart activeUsers={activeUsers} />
+          </DashboardPanel>
+          <DashboardPanel
+            title="Üniversite Dağılımı"
+            meta={`${formatTRNumber(totalStudents)} Öğrenci`}
+          >
+            <DonutChart
+              items={universityItems}
+              total={totalStudents}
+              emptyText="Üniversite/Öğrenci verisi yok."
+            />
+          </DashboardPanel>
+          <DashboardPanel
+            title="Kullanıcı Durumu"
+            meta={`${users.length} kullanıcı`}
+          >
+            <DonutChart
+              items={userItems}
+              total={Math.max(users.length, 1)}
+              center={{ title: "Aktif", value: activeUsers }}
+              emptyText="Kullanıcı verisi yok."
+            />
+          </DashboardPanel>
+          <DashboardPanel title="Menü Atamaları / Gün">
+            <MenuBars menuAssignments={menuAssignments} />
+          </DashboardPanel>
+        </div>
       </div>
-    </div>
-  </>;
+    </>
+  );
 }
 
 function CateringManagementContent() {
@@ -313,7 +554,6 @@ function CateringManagementContent() {
   const [authMode, setAuthMode] = useState("login");
   const [fullName, setFullName] = useState("");
   const [companyName, setCompanyName] = useState("");
-
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -327,6 +567,9 @@ function CateringManagementContent() {
   const [error, setError] = useState(null);
   const [info, setInfo] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  const [dateFilter, setDateFilter] = useState("30d");
+  const [companyFilter, setCompanyFilter] = useState("all");
 
   // Modals state
   const [modalType, setModalType] = useState(null);
@@ -431,7 +674,9 @@ function CateringManagementContent() {
         if (mockSessionStr) {
           try {
             const mockSession = JSON.parse(mockSessionStr);
-            const myProfile = profiles.find((p) => p.email === mockSession.user.email);
+            const myProfile = profiles.find(
+              (p) => p.email === mockSession.user.email,
+            );
             if (myProfile) {
               setCurrentUser(myProfile);
             } else if (mockSession.user.email === "superadmin@catering.com") {
@@ -489,7 +734,7 @@ function CateringManagementContent() {
           err.message.includes("401")
         ) {
           localStorage.removeItem(CATERING_SESSION_KEY);
-    window.dispatchEvent(new Event("catering-session-changed"));
+          window.dispatchEvent(new Event("catering-session-changed"));
           setIsAuthed(false);
           setCurrentUser(null);
         }
@@ -519,15 +764,19 @@ function CateringManagementContent() {
     }
 
     Promise.all(fetches)
-      .then(([dashboardData, universityData, userData, menuData, companyData]) => {
-        setDashboard(dashboardData);
-        setUniversities(universityData);
-        setUsers(userData);
-        setMenuAssignments(menuData);
-        if (companyData) {
-          setCompanies(Array.isArray(companyData) ? companyData : [companyData]);
-        }
-      })
+      .then(
+        ([dashboardData, universityData, userData, menuData, companyData]) => {
+          setDashboard(dashboardData);
+          setUniversities(universityData);
+          setUsers(userData);
+          setMenuAssignments(menuData);
+          if (companyData) {
+            setCompanies(
+              Array.isArray(companyData) ? companyData : [companyData],
+            );
+          }
+        },
+      )
       .catch((err) => setError(err.message))
       .finally(() => {
         if (!silent) {
@@ -570,6 +819,29 @@ function CateringManagementContent() {
     return "success";
   }, [dashboard]);
 
+  const dashFilteredData = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+
+    let filteredMenus = menuAssignments;
+    if (dateFilter === "30d") {
+      filteredMenus = filteredMenus.filter(
+        (m) => new Date(m.created_at) >= cutoff,
+      );
+    }
+
+    if (companyFilter !== "all") {
+      const cid = parseInt(companyFilter, 10);
+      return {
+        universities: universities.filter((u) => u.company_id === cid),
+        users: users.filter((u) => u.company_id === cid),
+        menuAssignments: filteredMenus.filter((m) => m.company_id === cid),
+      };
+    }
+
+    return { universities, users, menuAssignments: filteredMenus };
+  }, [universities, users, menuAssignments, dateFilter, companyFilter]);
+
   async function signIn() {
     setError(null);
     setInfo(null);
@@ -580,23 +852,25 @@ function CateringManagementContent() {
 
       try {
         // 1. Try signing in via Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const { data: authData, error: authError } =
+          await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
         if (authError) throw authError;
         if (!authData.session) throw new Error("Oturum başlatılamadı.");
 
         // 2. Fetch the user profile from backend
         const response = await fetch(`${API_BASE_URL}/auth/me`, {
           method: "GET",
-          headers: { 
+          headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${authData.session.access_token}`
+            Authorization: `Bearer ${authData.session.access_token}`,
           },
         });
         data = await response.json();
-        if (!response.ok) throw new Error(data.detail ?? "Profil bilgisi alınamadı.");
+        if (!response.ok)
+          throw new Error(data.detail ?? "Profil bilgisi alınamadı.");
         sessionToken = authData.session.access_token;
       } catch (supabaseErr) {
         // Fallback: Try backend login directly (useful for local seed users not in Supabase Auth)
@@ -615,7 +889,12 @@ function CateringManagementContent() {
 
       const mockSession = {
         access_token: sessionToken,
-        user: { email: data.email, id: data.auth_user_id, full_name: data.full_name, role_name: data.role_name },
+        user: {
+          email: data.email,
+          id: data.auth_user_id,
+          full_name: data.full_name,
+          role_name: data.role_name,
+        },
       };
       localStorage.setItem(CATERING_SESSION_KEY, JSON.stringify(mockSession));
       window.dispatchEvent(new Event("catering-session-changed"));
@@ -652,7 +931,12 @@ function CateringManagementContent() {
 
       const mockSession = {
         access_token: data.access_token,
-        user: { email: data.user.email, id: data.user.auth_user_id, full_name: data.user.full_name, role_name: data.user.role_name },
+        user: {
+          email: data.user.email,
+          id: data.user.auth_user_id,
+          full_name: data.user.full_name,
+          role_name: data.user.role_name,
+        },
       };
       localStorage.setItem(CATERING_SESSION_KEY, JSON.stringify(mockSession));
       window.dispatchEvent(new Event("catering-session-changed"));
@@ -665,7 +949,6 @@ function CateringManagementContent() {
       setLoading(false);
     }
   }
-
 
   async function signOut() {
     localStorage.removeItem(CATERING_SESSION_KEY);
@@ -695,9 +978,10 @@ function CateringManagementContent() {
     try {
       setLoading(true);
       setError(null);
-      const url = currentUser?.role_name === "SUPER_ADMIN" 
-        ? `/universities?company_id=${univForm.company_id}` 
-        : "/universities";
+      const url =
+        currentUser?.role_name === "SUPER_ADMIN"
+          ? `/universities?company_id=${univForm.company_id}`
+          : "/universities";
       await apiPost(url, {
         university_name: univForm.university_name,
         city: univForm.city || null,
@@ -753,9 +1037,10 @@ function CateringManagementContent() {
     try {
       setLoading(true);
       setError(null);
-      const url = currentUser?.role_name === "SUPER_ADMIN" 
-        ? `/users?company_id=${userForm.company_id}` 
-        : "/users";
+      const url =
+        currentUser?.role_name === "SUPER_ADMIN"
+          ? `/users?company_id=${userForm.company_id}`
+          : "/users";
       await apiPost(url, {
         auth_user_id: userForm.auth_user_id,
         email: userForm.email,
@@ -815,9 +1100,10 @@ function CateringManagementContent() {
     try {
       setLoading(true);
       setError(null);
-      const url = currentUser?.role_name === "SUPER_ADMIN" 
-        ? `/menu-assignments?company_id=${menuForm.company_id}` 
-        : "/menu-assignments";
+      const url =
+        currentUser?.role_name === "SUPER_ADMIN"
+          ? `/menu-assignments?company_id=${menuForm.company_id}`
+          : "/menu-assignments";
       await apiPost(url, {
         menu_id: menuForm.menu_id,
         university_id: menuForm.university_id,
@@ -927,7 +1213,12 @@ function CateringManagementContent() {
   };
 
   const handleDeleteCompany = async (id) => {
-    if (!confirm("Firma silindiğinde bağlı tüm üniversiteler, lisans ve kullanıcılar silinecektir. Emin misiniz?")) return;
+    if (
+      !confirm(
+        "Firma silindiğinde bağlı tüm üniversiteler, lisans ve kullanıcılar silinecektir. Emin misiniz?",
+      )
+    )
+      return;
     try {
       setLoading(true);
       setError(null);
@@ -999,7 +1290,9 @@ function CateringManagementContent() {
       menu_id: crypto.randomUUID(),
       university_id: universities[0]?.id || "",
       start_date: new Date().toISOString().split("T")[0],
-      end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0],
       status: "ACTIVE",
       is_published: false,
       company_id: companies[0]?.id || "",
@@ -1032,7 +1325,9 @@ function CateringManagementContent() {
       max_users: 5,
       max_universities: 2,
       start_date: new Date().toISOString().split("T")[0],
-      expire_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      expire_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0],
       status: true,
     });
     setModalType("add-company");
@@ -1072,7 +1367,9 @@ function CateringManagementContent() {
       });
       setModalType("edit-license");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Lisans bilgisi yüklenemedi.");
+      setError(
+        err instanceof Error ? err.message : "Lisans bilgisi yüklenemedi.",
+      );
     } finally {
       setLoading(false);
     }
@@ -1121,19 +1418,19 @@ function CateringManagementContent() {
               Kayıt Ol
             </button>
           </div>
-          
+
           {authMode === "login" ? (
             <div className="login-form">
               <div className="input-group">
                 <label>E-posta</label>
-                <input 
-                  type="email" 
-                  value={email} 
-                  onChange={(e) => setEmail(e.target.value)} 
-                  placeholder="ornek@catering.com" 
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="ornek@catering.com"
                 />
               </div>
-              
+
               <div className="input-group">
                 <label>Şifre</label>
                 <input
@@ -1144,7 +1441,11 @@ function CateringManagementContent() {
                 />
               </div>
 
-              <button disabled={loading} className="btn btn-primary" onClick={signIn}>
+              <button
+                disabled={loading}
+                className="btn btn-primary"
+                onClick={signIn}
+              >
                 {loading ? "Giriş Yapılıyor..." : "Giriş Yap"}
               </button>
             </div>
@@ -1152,33 +1453,33 @@ function CateringManagementContent() {
             <div className="login-form">
               <div className="input-group">
                 <label>Firma Adı</label>
-                <input 
-                  type="text" 
-                  value={companyName} 
-                  onChange={(e) => setCompanyName(e.target.value)} 
+                <input
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
                   placeholder="Lale Catering A.Ş."
                 />
               </div>
 
               <div className="input-group">
                 <label>Ad Soyad</label>
-                <input 
-                  type="text" 
-                  value={fullName} 
-                  onChange={(e) => setFullName(e.target.value)} 
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
                   placeholder="Ahmet Yılmaz"
                 />
               </div>
               <div className="input-group">
                 <label>E-posta</label>
-                <input 
-                  type="email" 
-                  value={email} 
-                  onChange={(e) => setEmail(e.target.value)} 
-                  placeholder="ornek@catering.com" 
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="ornek@catering.com"
                 />
               </div>
-              
+
               <div className="input-group">
                 <label>Şifre</label>
                 <input
@@ -1191,136 +1492,219 @@ function CateringManagementContent() {
 
               <PasswordStrength password={password} />
 
-              <button disabled={loading} className="btn btn-primary" onClick={handleRegister}>
+              <button
+                disabled={loading}
+                className="btn btn-primary"
+                onClick={handleRegister}
+              >
                 {loading ? "Kayıt Yapılıyor..." : "Kayıt Ol ve Giriş Yap"}
               </button>
             </div>
           )}
 
-          {error && <div className="alert alert-danger" style={{ marginTop: "1rem" }}>{error}</div>}
-          {info && <div className="alert alert-success" style={{ marginTop: "1rem" }}>{info}</div>}
+          {error && (
+            <div className="alert alert-danger" style={{ marginTop: "1rem" }}>
+              {error}
+            </div>
+          )}
+          {info && (
+            <div className="alert alert-success" style={{ marginTop: "1rem" }}>
+              {info}
+            </div>
+          )}
         </section>
       </main>
     );
   }
 
-
   return (
     <>
-        {loading && (
-          <div className="loading-overlay">
-            <div className="spinner"></div>
-          </div>
-        )}
+      {loading && (
+        <div className="loading-overlay">
+          <div className="spinner"></div>
+        </div>
+      )}
 
-        {/* Notifications */}
-        {error && (
-          <div className="alert alert-danger">
-            <span>{error}</span>
-            <button className="close-btn" onClick={() => setError(null)}><X size={16} /></button>
-          </div>
-        )}
-        {info && (
-          <div className="alert alert-success">
-            <span>{info}</span>
-            <button className="close-btn" onClick={() => setInfo(null)}><X size={16} /></button>
-          </div>
-        )}
+      {/* Notifications */}
+      {error && (
+        <div className="alert alert-danger">
+          <span>{error}</span>
+          <button className="close-btn" onClick={() => setError(null)}>
+            <X size={16} />
+          </button>
+        </div>
+      )}
+      {info && (
+        <div className="alert alert-success">
+          <span>{info}</span>
+          <button className="close-btn" onClick={() => setInfo(null)}>
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
-        {/* Views */}
-        <Routes>
-          <Route index element={<CateringDashboard dashboard={dashboard} universities={universities} users={users} menuAssignments={menuAssignments} />} />
+      {/* Views */}
+      <Routes>
+        <Route
+          index
+          element={
+            <CateringDashboard
+              dashboard={dashboard}
+              universities={dashFilteredData.universities}
+              users={dashFilteredData.users}
+              menuAssignments={dashFilteredData.menuAssignments}
+              dateFilter={dateFilter}
+              onDateFilterToggle={() =>
+                setDateFilter((f) => (f === "30d" ? "all" : "30d"))
+              }
+              companyFilter={companyFilter}
+              onCompanyFilterChange={setCompanyFilter}
+              companies={companies}
+              currentUser={currentUser}
+            />
+          }
+        />
 
-          <Route path="inventory" element={
+        <Route
+          path="inventory"
+          element={
             <div className="placeholder-view">
               <div className="placeholder-icon">📦</div>
               <h2>Malzeme Deposu</h2>
               <p>
-                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu sonrasında aktif hale gelecektir.
+                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer
+                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
+                sonrasında aktif hale gelecektir.
               </p>
             </div>
-          } />
+          }
+        />
 
-          <Route path="meals" element={
+        <Route
+          path="meals"
+          element={
             <div className="placeholder-view">
               <div className="placeholder-icon">🍳</div>
               <h2>Yapılacak Yemekler</h2>
               <p>
-                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu sonrasında aktif hale gelecektir.
+                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer
+                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
+                sonrasında aktif hale gelecektir.
               </p>
             </div>
-          } />
+          }
+        />
 
-          <Route path="ai-menu" element={
+        <Route
+          path="ai-menu"
+          element={
             <div className="placeholder-view">
               <div className="placeholder-icon">🪄</div>
               <h2>AI Menü Planı</h2>
               <p>
-                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu sonrasında aktif hale gelecektir.
+                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer
+                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
+                sonrasında aktif hale gelecektir.
               </p>
             </div>
-          } />
+          }
+        />
 
-          <Route path="allergies" element={
+        <Route
+          path="allergies"
+          element={
             <div className="placeholder-view">
               <div className="placeholder-icon">🚨</div>
               <h2>Alerji Profilleri</h2>
               <p>
-                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu sonrasında aktif hale gelecektir.
+                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer
+                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
+                sonrasında aktif hale gelecektir.
               </p>
             </div>
-          } />
+          }
+        />
 
-          <Route path="holidays" element={
+        <Route
+          path="holidays"
+          element={
             <div className="placeholder-view">
               <div className="placeholder-icon">🏖️</div>
               <h2>Tatil & Devamsızlık</h2>
               <p>
-                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu sonrasında aktif hale gelecektir.
+                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer
+                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
+                sonrasında aktif hale gelecektir.
               </p>
             </div>
-          } />
+          }
+        />
 
-          <Route path="dorms" element={
+        <Route
+          path="dorms"
+          element={
             <div className="placeholder-view">
               <div className="placeholder-icon">🏢</div>
               <h2>Yurtlar</h2>
               <p>
-                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu sonrasında aktif hale gelecektir.
+                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer
+                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
+                sonrasında aktif hale gelecektir.
               </p>
             </div>
-          } />
+          }
+        />
 
-          <Route path="reports" element={
+        <Route
+          path="reports"
+          element={
             <div className="placeholder-view">
               <div className="placeholder-icon">📈</div>
               <h2>Raporlar</h2>
               <p>
-                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu sonrasında aktif hale gelecektir.
+                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer
+                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
+                sonrasında aktif hale gelecektir.
               </p>
             </div>
-          } />
+          }
+        />
 
-          <Route path="yok-univ" element={
+        <Route
+          path="yok-univ"
+          element={
             <div className="placeholder-view">
               <div className="placeholder-icon">🎓</div>
               <h2>YÖK / Üniversite</h2>
               <p>
-                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu sonrasında aktif hale gelecektir.
+                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer
+                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
+                sonrasında aktif hale gelecektir.
               </p>
             </div>
-          } />
+          }
+        />
 
-          <Route element={<Outlet />}>
-            <Route path="universities" element={
+        <Route element={<Outlet />}>
+          <Route
+            path="universities"
+            element={
               <>
                 <header className="content-header">
                   <div>
                     <h1>Üniversiteler</h1>
-                    <p>Catering firmasının hizmet sağladığı kayıtlı üniversiteler.</p>
+                    <p>
+                      Catering firmasının hizmet sağladığı kayıtlı
+                      üniversiteler.
+                    </p>
                   </div>
-                  {["SUPER_ADMIN", "CATERING_ADMIN"].includes(currentUser?.role_name || "") && (
-                    <button className="btn btn-primary" onClick={openAddUnivModal}>
+                  {["SUPER_ADMIN", "CATERING_ADMIN"].includes(
+                    currentUser?.role_name || "",
+                  ) && (
+                    <button
+                      className="btn btn-primary"
+                      onClick={openAddUnivModal}
+                    >
                       <Plus size={16} /> Yeni Üniversite Ekle
                     </button>
                   )}
@@ -1341,31 +1725,53 @@ function CateringManagementContent() {
                     <tbody>
                       {universities.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="text-center">Kayıtlı üniversite bulunamadı.</td>
+                          <td colSpan={6} className="text-center">
+                            Kayıtlı üniversite bulunamadı.
+                          </td>
                         </tr>
                       ) : (
                         universities.map((univ) => (
                           <tr key={univ.id}>
-                            <td><strong>{univ.university_name}</strong></td>
-                            <td>{univ.city ?? "-"}</td>
-                            <td>{univ.student_count?.toLocaleString() ?? "-"}</td>
                             <td>
-                              <span className={`pill pill-${univ.status ? "active" : "inactive"}`}>
+                              <strong>{univ.university_name}</strong>
+                            </td>
+                            <td>{univ.city ?? "-"}</td>
+                            <td>
+                              {univ.student_count?.toLocaleString() ?? "-"}
+                            </td>
+                            <td>
+                              <span
+                                className={`pill pill-${univ.status ? "active" : "inactive"}`}
+                              >
                                 {univ.status ? "Aktif" : "Pasif"}
                               </span>
                             </td>
-                            <td>{new Date(univ.created_at).toLocaleDateString("tr-TR")}</td>
+                            <td>
+                              {new Date(univ.created_at).toLocaleDateString(
+                                "tr-TR",
+                              )}
+                            </td>
                             <td className="actions-col">
-                              {["SUPER_ADMIN", "CATERING_ADMIN"].includes(currentUser?.role_name || "") ? (
+                              {["SUPER_ADMIN", "CATERING_ADMIN"].includes(
+                                currentUser?.role_name || "",
+                              ) ? (
                                 <>
-                                  <button className="icon-btn btn-edit" onClick={() => openEditUnivModal(univ)}>
+                                  <button
+                                    className="icon-btn btn-edit"
+                                    onClick={() => openEditUnivModal(univ)}
+                                  >
                                     <Edit2 size={14} />
                                   </button>
-                                  <button className="icon-btn btn-delete" onClick={() => handleDeleteUniv(univ.id)}>
+                                  <button
+                                    className="icon-btn btn-delete"
+                                    onClick={() => handleDeleteUniv(univ.id)}
+                                  >
                                     <Trash2 size={14} />
                                   </button>
                                 </>
-                              ) : "-"}
+                              ) : (
+                                "-"
+                              )}
                             </td>
                           </tr>
                         ))
@@ -1374,17 +1780,29 @@ function CateringManagementContent() {
                   </table>
                 </div>
               </>
-            } />
+            }
+          />
 
-            <Route path="users" element={
+          <Route
+            path="users"
+            element={
               <>
                 <header className="content-header">
                   <div>
                     <h1>Kullanıcı Yönetimi</h1>
-                    <p>Catering personeli ve üniversite yöneticisi hesapları.</p>
+                    <p>
+                      Catering personeli ve üniversite yöneticisi hesapları.
+                    </p>
                   </div>
-                  {["SUPER_ADMIN", "CATERING_ADMIN", "UNIVERSITY_ADMIN"].includes(currentUser?.role_name || "") && (
-                    <button className="btn btn-primary" onClick={openAddUserModal}>
+                  {[
+                    "SUPER_ADMIN",
+                    "CATERING_ADMIN",
+                    "UNIVERSITY_ADMIN",
+                  ].includes(currentUser?.role_name || "") && (
+                    <button
+                      className="btn btn-primary"
+                      onClick={openAddUserModal}
+                    >
                       <Plus size={16} /> Yeni Kullanıcı Davet Et
                     </button>
                   )}
@@ -1406,40 +1824,67 @@ function CateringManagementContent() {
                     <tbody>
                       {users.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="text-center">Kayıtlı kullanıcı bulunamadı.</td>
+                          <td colSpan={7} className="text-center">
+                            Kayıtlı kullanıcı bulunamadı.
+                          </td>
                         </tr>
                       ) : (
                         users.map((user) => {
-                          const uName = universities.find((u) => u.id === user.university_id)?.university_name || "-";
+                          const uName =
+                            universities.find(
+                              (u) => u.id === user.university_id,
+                            )?.university_name || "-";
                           return (
                             <tr key={user.id}>
-                              <td><strong>{user.full_name}</strong></td>
+                              <td>
+                                <strong>{user.full_name}</strong>
+                              </td>
                               <td>{user.email}</td>
                               <td>
-                                <span className={`badge badge-role ${user.role_name.toLowerCase()}`}>
-                                  {ROLE_LABELS[user.role_name] || user.role_name}
+                                <span
+                                  className={`badge badge-role ${user.role_name.toLowerCase()}`}
+                                >
+                                  {ROLE_LABELS[user.role_name] ||
+                                    user.role_name}
                                 </span>
                               </td>
                               <td>{uName}</td>
                               <td>{user.phone ?? "-"}</td>
                               <td>
-                                <span className={`pill pill-${user.is_active ? "active" : "inactive"}`}>
+                                <span
+                                  className={`pill pill-${user.is_active ? "active" : "inactive"}`}
+                                >
                                   {user.is_active ? "Aktif" : "Pasif"}
                                 </span>
                               </td>
                               <td className="actions-col">
-                                {["SUPER_ADMIN", "CATERING_ADMIN", "UNIVERSITY_ADMIN"].includes(currentUser?.role_name || "") ? (
+                                {[
+                                  "SUPER_ADMIN",
+                                  "CATERING_ADMIN",
+                                  "UNIVERSITY_ADMIN",
+                                ].includes(currentUser?.role_name || "") ? (
                                   <>
-                                    <button className="icon-btn btn-edit" onClick={() => openEditUserModal(user)}>
+                                    <button
+                                      className="icon-btn btn-edit"
+                                      onClick={() => openEditUserModal(user)}
+                                    >
                                       <Edit2 size={14} />
                                     </button>
-                                    {user.auth_user_id !== currentUser?.auth_user_id && (
-                                      <button className="icon-btn btn-delete" onClick={() => handleDeleteUser(user.id)}>
+                                    {user.auth_user_id !==
+                                      currentUser?.auth_user_id && (
+                                      <button
+                                        className="icon-btn btn-delete"
+                                        onClick={() =>
+                                          handleDeleteUser(user.id)
+                                        }
+                                      >
                                         <Trash2 size={14} />
                                       </button>
                                     )}
                                   </>
-                                ) : "-"}
+                                ) : (
+                                  "-"
+                                )}
                               </td>
                             </tr>
                           );
@@ -1449,17 +1894,28 @@ function CateringManagementContent() {
                   </table>
                 </div>
               </>
-            } />
+            }
+          />
 
-            <Route path="menu-assignments" element={
+          <Route
+            path="menu-assignments"
+            element={
               <>
                 <header className="content-header">
                   <div>
                     <h1>Menü Atamaları</h1>
-                    <p>AI ile oluşturulan menülerin üniversiteler bazında planlama ve takvimi.</p>
+                    <p>
+                      AI ile oluşturulan menülerin üniversiteler bazında
+                      planlama ve takvimi.
+                    </p>
                   </div>
-                  {["SUPER_ADMIN", "CATERING_ADMIN", "DIETITIAN"].includes(currentUser?.role_name || "") && (
-                    <button className="btn btn-primary" onClick={openAddMenuModal}>
+                  {["SUPER_ADMIN", "CATERING_ADMIN", "DIETITIAN"].includes(
+                    currentUser?.role_name || "",
+                  ) && (
+                    <button
+                      className="btn btn-primary"
+                      onClick={openAddMenuModal}
+                    >
                       <Plus size={16} /> Menü Ata
                     </button>
                   )}
@@ -1482,42 +1938,87 @@ function CateringManagementContent() {
                     <tbody>
                       {menuAssignments.length === 0 ? (
                         <tr>
-                          <td colSpan={8} className="text-center">Kayıtlı menü ataması bulunamadı.</td>
+                          <td colSpan={8} className="text-center">
+                            Kayıtlı menü ataması bulunamadı.
+                          </td>
                         </tr>
                       ) : (
                         menuAssignments.map((menu) => {
-                          const uName = universities.find((u) => u.id === menu.university_id)?.university_name || "-";
-                          const assignerName = users.find((u) => u.id === menu.assigned_by)?.full_name || "Bilinmiyor";
+                          const uName =
+                            universities.find(
+                              (u) => u.id === menu.university_id,
+                            )?.university_name || "-";
+                          const assignerName =
+                            users.find((u) => u.id === menu.assigned_by)
+                              ?.full_name || "Bilinmiyor";
                           return (
                             <tr key={menu.id}>
-                              <td><span className="mono">{menu.menu_id.substring(0, 8)}...</span></td>
-                              <td><strong>{uName}</strong></td>
-                              <td>{new Date(menu.start_date).toLocaleDateString("tr-TR")}</td>
-                              <td>{new Date(menu.end_date).toLocaleDateString("tr-TR")}</td>
                               <td>
-                                <span className={`pill pill-${menu.status.toLowerCase()}`}>
-                                  {menu.status === "ACTIVE" ? "Aktif" : menu.status === "INACTIVE" ? "Pasif" : "Arşivlendi"}
+                                <span className="mono">
+                                  {menu.menu_id.substring(0, 8)}...
                                 </span>
                               </td>
                               <td>
-                                <span className={`pill pill-${menu.is_published ? "active" : "inactive"}`}>
+                                <strong>{uName}</strong>
+                              </td>
+                              <td>
+                                {new Date(menu.start_date).toLocaleDateString(
+                                  "tr-TR",
+                                )}
+                              </td>
+                              <td>
+                                {new Date(menu.end_date).toLocaleDateString(
+                                  "tr-TR",
+                                )}
+                              </td>
+                              <td>
+                                <span
+                                  className={`pill pill-${menu.status.toLowerCase()}`}
+                                >
+                                  {menu.status === "ACTIVE"
+                                    ? "Aktif"
+                                    : menu.status === "INACTIVE"
+                                      ? "Pasif"
+                                      : "Arşivlendi"}
+                                </span>
+                              </td>
+                              <td>
+                                <span
+                                  className={`pill pill-${menu.is_published ? "active" : "inactive"}`}
+                                >
                                   {menu.is_published ? "Yayınlandı" : "Taslak"}
                                 </span>
                               </td>
                               <td>{assignerName}</td>
                               <td className="actions-col">
-                                {["SUPER_ADMIN", "CATERING_ADMIN", "DIETITIAN"].includes(currentUser?.role_name || "") ? (
+                                {[
+                                  "SUPER_ADMIN",
+                                  "CATERING_ADMIN",
+                                  "DIETITIAN",
+                                ].includes(currentUser?.role_name || "") ? (
                                   <>
-                                    <button className="icon-btn btn-edit" onClick={() => openEditMenuModal(menu)}>
+                                    <button
+                                      className="icon-btn btn-edit"
+                                      onClick={() => openEditMenuModal(menu)}
+                                    >
                                       <Edit2 size={14} />
                                     </button>
-                                    {["SUPER_ADMIN", "CATERING_ADMIN"].includes(currentUser?.role_name || "") && (
-                                      <button className="icon-btn btn-delete" onClick={() => handleDeleteMenu(menu.id)}>
+                                    {["SUPER_ADMIN", "CATERING_ADMIN"].includes(
+                                      currentUser?.role_name || "",
+                                    ) && (
+                                      <button
+                                        className="icon-btn btn-delete"
+                                        onClick={() =>
+                                          handleDeleteMenu(menu.id)
+                                        }
+                                      >
                                         <Trash2 size={14} />
                                       </button>
                                     )}
                                   </>
-                                ) : "-"}
+                                ) : (
+                                  "-"
+                                )}
                               </td>
                             </tr>
                           );
@@ -1527,17 +2028,26 @@ function CateringManagementContent() {
                   </table>
                 </div>
               </>
-            } />
+            }
+          />
 
-            <Route path="companies" element={
+          <Route
+            path="companies"
+            element={
               roleCan(currentUser?.role_name, "companies") ? (
                 <>
                   <header className="content-header">
                     <div>
                       <h1>Catering Firmaları & Lisans Planları</h1>
-                      <p>SaaS platformuna kayıtlı tüm catering firmaları, limitleri ve lisansları.</p>
+                      <p>
+                        SaaS platformuna kayıtlı tüm catering firmaları,
+                        limitleri ve lisansları.
+                      </p>
                     </div>
-                    <button className="btn btn-primary" onClick={openAddCompanyModal}>
+                    <button
+                      className="btn btn-primary"
+                      onClick={openAddCompanyModal}
+                    >
                       <Plus size={16} /> Yeni Firma Ekle
                     </button>
                   </header>
@@ -1559,17 +2069,23 @@ function CateringManagementContent() {
                       <tbody>
                         {companies.length === 0 ? (
                           <tr>
-                            <td colSpan={8} className="text-center">Kayıtlı firma bulunamadı.</td>
+                            <td colSpan={8} className="text-center">
+                              Kayıtlı firma bulunamadı.
+                            </td>
                           </tr>
                         ) : (
                           companies.map((comp) => (
                             <tr key={comp.id}>
-                              <td><strong>{comp.company_name}</strong></td>
+                              <td>
+                                <strong>{comp.company_name}</strong>
+                              </td>
                               <td>{comp.tax_number ?? "-"}</td>
                               <td>{comp.email ?? "-"}</td>
                               <td>{comp.phone ?? "-"}</td>
                               <td>
-                                <span className={`pill pill-${comp.status ? "active" : "inactive"}`}>
+                                <span
+                                  className={`pill pill-${comp.status ? "active" : "inactive"}`}
+                                >
                                   {comp.status ? "Aktif" : "Pasif"}
                                 </span>
                               </td>
@@ -1578,17 +2094,27 @@ function CateringManagementContent() {
                                   {comp.email ? "Professional" : "Starter"}
                                 </span>
                               </td>
-                              <td>
-                                Detay için lisansı düzenleyin
-                              </td>
+                              <td>Detay için lisansı düzenleyin</td>
                               <td className="actions-col-wide">
-                                <button className="icon-btn btn-edit" title="Firmayı Düzenle" onClick={() => openEditCompanyModal(comp)}>
+                                <button
+                                  className="icon-btn btn-edit"
+                                  title="Firmayı Düzenle"
+                                  onClick={() => openEditCompanyModal(comp)}
+                                >
                                   <Edit2 size={14} /> Firma
                                 </button>
-                                <button className="icon-btn btn-license" title="Lisansı Düzenle" onClick={() => openEditLicenseModal(comp)}>
+                                <button
+                                  className="icon-btn btn-license"
+                                  title="Lisansı Düzenle"
+                                  onClick={() => openEditLicenseModal(comp)}
+                                >
                                   <Award size={14} /> Lisans
                                 </button>
-                                <button className="icon-btn btn-delete" title="Firmayı Sil" onClick={() => handleDeleteCompany(comp.id)}>
+                                <button
+                                  className="icon-btn btn-delete"
+                                  title="Firmayı Sil"
+                                  onClick={() => handleDeleteCompany(comp.id)}
+                                >
                                   <Trash2 size={14} /> Sil
                                 </button>
                               </td>
@@ -1599,13 +2125,18 @@ function CateringManagementContent() {
                     </table>
                   </div>
                 </>
-              ) : <Navigate to="/modules/catering-management" replace />
-            } />
-          </Route>
+              ) : (
+                <Navigate to="/modules/catering-management" replace />
+              )
+            }
+          />
+        </Route>
 
-          <Route path="*" element={<Navigate to="/modules/catering-management" replace />} />
-        </Routes>
-
+        <Route
+          path="*"
+          element={<Navigate to="/modules/catering-management" replace />}
+        />
+      </Routes>
 
       {/* Modals */}
       {modalType && (
@@ -1621,7 +2152,8 @@ function CateringManagementContent() {
                 {modalType === "edit-menu" && "Menü Atamasını Düzenle"}
                 {modalType === "add-company" && "Firma Ekle"}
                 {modalType === "edit-company" && "Firma Bilgilerini Düzenle"}
-                {modalType === "edit-license" && `Lisans Yönetimi - ${selectedCompany?.company_name}`}
+                {modalType === "edit-license" &&
+                  `Lisans Yönetimi - ${selectedCompany?.company_name}`}
               </h2>
               <button className="close-btn" onClick={() => setModalType(null)}>
                 <X size={18} />
@@ -1632,25 +2164,38 @@ function CateringManagementContent() {
               {/* Add / Edit University */}
               {(modalType === "add-univ" || modalType === "edit-univ") && (
                 <>
-                  {currentUser?.role_name === "SUPER_ADMIN" && modalType === "add-univ" && (
-                    <div className="input-group">
-                      <label>Firma</label>
-                      <select 
-                        value={univForm.company_id} 
-                        onChange={(e) => setUnivForm({ ...univForm, company_id: e.target.value })}
-                      >
-                        {companies.map((c) => (
-                          <option key={c.id} value={c.id}>{c.company_name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+                  {currentUser?.role_name === "SUPER_ADMIN" &&
+                    modalType === "add-univ" && (
+                      <div className="input-group">
+                        <label>Firma</label>
+                        <select
+                          value={univForm.company_id}
+                          onChange={(e) =>
+                            setUnivForm({
+                              ...univForm,
+                              company_id: e.target.value,
+                            })
+                          }
+                        >
+                          {companies.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.company_name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   <div className="input-group">
                     <label>Üniversite Adı</label>
                     <input
                       type="text"
                       value={univForm.university_name}
-                      onChange={(e) => setUnivForm({ ...univForm, university_name: e.target.value })}
+                      onChange={(e) =>
+                        setUnivForm({
+                          ...univForm,
+                          university_name: e.target.value,
+                        })
+                      }
                       placeholder="Örn. İstanbul Teknik Üniversitesi"
                     />
                   </div>
@@ -1660,7 +2205,9 @@ function CateringManagementContent() {
                       <input
                         type="text"
                         value={univForm.city}
-                        onChange={(e) => setUnivForm({ ...univForm, city: e.target.value })}
+                        onChange={(e) =>
+                          setUnivForm({ ...univForm, city: e.target.value })
+                        }
                         placeholder="Örn. İstanbul"
                       />
                     </div>
@@ -1669,7 +2216,12 @@ function CateringManagementContent() {
                       <input
                         type="number"
                         value={univForm.student_count}
-                        onChange={(e) => setUnivForm({ ...univForm, student_count: parseInt(e.target.value) || 0 })}
+                        onChange={(e) =>
+                          setUnivForm({
+                            ...univForm,
+                            student_count: parseInt(e.target.value) || 0,
+                          })
+                        }
                       />
                     </div>
                   </div>
@@ -1679,12 +2231,19 @@ function CateringManagementContent() {
                         type="checkbox"
                         id="univ_status"
                         checked={univForm.status}
-                        onChange={(e) => setUnivForm({ ...univForm, status: e.target.checked })}
+                        onChange={(e) =>
+                          setUnivForm({ ...univForm, status: e.target.checked })
+                        }
                       />
                       <label htmlFor="univ_status">Aktif Üniversite</label>
                     </div>
                   )}
-                  <button className="btn btn-primary" onClick={modalType === "add-univ" ? handleAddUniv : handleEditUniv}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={
+                      modalType === "add-univ" ? handleAddUniv : handleEditUniv
+                    }
+                  >
                     {loading ? "Kaydediliyor..." : "Kaydet"}
                   </button>
                 </>
@@ -1693,26 +2252,39 @@ function CateringManagementContent() {
               {/* Add / Edit User */}
               {(modalType === "add-user" || modalType === "edit-user") && (
                 <>
-                  {currentUser?.role_name === "SUPER_ADMIN" && modalType === "add-user" && (
-                    <div className="input-group">
-                      <label>Firma</label>
-                      <select 
-                        value={userForm.company_id} 
-                        onChange={(e) => setUserForm({ ...userForm, company_id: e.target.value })}
-                      >
-                        {companies.map((c) => (
-                          <option key={c.id} value={c.id}>{c.company_name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+                  {currentUser?.role_name === "SUPER_ADMIN" &&
+                    modalType === "add-user" && (
+                      <div className="input-group">
+                        <label>Firma</label>
+                        <select
+                          value={userForm.company_id}
+                          onChange={(e) =>
+                            setUserForm({
+                              ...userForm,
+                              company_id: e.target.value,
+                            })
+                          }
+                        >
+                          {companies.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.company_name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   {modalType === "add-user" && (
                     <div className="input-group">
                       <label>Auth User ID (Supabase UID)</label>
                       <input
                         type="text"
                         value={userForm.auth_user_id}
-                        onChange={(e) => setUserForm({ ...userForm, auth_user_id: e.target.value })}
+                        onChange={(e) =>
+                          setUserForm({
+                            ...userForm,
+                            auth_user_id: e.target.value,
+                          })
+                        }
                         placeholder="UUID girin veya otomatik oluşanı kullanın"
                       />
                     </div>
@@ -1724,7 +2296,9 @@ function CateringManagementContent() {
                         type="email"
                         value={userForm.email}
                         disabled={modalType === "edit-user"}
-                        onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                        onChange={(e) =>
+                          setUserForm({ ...userForm, email: e.target.value })
+                        }
                         placeholder="Örn. ahmet@catering.com"
                       />
                     </div>
@@ -1733,7 +2307,12 @@ function CateringManagementContent() {
                       <input
                         type="text"
                         value={userForm.full_name}
-                        onChange={(e) => setUserForm({ ...userForm, full_name: e.target.value })}
+                        onChange={(e) =>
+                          setUserForm({
+                            ...userForm,
+                            full_name: e.target.value,
+                          })
+                        }
                         placeholder="Ahmet Yılmaz"
                       />
                     </div>
@@ -1744,7 +2323,9 @@ function CateringManagementContent() {
                       <input
                         type="text"
                         value={userForm.phone}
-                        onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
+                        onChange={(e) =>
+                          setUserForm({ ...userForm, phone: e.target.value })
+                        }
                         placeholder="555-1234"
                       />
                     </div>
@@ -1752,47 +2333,78 @@ function CateringManagementContent() {
                       <label>Rol</label>
                       <select
                         value={userForm.role_name}
-                        onChange={(e) => setUserForm({ ...userForm, role_name: e.target.value })}
+                        onChange={(e) =>
+                          setUserForm({
+                            ...userForm,
+                            role_name: e.target.value,
+                          })
+                        }
                       >
                         {currentUser?.role_name === "SUPER_ADMIN" && (
                           <option value="SUPER_ADMIN">Süper Admin</option>
                         )}
                         {currentUser?.role_name !== "UNIVERSITY_ADMIN" && (
-                          <option value="CATERING_ADMIN">Catering Yöneticisi</option>
+                          <option value="CATERING_ADMIN">
+                            Catering Yöneticisi
+                          </option>
                         )}
-                        <option value="UNIVERSITY_ADMIN">Üniversite Yöneticisi</option>
+                        <option value="UNIVERSITY_ADMIN">
+                          Üniversite Yöneticisi
+                        </option>
                         <option value="DIETITIAN">Diyetisyen</option>
                         <option value="WAREHOUSE_STAFF">Depo Görevlisi</option>
-                        <option value="PURCHASING_STAFF">Satın Alma Sorumlusu</option>
+                        <option value="PURCHASING_STAFF">
+                          Satın Alma Sorumlusu
+                        </option>
                       </select>
                     </div>
                   </div>
-                  {userForm.role_name !== "SUPER_ADMIN" && userForm.role_name !== "CATERING_ADMIN" && (
-                    <div className="input-group">
-                      <label>Görevli Olduğu Üniversite</label>
-                      <select
-                        value={userForm.university_id}
-                        onChange={(e) => setUserForm({ ...userForm, university_id: e.target.value })}
-                      >
-                        <option value="">Seçiniz...</option>
-                        {universities.map((u) => (
-                          <option key={u.id} value={u.id}>{u.university_name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+                  {userForm.role_name !== "SUPER_ADMIN" &&
+                    userForm.role_name !== "CATERING_ADMIN" && (
+                      <div className="input-group">
+                        <label>Görevli Olduğu Üniversite</label>
+                        <select
+                          value={userForm.university_id}
+                          onChange={(e) =>
+                            setUserForm({
+                              ...userForm,
+                              university_id: e.target.value,
+                            })
+                          }
+                        >
+                          <option value="">Seçiniz...</option>
+                          {universities.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.university_name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   {modalType === "edit-user" && (
                     <div className="checkbox-group">
                       <input
                         type="checkbox"
                         id="user_active"
                         checked={userForm.is_active}
-                        onChange={(e) => setUserForm({ ...userForm, is_active: e.target.checked })}
+                        onChange={(e) =>
+                          setUserForm({
+                            ...userForm,
+                            is_active: e.target.checked,
+                          })
+                        }
                       />
-                      <label htmlFor="user_active">Aktif Kullanıcı Hesabı</label>
+                      <label htmlFor="user_active">
+                        Aktif Kullanıcı Hesabı
+                      </label>
                     </div>
                   )}
-                  <button className="btn btn-primary" onClick={modalType === "add-user" ? handleAddUser : handleEditUser}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={
+                      modalType === "add-user" ? handleAddUser : handleEditUser
+                    }
+                  >
                     {loading ? "Kaydediliyor..." : "Kaydet"}
                   </button>
                 </>
@@ -1801,26 +2413,38 @@ function CateringManagementContent() {
               {/* Add / Edit Menu Assignment */}
               {(modalType === "add-menu" || modalType === "edit-menu") && (
                 <>
-                  {currentUser?.role_name === "SUPER_ADMIN" && modalType === "add-menu" && (
-                    <div className="input-group">
-                      <label>Firma</label>
-                      <select 
-                        value={menuForm.company_id} 
-                        onChange={(e) => setMenuForm({ ...menuForm, company_id: e.target.value })}
-                      >
-                        {companies.map((c) => (
-                          <option key={c.id} value={c.id}>{c.company_name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+                  {currentUser?.role_name === "SUPER_ADMIN" &&
+                    modalType === "add-menu" && (
+                      <div className="input-group">
+                        <label>Firma</label>
+                        <select
+                          value={menuForm.company_id}
+                          onChange={(e) =>
+                            setMenuForm({
+                              ...menuForm,
+                              company_id: e.target.value,
+                            })
+                          }
+                        >
+                          {companies.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.company_name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   {modalType === "add-menu" && (
                     <div className="input-group">
-                      <label>Menü ID (AI Modülünden Gelen Benzersiz Kimlik)</label>
+                      <label>
+                        Menü ID (AI Modülünden Gelen Benzersiz Kimlik)
+                      </label>
                       <input
                         type="text"
                         value={menuForm.menu_id}
-                        onChange={(e) => setMenuForm({ ...menuForm, menu_id: e.target.value })}
+                        onChange={(e) =>
+                          setMenuForm({ ...menuForm, menu_id: e.target.value })
+                        }
                         placeholder="UUID formatında"
                       />
                     </div>
@@ -1830,10 +2454,17 @@ function CateringManagementContent() {
                       <label>Üniversite</label>
                       <select
                         value={menuForm.university_id}
-                        onChange={(e) => setMenuForm({ ...menuForm, university_id: e.target.value })}
+                        onChange={(e) =>
+                          setMenuForm({
+                            ...menuForm,
+                            university_id: e.target.value,
+                          })
+                        }
                       >
                         {universities.map((u) => (
-                          <option key={u.id} value={u.id}>{u.university_name}</option>
+                          <option key={u.id} value={u.id}>
+                            {u.university_name}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -1844,7 +2475,12 @@ function CateringManagementContent() {
                       <input
                         type="date"
                         value={menuForm.start_date}
-                        onChange={(e) => setMenuForm({ ...menuForm, start_date: e.target.value })}
+                        onChange={(e) =>
+                          setMenuForm({
+                            ...menuForm,
+                            start_date: e.target.value,
+                          })
+                        }
                       />
                     </div>
                     <div className="input-group">
@@ -1852,7 +2488,9 @@ function CateringManagementContent() {
                       <input
                         type="date"
                         value={menuForm.end_date}
-                        onChange={(e) => setMenuForm({ ...menuForm, end_date: e.target.value })}
+                        onChange={(e) =>
+                          setMenuForm({ ...menuForm, end_date: e.target.value })
+                        }
                       />
                     </div>
                   </div>
@@ -1861,7 +2499,9 @@ function CateringManagementContent() {
                       <label>Durum</label>
                       <select
                         value={menuForm.status}
-                        onChange={(e) => setMenuForm({ ...menuForm, status: e.target.value })}
+                        onChange={(e) =>
+                          setMenuForm({ ...menuForm, status: e.target.value })
+                        }
                       >
                         <option value="ACTIVE">Aktif</option>
                         <option value="INACTIVE">Pasif</option>
@@ -1873,26 +2513,42 @@ function CateringManagementContent() {
                         type="checkbox"
                         id="is_published"
                         checked={menuForm.is_published}
-                        onChange={(e) => setMenuForm({ ...menuForm, is_published: e.target.checked })}
+                        onChange={(e) =>
+                          setMenuForm({
+                            ...menuForm,
+                            is_published: e.target.checked,
+                          })
+                        }
                       />
                       <label htmlFor="is_published">Öğrencilere Yayınla</label>
                     </div>
                   </div>
-                  <button className="btn btn-primary" onClick={modalType === "add-menu" ? handleAddMenu : handleEditMenu}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={
+                      modalType === "add-menu" ? handleAddMenu : handleEditMenu
+                    }
+                  >
                     {loading ? "Kaydediliyor..." : "Menüyü Ata"}
                   </button>
                 </>
               )}
 
               {/* Add / Edit Company */}
-              {(modalType === "add-company" || modalType === "edit-company") && (
+              {(modalType === "add-company" ||
+                modalType === "edit-company") && (
                 <>
                   <div className="input-group">
                     <label>Firma Adı</label>
                     <input
                       type="text"
                       value={companyForm.company_name}
-                      onChange={(e) => setCompanyForm({ ...companyForm, company_name: e.target.value })}
+                      onChange={(e) =>
+                        setCompanyForm({
+                          ...companyForm,
+                          company_name: e.target.value,
+                        })
+                      }
                       placeholder="Örn. Lale Catering A.Ş."
                     />
                   </div>
@@ -1902,7 +2558,12 @@ function CateringManagementContent() {
                       <input
                         type="text"
                         value={companyForm.tax_number}
-                        onChange={(e) => setCompanyForm({ ...companyForm, tax_number: e.target.value })}
+                        onChange={(e) =>
+                          setCompanyForm({
+                            ...companyForm,
+                            tax_number: e.target.value,
+                          })
+                        }
                         placeholder="Örn. 9988776655"
                       />
                     </div>
@@ -1911,7 +2572,12 @@ function CateringManagementContent() {
                       <input
                         type="email"
                         value={companyForm.email}
-                        onChange={(e) => setCompanyForm({ ...companyForm, email: e.target.value })}
+                        onChange={(e) =>
+                          setCompanyForm({
+                            ...companyForm,
+                            email: e.target.value,
+                          })
+                        }
                         placeholder="kurumsal@lale.com"
                       />
                     </div>
@@ -1922,7 +2588,12 @@ function CateringManagementContent() {
                       <input
                         type="text"
                         value={companyForm.phone}
-                        onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })}
+                        onChange={(e) =>
+                          setCompanyForm({
+                            ...companyForm,
+                            phone: e.target.value,
+                          })
+                        }
                         placeholder="555-555-5555"
                       />
                     </div>
@@ -1931,7 +2602,12 @@ function CateringManagementContent() {
                       <input
                         type="text"
                         value={companyForm.address}
-                        onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })}
+                        onChange={(e) =>
+                          setCompanyForm({
+                            ...companyForm,
+                            address: e.target.value,
+                          })
+                        }
                         placeholder="Karanfil Sok. No: 12"
                       />
                     </div>
@@ -1945,7 +2621,12 @@ function CateringManagementContent() {
                           <label>Plan Adı</label>
                           <select
                             value={companyForm.plan_name}
-                            onChange={(e) => setCompanyForm({ ...companyForm, plan_name: e.target.value })}
+                            onChange={(e) =>
+                              setCompanyForm({
+                                ...companyForm,
+                                plan_name: e.target.value,
+                              })
+                            }
                           >
                             <option value="Starter">Starter</option>
                             <option value="Professional">Professional</option>
@@ -1957,7 +2638,12 @@ function CateringManagementContent() {
                           <input
                             type="number"
                             value={companyForm.max_universities}
-                            onChange={(e) => setCompanyForm({ ...companyForm, max_universities: parseInt(e.target.value) || 1 })}
+                            onChange={(e) =>
+                              setCompanyForm({
+                                ...companyForm,
+                                max_universities: parseInt(e.target.value) || 1,
+                              })
+                            }
                           />
                         </div>
                         <div className="input-group">
@@ -1965,7 +2651,12 @@ function CateringManagementContent() {
                           <input
                             type="number"
                             value={companyForm.max_users}
-                            onChange={(e) => setCompanyForm({ ...companyForm, max_users: parseInt(e.target.value) || 1 })}
+                            onChange={(e) =>
+                              setCompanyForm({
+                                ...companyForm,
+                                max_users: parseInt(e.target.value) || 1,
+                              })
+                            }
                           />
                         </div>
                       </div>
@@ -1975,7 +2666,12 @@ function CateringManagementContent() {
                           <input
                             type="date"
                             value={companyForm.start_date}
-                            onChange={(e) => setCompanyForm({ ...companyForm, start_date: e.target.value })}
+                            onChange={(e) =>
+                              setCompanyForm({
+                                ...companyForm,
+                                start_date: e.target.value,
+                              })
+                            }
                           />
                         </div>
                         <div className="input-group">
@@ -1983,7 +2679,12 @@ function CateringManagementContent() {
                           <input
                             type="date"
                             value={companyForm.expire_date}
-                            onChange={(e) => setCompanyForm({ ...companyForm, expire_date: e.target.value })}
+                            onChange={(e) =>
+                              setCompanyForm({
+                                ...companyForm,
+                                expire_date: e.target.value,
+                              })
+                            }
                           />
                         </div>
                       </div>
@@ -1996,13 +2697,25 @@ function CateringManagementContent() {
                         type="checkbox"
                         id="comp_status"
                         checked={companyForm.status}
-                        onChange={(e) => setCompanyForm({ ...companyForm, status: e.target.checked })}
+                        onChange={(e) =>
+                          setCompanyForm({
+                            ...companyForm,
+                            status: e.target.checked,
+                          })
+                        }
                       />
                       <label htmlFor="comp_status">Aktif Firma Hesabı</label>
                     </div>
                   )}
 
-                  <button className="btn btn-primary" onClick={modalType === "add-company" ? handleAddCompany : handleEditCompany}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={
+                      modalType === "add-company"
+                        ? handleAddCompany
+                        : handleEditCompany
+                    }
+                  >
                     {loading ? "Kaydediliyor..." : "Firma Kaydet"}
                   </button>
                 </>
@@ -2016,7 +2729,12 @@ function CateringManagementContent() {
                       <label>Plan Adı</label>
                       <select
                         value={licenseForm.plan_name}
-                        onChange={(e) => setLicenseForm({ ...licenseForm, plan_name: e.target.value })}
+                        onChange={(e) =>
+                          setLicenseForm({
+                            ...licenseForm,
+                            plan_name: e.target.value,
+                          })
+                        }
                       >
                         <option value="Starter">Starter</option>
                         <option value="Professional">Professional</option>
@@ -2028,7 +2746,12 @@ function CateringManagementContent() {
                       <input
                         type="number"
                         value={licenseForm.max_universities}
-                        onChange={(e) => setLicenseForm({ ...licenseForm, max_universities: parseInt(e.target.value) || 1 })}
+                        onChange={(e) =>
+                          setLicenseForm({
+                            ...licenseForm,
+                            max_universities: parseInt(e.target.value) || 1,
+                          })
+                        }
                       />
                     </div>
                     <div className="input-group">
@@ -2036,7 +2759,12 @@ function CateringManagementContent() {
                       <input
                         type="number"
                         value={licenseForm.max_users}
-                        onChange={(e) => setLicenseForm({ ...licenseForm, max_users: parseInt(e.target.value) || 1 })}
+                        onChange={(e) =>
+                          setLicenseForm({
+                            ...licenseForm,
+                            max_users: parseInt(e.target.value) || 1,
+                          })
+                        }
                       />
                     </div>
                   </div>
@@ -2046,7 +2774,12 @@ function CateringManagementContent() {
                       <input
                         type="date"
                         value={licenseForm.start_date}
-                        onChange={(e) => setLicenseForm({ ...licenseForm, start_date: e.target.value })}
+                        onChange={(e) =>
+                          setLicenseForm({
+                            ...licenseForm,
+                            start_date: e.target.value,
+                          })
+                        }
                       />
                     </div>
                     <div className="input-group">
@@ -2054,7 +2787,12 @@ function CateringManagementContent() {
                       <input
                         type="date"
                         value={licenseForm.expire_date}
-                        onChange={(e) => setLicenseForm({ ...licenseForm, expire_date: e.target.value })}
+                        onChange={(e) =>
+                          setLicenseForm({
+                            ...licenseForm,
+                            expire_date: e.target.value,
+                          })
+                        }
                       />
                     </div>
                   </div>
@@ -2063,12 +2801,22 @@ function CateringManagementContent() {
                       type="checkbox"
                       id="lic_active"
                       checked={licenseForm.status}
-                      onChange={(e) => setLicenseForm({ ...licenseForm, status: e.target.checked })}
+                      onChange={(e) =>
+                        setLicenseForm({
+                          ...licenseForm,
+                          status: e.target.checked,
+                        })
+                      }
                     />
                     <label htmlFor="lic_active">Lisans Aktif</label>
                   </div>
-                  <button className="btn btn-primary" onClick={handleEditLicense}>
-                    {loading ? "Kaydediliyor..." : "Lisans Bilgilerini Güncelle"}
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleEditLicense}
+                  >
+                    {loading
+                      ? "Kaydediliyor..."
+                      : "Lisans Bilgilerini Güncelle"}
                   </button>
                 </>
               )}
@@ -2087,4 +2835,3 @@ export default function App() {
     </div>
   );
 }
-
