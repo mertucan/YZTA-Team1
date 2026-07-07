@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+
 from app.database import get_db
 from app.models.absence import Absence, AbsenceCreate
 
@@ -13,13 +14,24 @@ def list_absences():
 
 @router.get("/student/{student_id}", response_model=list[Absence])
 def get_student_absences(student_id: int):
-    res = get_db().table("student_absences").select("*").eq("student_id", student_id).execute()
+    res = (
+        get_db()
+        .table("student_absences")
+        .select("*")
+        .eq("student_id", student_id)
+        .execute()
+    )
     return res.data
 
 
 @router.post("/", response_model=Absence, status_code=201)
 def create_absence(payload: AbsenceCreate):
-    res = get_db().table("student_absences").insert(payload.model_dump()).execute()
+    res = (
+        get_db()
+        .table("student_absences")
+        .insert(payload.model_dump(mode="json"))
+        .execute()
+    )
     return res.data[0]
 
 
