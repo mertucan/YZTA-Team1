@@ -16,40 +16,11 @@ export function useTheme() {
 }
 
 function ToastProvider({ children }) {
-  const [toasts, setToasts] = useState([]);
-
-  const showToast = (message, type = "info") => {
-    const id = crypto.randomUUID();
-    setToasts((current) => [...current, { id, message, type }]);
-    window.setTimeout(() => {
-      setToasts((current) => current.filter((toast) => toast.id !== id));
-    }, 2600);
-  };
-
-  useEffect(() => {
-    const handleButtonClick = (event) => {
-      const button = event.target.closest("button");
-      if (!button || button.dataset.toast === "off") return;
-
-      const message = button.dataset.toast || `${button.textContent.trim() || "Buton"} işlemi çalıştırıldı`;
-      showToast(message);
-    };
-
-    document.addEventListener("click", handleButtonClick);
-    return () => document.removeEventListener("click", handleButtonClick);
-  }, []);
+  const showToast = () => {};
 
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div style={toastWrap}>
-        {toasts.map((toast) => (
-          <div key={toast.id} style={{ ...toastBox, ...toastType[toast.type] }}>
-            <span style={toastDot} />
-            <span>{toast.message}</span>
-          </div>
-        ))}
-      </div>
     </ToastContext.Provider>
   );
 }
@@ -78,44 +49,3 @@ export default function AppProviders({ children }) {
     </ThemeProvider>
   );
 }
-
-const toastWrap = {
-  position: "fixed",
-  top: 68,
-  right: 20,
-  display: "flex",
-  flexDirection: "column",
-  gap: 10,
-  zIndex: 1000,
-  pointerEvents: "none",
-};
-
-const toastBox = {
-  minWidth: 230,
-  maxWidth: 360,
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  padding: "11px 14px",
-  borderRadius: 8,
-  border: "1px solid var(--border)",
-  background: "var(--surface)",
-  boxShadow: "var(--shadow-md)",
-  color: "var(--text)",
-  fontSize: 12,
-  fontWeight: 600,
-};
-
-const toastType = {
-  info: { borderColor: "var(--accent)", background: "var(--surface)" },
-  success: { borderColor: "var(--green-border)", background: "var(--green-bg)" },
-  error: { borderColor: "var(--red-border)", background: "var(--red-bg)" },
-};
-
-const toastDot = {
-  width: 8,
-  height: 8,
-  borderRadius: "50%",
-  background: "var(--accent)",
-  flexShrink: 0,
-};

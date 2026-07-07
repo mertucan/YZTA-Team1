@@ -1,7 +1,17 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import ingredients, meals, students, absences, dashboard, student_meals, student_health_flags
+from app.routers import (
+    absences,
+    dashboard,
+    ingredients,
+    meals,
+    menus,
+    student_health_flags,
+    student_meals,
+    students,
+)
+from app.catering_management.integration import register_catering_routes
 
 app = FastAPI(title="YemekhanAI API", version="1.0.0")
 
@@ -20,6 +30,8 @@ app.include_router(students.router)
 app.include_router(absences.router)
 app.include_router(student_meals.router)
 app.include_router(student_health_flags.router)
+app.include_router(menus.router)
+register_catering_routes(app)
 
 
 @app.get("/")
