@@ -1,8 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { getMenus, getMenu, generateMenu, approveMenu } from "../api/aiMenuPlanner";
+import { getMenus, getMenu, generateMenu, createManualMenu, addMealItem, removeMenuItem, approveMenu } from "../api/aiMenuPlanner";
 import { getIngredients } from "../../../api/ingredients";
+import { getMeals } from "../../../api/meals";
 
-const DAYS_OF_WEEK = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma"];
+const DAYS_OF_WEEK = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
+const CATEGORIES = [
+  "Çorba",
+  "Ana Yemek",
+  "Ara Sıcak",
+  "Tahıl (Pilav/Makarna)",
+  "Yoğurt/Salata",
+  "Tatlı/Meyve",
+];
 
 const nextMonday = () => {
   const d = new Date();
@@ -30,6 +39,7 @@ function numericValue(value) {
 
 export default function AiMenuPlannerPage() {
   const [ingredientsById, setIngredientsById] = useState({});
+  const [meals, setMeals]           = useState([]);
   const [menus, setMenus]           = useState([]);
   const [current, setCurrent]       = useState(null);
   const [weekStartDate, setWeekStartDate] = useState(nextMonday());
@@ -37,15 +47,24 @@ export default function AiMenuPlannerPage() {
   const [extraInstructions, setExtraInstructions] = useState("");
   const [generating, setGenerating] = useState(false);
   const [error, setError]           = useState(null);
+  const [picker, setPicker]         = useState({});
 
   const refreshMenus = () => getMenus().then(setMenus);
+  const refreshCurrent = (id) => getMenu(id).then(setCurrent);
 
   useEffect(() => {
     getIngredients().then((list) => {
       setIngredientsById(Object.fromEntries(list.map((i) => [i.id, i])));
     });
+    getMeals().then(setMeals);
     refreshMenus();
   }, []);
+
+  const mealsByCategory = useMemo(() => {
+    const map = Object.fromEntries(CATEGORIES.map((c) => [c, []]));
+    meals.forEach((m) => { if (map[m.category]) map[m.category].push(m); });
+    return map;
+  }, [meals]);
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -65,10 +84,46 @@ export default function AiMenuPlannerPage() {
     }
   };
 
+  const handleCreateManual = async () => {
+    setError(null);
+    try {
+      const menu = await createManualMenu({ week_start_date: weekStartDate, budget: parseFloat(budget) || 0 });
+      setCurrent(menu);
+      refreshMenus();
+    } catch (e) {
+      setError(e.response?.data?.detail || "Boş menü oluşturulamadı.");
+    }
+  };
+
   const handleApprove = async () => {
     if (!current) return;
     const updated = await approveMenu(current.id);
     setCurrent({ ...current, status: updated.status });
+    refreshMenus();
+  };
+
+  const getPicker = (day) => picker[day] || { category: CATEGORIES[0], meal_id: "" };
+  const setPickerField = (day, field, value) => {
+    const cur = getPicker(day);
+    const next = { ...cur, [field]: value };
+    if (field === "category") next.meal_id = "";
+    setPicker({ ...picker, [day]: next });
+  };
+
+  const handleAddMeal = async (day) => {
+    if (!current) return;
+    const sel = getPicker(day);
+    if (!sel.meal_id) return;
+    await addMealItem(current.id, { day_of_week: day, category: sel.category, meal_id: Number(sel.meal_id) });
+    await refreshCurrent(current.id);
+    refreshMenus();
+    setPickerField(day, "meal_id", "");
+  };
+
+  const handleRemoveItem = async (itemId) => {
+    if (!current) return;
+    await removeMenuItem(current.id, itemId);
+    await refreshCurrent(current.id);
     refreshMenus();
   };
 
@@ -85,15 +140,15 @@ export default function AiMenuPlannerPage() {
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 20, fontWeight: 600 }}>🤖 AI Menü Planlayıcı</div>
+        <div style={{ fontSize: 20, fontWeight: 600 }}>🤖 AI Destekli Menü Planlayıcı</div>
         <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 3 }}>
-          Gemini + RAG (stoktaki malzeme/fiyat/besin verisi) ile bütçeye göre haftalık menü üretimi
+          Depodaki mevcut malzemelerle, Pazartesi'den Pazar'a her gün her kategoriden bir yemek önerir — ya da Yemek Kategorisi kataloğundan gün ve kategori bazında elle seçim yapın
         </div>
       </div>
 
       <div style={card}>
         <div style={cardHd}>📅 Yeni Haftalık Menü Oluştur</div>
-        <div style={{ padding: 18, display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 10, alignItems: "end" }}>
+        <div style={{ padding: 18, display: "grid", gridTemplateColumns: "1fr 1fr auto auto", gap: 10, alignItems: "end" }}>
           <div>
             <div style={fieldLabel}>Hafta Başlangıcı (Pazartesi)</div>
             <input type="date" value={weekStartDate} onChange={(e) => setWeekStartDate(e.target.value)} style={input} />
@@ -118,9 +173,12 @@ export default function AiMenuPlannerPage() {
           <button onClick={handleGenerate} disabled={generating} style={btnPrimary}>
             {generating ? "Oluşturuluyor..." : "✨ AI ile Oluştur"}
           </button>
+          <button onClick={handleCreateManual} style={btnSecondary}>
+            📋 Boş Menü Oluştur (Katalogdan Seç)
+          </button>
         </div>
         <div style={{ padding: "0 18px 18px" }}>
-          <div style={fieldLabel}>Ek Talimat (opsiyonel) — AI'ı yönlendirmek için</div>
+          <div style={fieldLabel}>Ek Talimat (opsiyonel) — yalnızca AI üretimi için</div>
           <textarea
             value={extraInstructions}
             onChange={(e) => setExtraInstructions(e.target.value)}
@@ -162,17 +220,20 @@ export default function AiMenuPlannerPage() {
           </div>
           <div style={{ padding: "0 18px 14px", fontSize: 11, fontWeight: 700, color: status.color }}>{status.label}</div>
 
-          <div style={{ display: "grid", gridTemplateColumns: `repeat(${DAYS_OF_WEEK.length}, 1fr)`, gap: 10, padding: "0 18px 18px" }}>
-            {DAYS_OF_WEEK.map((day) => (
-              <div key={day} style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
-                <div style={{ background: "var(--surface2)", padding: "8px 10px", fontSize: 11, fontWeight: 700 }}>{day}</div>
-                <div style={{ padding: 10 }}>
-                  {(itemsByDay[day] || []).length === 0
-                    ? <div style={{ fontSize: 11, color: "var(--text3)" }}>—</div>
-                    : (
+          <div style={{ display: "flex", gap: 10, padding: "0 18px 18px", overflowX: "auto" }}>
+            {DAYS_OF_WEEK.map((day) => {
+              const dayItems = itemsByDay[day] || [];
+              const aiItems = dayItems.filter((it) => it.ingredient_id);
+              const mealItems = dayItems.filter((it) => it.meal_id);
+              const sel = getPicker(day);
+              return (
+                <div key={day} style={{ flex: "0 0 170px", border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                  <div style={{ background: "var(--surface2)", padding: "8px 10px", fontSize: 11, fontWeight: 700 }}>{day}</div>
+                  <div style={{ padding: 10, flex: 1 }}>
+                    {aiItems.length > 0 && (
                       <>
-                        <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>{itemsByDay[day][0].meal_name}</div>
-                        {itemsByDay[day].map((item) => {
+                        <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>{aiItems[0].meal_name}</div>
+                        {aiItems.map((item) => {
                           const ing = ingredientsById[item.ingredient_id];
                           return (
                             <div key={item.id} style={{ fontSize: 11, color: "var(--text2)", marginBottom: 2 }}>
@@ -182,9 +243,40 @@ export default function AiMenuPlannerPage() {
                         })}
                       </>
                     )}
+
+                    {mealItems.length === 0 && aiItems.length === 0 && (
+                      <div style={{ fontSize: 11, color: "var(--text3)", marginBottom: 6 }}>—</div>
+                    )}
+
+                    {mealItems.map((item) => (
+                      <div key={item.id} style={{
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                        fontSize: 11, background: "var(--surface2)", borderRadius: 6, padding: "4px 7px", marginBottom: 4,
+                      }}>
+                        <div>
+                          <div style={{ fontWeight: 600 }}>{item.meal_name}</div>
+                          <div style={{ color: "var(--text3)", fontSize: 10 }}>{item.category} · {item.calories} kcal</div>
+                        </div>
+                        <button onClick={() => handleRemoveItem(item.id)} style={btnX}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ padding: 8, borderTop: "1px solid var(--border)", background: "var(--surface2)" }}>
+                    <select value={sel.category} onChange={(e) => setPickerField(day, "category", e.target.value)} style={inputXs}>
+                      {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <select value={sel.meal_id} onChange={(e) => setPickerField(day, "meal_id", e.target.value)} style={{ ...inputXs, marginTop: 4 }}>
+                      <option value="">Yemek seçin...</option>
+                      {(mealsByCategory[sel.category] || []).map((m) => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </select>
+                    <button onClick={() => handleAddMeal(day)} disabled={!sel.meal_id} style={{ ...btnSm, width: "100%", marginTop: 4 }}>+ Ekle</button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -228,7 +320,10 @@ const card       = { background: "var(--surface)", border: "1px solid var(--bord
 const cardHd     = { padding: "14px 18px 12px", borderBottom: "1px solid var(--border)", fontSize: 13, fontWeight: 600 };
 const fieldLabel = { fontSize: 11, color: "var(--text2)", marginBottom: 5, fontWeight: 500 };
 const input      = { width: "100%", background: "var(--surface2)", border: "1px solid var(--border2)", borderRadius: 7, padding: "7px 12px", fontSize: 13, color: "var(--text)", outline: "none" };
+const inputXs    = { width: "100%", background: "var(--surface)", border: "1px solid var(--border2)", borderRadius: 6, padding: "5px 6px", fontSize: 10, color: "var(--text)", outline: "none" };
 const th         = { textAlign: "left", fontSize: 10, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".06em", padding: "10px 18px", borderBottom: "1px solid var(--border)" };
 const td         = { padding: "10px 18px", fontSize: 12, color: "var(--text2)", borderBottom: "1px solid var(--border)" };
-const btnPrimary = { background: "var(--accent)", border: "none", color: "#fff", padding: "8px 18px", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer" };
+const btnPrimary = { background: "var(--accent)", border: "none", color: "#fff", padding: "8px 18px", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" };
+const btnSecondary = { background: "var(--surface2)", border: "1px solid var(--accent)", color: "var(--accent)", padding: "8px 18px", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" };
 const btnSm      = { background: "var(--surface2)", border: "1px solid var(--border2)", color: "var(--text2)", padding: "4px 10px", borderRadius: 6, fontSize: 11, cursor: "pointer" };
+const btnX       = { background: "none", border: "none", color: "var(--red)", cursor: "pointer", fontSize: 11, padding: "0 2px" };

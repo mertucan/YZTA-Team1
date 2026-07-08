@@ -9,13 +9,27 @@ class WeeklyMenuGenerate(BaseModel):
     extra_instructions: Optional[str] = None
 
 
+class WeeklyMenuCreateManual(BaseModel):
+    week_start_date: date
+    budget: float = 0
+
+
+class WeeklyMenuMealItemCreate(BaseModel):
+    day_of_week: str
+    category: str
+    meal_id: int
+
+
 class WeeklyMenuItem(BaseModel):
     id: int
     weekly_menu_id: int
     day_of_week: str
     meal_name: str
-    ingredient_id: int
-    quantity: float
+    ingredient_id: Optional[int] = None
+    meal_id: Optional[int] = None
+    category: Optional[str] = None
+    quantity: Optional[float] = None
+    portions: Optional[int] = None
     estimated_cost: float
     calories: float
     protein: float

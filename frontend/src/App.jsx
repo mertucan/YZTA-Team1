@@ -86,11 +86,11 @@ function AppShell() {
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div style={{ display: "flex", minHeight: "100vh", overflowX: "hidden" }}>
       <Sidebar />
-      <div style={{ marginLeft: 230, flex: 1, display: "flex", flexDirection: "column" }}>
+      <div style={{ marginLeft: 230, flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         <Topbar />
-        <main style={{ padding: 24, flex: 1 }}>
+        <main style={{ padding: 24, flex: 1, minWidth: 0, overflowX: "hidden" }}>
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/ingredients" element={<Ingredients />} />
