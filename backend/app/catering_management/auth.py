@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.catering_management.core.config import get_settings
@@ -42,11 +42,14 @@ def get_current_principal(
 
     # Developer Mock Login Bypass
     if credentials.credentials.startswith("mock-token-"):
-        email = credentials.credentials.replace("mock-token-", "")
+        email = credentials.credentials.replace("mock-token-", "").strip().lower()
         profile = db.scalar(
             select(UserProfile)
             .options(joinedload(UserProfile.role_obj))
-            .where(UserProfile.email == email, UserProfile.is_active.is_(True))
+            .where(
+                func.lower(UserProfile.email) == email,
+                UserProfile.is_active.is_(True),
+            )
         )
         if profile is None:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Mock user profile not found or inactive")

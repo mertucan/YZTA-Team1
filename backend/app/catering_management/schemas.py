@@ -10,22 +10,9 @@ class RoleRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class CompanyRead(BaseModel):
-    id: int
-    company_name: str
-    tax_number: str | None
-    email: str | None
-    phone: str | None
-    address: str | None
-    status: bool
-    created_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
 class CompanyCreate(BaseModel):
     company_name: str = Field(min_length=2, max_length=150)
-    tax_number: str | None = Field(default=None, max_length=20)
+    tax_number: str | None = Field(default=None, max_length=11, pattern=r"^\d{10,11}$")
     email: str | None = Field(default=None, max_length=150)
     phone: str | None = Field(default=None, max_length=20)
     address: str | None = None
@@ -38,7 +25,7 @@ class CompanyCreate(BaseModel):
 
 class CompanyUpdate(BaseModel):
     company_name: str | None = Field(default=None, min_length=2, max_length=150)
-    tax_number: str | None = Field(default=None, max_length=20)
+    tax_number: str | None = Field(default=None, max_length=11, pattern=r"^\d{10,11}$")
     email: str | None = Field(default=None, max_length=150)
     phone: str | None = Field(default=None, max_length=20)
     address: str | None = None
@@ -55,6 +42,20 @@ class LicenseRead(BaseModel):
     expire_date: date
     status: bool
     created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class CompanyRead(BaseModel):
+    id: int
+    company_name: str
+    tax_number: str | None
+    email: str | None
+    phone: str | None
+    address: str | None
+    status: bool
+    created_at: datetime
+    license: LicenseRead | None = None
 
     model_config = {"from_attributes": True}
 
@@ -129,6 +130,7 @@ class UserRegister(BaseModel):
     company_name: str = Field(min_length=2, max_length=150)
     full_name: str = Field(min_length=2, max_length=120)
     email: EmailStr
+    password: str = Field(min_length=6, max_length=128)
     auth_user_id: uuid.UUID
     role_name: str = "CATERING_ADMIN"
 

@@ -1,6 +1,6 @@
 ﻿from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.catering_management.auth import Principal, require_roles, require_company_scope
 from app.catering_management.core.database import get_db
@@ -12,7 +12,13 @@ router = APIRouter(prefix="/companies", tags=["companies"])
 
 @router.get("", response_model=list[CompanyRead], dependencies=[Depends(require_roles(Role.super_admin))])
 def list_companies(db: Session = Depends(get_db)) -> list[Company]:
-    return list(db.scalars(select(Company).order_by(Company.company_name)).all())
+    return list(
+        db.scalars(
+            select(Company)
+            .options(joinedload(Company.license))
+            .order_by(Company.company_name)
+        ).all()
+    )
 
 
 @router.post(
@@ -58,7 +64,11 @@ def get_company(
     if principal.role != Role.super_admin and principal.company_id != company_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this company")
 
-    company = db.scalar(select(Company).where(Company.id == company_id))
+    company = db.scalar(
+        select(Company)
+        .options(joinedload(Company.license))
+        .where(Company.id == company_id)
+    )
     if company is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
     return company
@@ -151,6 +161,7 @@ def update_company_license(
     if lic.expire_date < lic.start_date:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="License expire date cannot be before start date")
 
+    db.add(lic)
     db.commit()
     db.refresh(lic)
     return lic

@@ -1,12 +1,12 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
 
 class StudentBase(BaseModel):
     first_name: str
     last_name: str
-    national_id: str
-    age: int
+    national_id: str = Field(pattern=r"^\d{11}$")
+    age: int = Field(ge=0)
 
 
 class StudentCreate(StudentBase):

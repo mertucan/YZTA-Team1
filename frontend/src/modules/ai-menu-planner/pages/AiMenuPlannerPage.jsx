@@ -18,6 +18,16 @@ const budgetStatus = (totalCost, budget) => {
   return { color: "var(--green)", label: "Bütçe İçinde" };
 };
 
+function numericValue(value) {
+  const normalized = String(value)
+    .replace(",", ".")
+    .replace(/[^\d.]/g, "")
+    .replace(/(\..*)\./g, "$1")
+    .replace(/^0+(?=\d)/, "");
+  if (!normalized || normalized === ".") return "";
+  return normalized;
+}
+
 export default function AiMenuPlannerPage() {
   const [ingredientsById, setIngredientsById] = useState({});
   const [menus, setMenus]           = useState([]);
@@ -90,7 +100,20 @@ export default function AiMenuPlannerPage() {
           </div>
           <div>
             <div style={fieldLabel}>Haftalık Bütçe (TL)</div>
-            <input type="number" value={budget} onChange={(e) => setBudget(e.target.value)} style={input} />
+            <input
+              type="text"
+              inputMode="decimal"
+              value={budget}
+              onFocus={(e) => {
+                if (Number(budget) === 0) setBudget("");
+                e.target.select();
+              }}
+              onBlur={() => {
+                if (budget === "") setBudget(0);
+              }}
+              onChange={(e) => setBudget(numericValue(e.target.value))}
+              style={input}
+            />
           </div>
           <button onClick={handleGenerate} disabled={generating} style={btnPrimary}>
             {generating ? "Oluşturuluyor..." : "✨ AI ile Oluştur"}

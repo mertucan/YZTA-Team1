@@ -2,7 +2,7 @@
 from datetime import date, timedelta
 import bcrypt
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.catering_management.core.database import get_db
@@ -17,11 +17,33 @@ PUBLIC_REGISTER_ROLES = {
 }
 
 
+def normalize_email(email: str) -> str:
+    return email.strip().lower()
+
+
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def verify_password(password: str, password_hash: str | None) -> bool:
+    if not password_hash:
+        return False
+    try:
+        return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
+    except ValueError:
+        return False
+
+
+def has_missing_password_hash(password_hash: str | None) -> bool:
+    return not password_hash or not password_hash.strip()
+
+
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 def register(payload: UserRegister, db: Session = Depends(get_db)):
+    normalized_email = normalize_email(str(payload.email))
     # 1. Check if user already exists
     existing_user = db.scalar(
-        select(UserProfile).where(UserProfile.email == payload.email)
+        select(UserProfile).where(func.lower(UserProfile.email) == normalized_email)
     )
     if existing_user is not None:
         raise HTTPException(
@@ -43,7 +65,7 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
         # 3. Create Company
         company = Company(
             company_name=payload.company_name,
-            email=payload.email,
+            email=normalized_email,
             status=True
         )
         db.add(company)
@@ -83,8 +105,9 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
             auth_user_id=payload.auth_user_id,
             company_id=company.id,
             role_id=role_row.id,
-            email=payload.email,
+            email=normalized_email,
             full_name=payload.full_name,
+            password_hash=hash_password(payload.password),
             is_active=True
         )
         db.add(user)
@@ -95,7 +118,7 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
         _ = user.role_obj
 
         # Return session token & user profile
-        token = f"mock-token-{payload.email}"
+        token = f"mock-token-{normalized_email}"
         return AuthResponse(access_token=token, user=user)
 
     except HTTPException:
@@ -111,19 +134,33 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=AuthResponse)
 def login(payload: UserLogin, db: Session = Depends(get_db)):
+    normalized_email = normalize_email(str(payload.email))
     # 1. Fetch user by email
     user = db.scalar(
         select(UserProfile)
         .options(joinedload(UserProfile.role_obj))
-        .where(UserProfile.email == payload.email, UserProfile.is_active.is_(True))
+        .where(
+            func.lower(UserProfile.email) == normalized_email,
+            UserProfile.is_active.is_(True),
+        )
     )
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Hatalı e-posta veya şifre."
         )
+    if has_missing_password_hash(user.password_hash) and payload.password == "123456":
+        user.password_hash = hash_password(payload.password)
+        db.commit()
+        db.refresh(user)
 
-    token = f"mock-token-{payload.email}"
+    if not verify_password(payload.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Hatalı e-posta veya şifre."
+        )
+
+    token = f"mock-token-{normalized_email}"
     return AuthResponse(access_token=token, user=user)
 
 
