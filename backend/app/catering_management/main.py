@@ -26,12 +26,23 @@ for router in (auth.router, dashboard.router, companies.router, universities.rou
 def on_startup():
     from app.catering_management.core.database import Base, engine, SessionLocal
     from app.catering_management.models import RoleModel, Role, Company, License, UserProfile, University
-    from sqlalchemy import select
+    from sqlalchemy import inspect, or_, select, text
     from datetime import date, timedelta
+    import bcrypt
     import uuid
     
     # Create tables if they do not exist
     Base.metadata.create_all(bind=engine)
+    inspector = inspect(engine)
+    user_profile_columns = {
+        column["name"] for column in inspector.get_columns("user_profiles")
+    }
+    if "password_hash" not in user_profile_columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE user_profiles ADD COLUMN password_hash VARCHAR(255)"))
+
+    def default_password_hash() -> str:
+        return bcrypt.hashpw("123456".encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
     
     db = SessionLocal()
     try:
@@ -50,9 +61,13 @@ def on_startup():
                 email="superadmin@catering.com",
                 full_name="Süper Admin Yetkilisi",
                 role_id=1,  # SUPER_ADMIN
+                password_hash=default_password_hash(),
                 is_active=True
             )
             db.add(super_admin)
+            db.commit()
+        elif not super_admin.password_hash:
+            super_admin.password_hash = default_password_hash()
             db.commit()
             
         # 3. Seed Company A
@@ -89,6 +104,7 @@ def on_startup():
                     email="admin@companya.com",
                     full_name="Lale Catering Yöneticisi",
                     role_id=2,  # CATERING_ADMIN
+                    password_hash=default_password_hash(),
                     is_active=True
                 )
             )
@@ -100,6 +116,7 @@ def on_startup():
                     email="dietitian@companya.com",
                     full_name="Diyetisyen Canan",
                     role_id=4,  # DIETITIAN
+                    password_hash=default_password_hash(),
                     is_active=True
                 )
             )
@@ -139,10 +156,24 @@ def on_startup():
                     email="admin@companyb.com",
                     full_name="Gül Catering Yöneticisi",
                     role_id=2,  # CATERING_ADMIN
+                    password_hash=default_password_hash(),
                     is_active=True
                 )
             )
             db.commit()
+
+        users_without_password = db.scalars(
+            select(UserProfile).where(
+                UserProfile.is_active.is_(True),
+                or_(
+                    UserProfile.password_hash.is_(None),
+                    UserProfile.password_hash == "",
+                ),
+            )
+        ).all()
+        for legacy_user in users_without_password:
+            legacy_user.password_hash = default_password_hash()
+        db.commit()
 
         # 5. Seed Universities (if empty)
         existing_univs = db.scalars(select(University)).all()

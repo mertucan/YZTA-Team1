@@ -3,6 +3,17 @@ import { getStudents, createStudent, deleteStudent } from "../api/students";
 
 const emptyForm = { first_name: "", last_name: "", national_id: "", age: 18 };
 
+function digitsOnly(value, maxLength) {
+  const digits = String(value).replace(/\D/g, "");
+  return typeof maxLength === "number" ? digits.slice(0, maxLength) : digits;
+}
+
+function integerInputValue(value, min = 0) {
+  const digits = digitsOnly(value);
+  if (!digits) return "";
+  return Math.max(min, Number(digits.replace(/^0+(?=\d)/, "")));
+}
+
 export default function Students() {
   const [items, setItems]     = useState([]);
   const [form, setForm]       = useState(emptyForm);
@@ -37,12 +48,46 @@ export default function Students() {
           {fields.map(({ label, key, placeholder }) => (
             <div key={key}>
               <div style={fieldLabel}>{label}</div>
-              <input value={form[key]} placeholder={placeholder} onChange={(e) => setForm({ ...form, [key]: e.target.value })} style={input} />
+              <input
+                value={form[key]}
+                placeholder={placeholder}
+                inputMode={key === "national_id" ? "numeric" : undefined}
+                maxLength={key === "national_id" ? 11 : undefined}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    [key]:
+                      key === "national_id"
+                        ? digitsOnly(e.target.value, 11)
+                        : e.target.value,
+                  })
+                }
+                style={input}
+              />
             </div>
           ))}
           <div>
             <div style={fieldLabel}>Yaş</div>
-            <input type="number" value={form.age} onChange={(e) => setForm({ ...form, age: parseInt(e.target.value) || 18 })} style={input} />
+            <input
+              type="text"
+              inputMode="numeric"
+              value={form.age}
+              onFocus={(e) => {
+                if (String(form.age) === "18") {
+                  setForm({ ...form, age: "" });
+                }
+                e.target.select();
+              }}
+              onBlur={() => {
+                if (form.age === "") {
+                  setForm({ ...form, age: 18 });
+                }
+              }}
+              onChange={(e) =>
+                setForm({ ...form, age: integerInputValue(e.target.value, 0) })
+              }
+              style={input}
+            />
           </div>
           <button onClick={handleAdd} style={btnPrimary}>Ekle</button>
         </div>

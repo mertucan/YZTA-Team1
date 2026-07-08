@@ -3,6 +3,15 @@ import { getMeals, createMeal, deleteMeal } from "../api/meals";
 
 const emptyForm = { name: "", stock: 0, ingredient_id: null, rating_id: null, calories: 0 };
 
+function numericValue(value) {
+  const digits = String(value).replace(/\D/g, "").replace(/^0+(?=\d)/, "");
+  return digits ? Number(digits) : "";
+}
+
+function blurNumericValue(value, fallback = 0) {
+  return value === "" ? fallback : value;
+}
+
 export default function Meals() {
   const [items, setItems]     = useState([]);
   const [form, setForm]       = useState(emptyForm);
@@ -34,11 +43,46 @@ export default function Meals() {
           </div>
           <div>
             <div style={fieldLabel}>Stok (porsiyon)</div>
-            <input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: parseInt(e.target.value) || 0 })} style={input} />
+            <input
+              type="text"
+              inputMode="numeric"
+              value={form.stock}
+              onFocus={(e) => {
+                if (Number(form.stock) === 0) setForm({ ...form, stock: "" });
+                e.target.select();
+              }}
+              onBlur={() =>
+                setForm({ ...form, stock: blurNumericValue(form.stock, 0) })
+              }
+              onChange={(e) =>
+                setForm({ ...form, stock: numericValue(e.target.value) })
+              }
+              style={input}
+            />
           </div>
           <div>
             <div style={fieldLabel}>Kalori (kişi başı)</div>
-            <input type="number" value={form.calories} onChange={(e) => setForm({ ...form, calories: parseFloat(e.target.value) || 0 })} style={input} />
+            <input
+              type="text"
+              inputMode="numeric"
+              value={form.calories}
+              onFocus={(e) => {
+                if (Number(form.calories) === 0) {
+                  setForm({ ...form, calories: "" });
+                }
+                e.target.select();
+              }}
+              onBlur={() =>
+                setForm({
+                  ...form,
+                  calories: blurNumericValue(form.calories, 0),
+                })
+              }
+              onChange={(e) =>
+                setForm({ ...form, calories: numericValue(e.target.value) })
+              }
+              style={input}
+            />
           </div>
           <button onClick={handleAdd} style={btnPrimary}>Ekle</button>
         </div>

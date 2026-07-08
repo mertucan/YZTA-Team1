@@ -53,7 +53,7 @@ export default function Topbar() {
   const handleCateringLogout = () => {
     localStorage.removeItem(CATERING_SESSION_KEY);
     window.dispatchEvent(new Event("catering-session-changed"));
-    navigate("/dashboard");
+    navigate("/modules/catering-management", { replace: true });
   };
 
   return (

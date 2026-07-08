@@ -4,6 +4,8 @@ import {
   Calendar,
   Check,
   Edit2,
+  Eye,
+  EyeOff,
   Globe,
   Key,
   LayoutDashboard,
@@ -198,6 +200,66 @@ function PasswordStrength({ password }) {
   );
 }
 
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function getRegisterValidation({
+  companyName,
+  fullName,
+  email,
+  password,
+  confirmPassword,
+  acceptedTerms,
+}) {
+  const errors = [];
+  const strength = getPasswordStrength(password);
+
+  if (companyName.trim().length < 2) errors.push("Firma adını girin.");
+  if (fullName.trim().length < 2) errors.push("Ad soyad bilgisini girin.");
+  if (!isValidEmail(email)) errors.push("Geçerli bir e-posta girin.");
+  if (password.length < 6) errors.push("Şifre en az 6 karakter olmalı.");
+  if (strength.score < 2) errors.push("Daha güçlü bir şifre seçin.");
+  if (password !== confirmPassword) errors.push("Şifreler eşleşmiyor.");
+  if (!acceptedTerms) errors.push("Kullanım şartlarını onaylayın.");
+
+  return errors;
+}
+
+function PasswordField({
+  label,
+  value,
+  onChange,
+  visible,
+  onToggle,
+  placeholder,
+  autoComplete,
+}) {
+  return (
+    <div className="input-group">
+      <label>{label}</label>
+      <div className="password-field">
+        <input
+          type={visible ? "text" : "password"}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+        />
+        <button
+          type="button"
+          className="password-toggle"
+          onClick={onToggle}
+          title={visible ? "Şifreyi gizle" : "Şifreyi göster"}
+          aria-label={visible ? "Şifreyi gizle" : "Şifreyi göster"}
+        >
+          {visible ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const DASH_COLORS = [
   "#22d3ee",
   "#38bdf8",
@@ -210,6 +272,91 @@ const WEEK_DAYS = ["Pzt", "Sal", "Çar", "Per", "Cum"];
 
 function formatTRNumber(value) {
   return Number(value || 0).toLocaleString("tr-TR");
+}
+
+function digitsOnly(value, maxLength) {
+  const digits = String(value).replace(/\D/g, "");
+  return typeof maxLength === "number" ? digits.slice(0, maxLength) : digits;
+}
+
+function integerInputValue(value, { min = 0, max } = {}) {
+  const digits = digitsOnly(value);
+  if (!digits) return "";
+  const normalizedDigits = digits.replace(/^0+(?=\d)/, "");
+  const nextValue = Math.max(min, Number(normalizedDigits));
+  return typeof max === "number" ? Math.min(max, nextValue) : nextValue;
+}
+
+function nextSteppedValue(value, step, { min = 0, max } = {}) {
+  const base = value === "" ? min : Number(value);
+  const safeBase = Number.isFinite(base) ? base : min;
+  const nextValue = Math.max(min, safeBase + step);
+  return typeof max === "number" ? Math.min(max, nextValue) : nextValue;
+}
+
+function positiveInt(value, fallback = 1) {
+  const nextValue = Number(value);
+  return Number.isFinite(nextValue) && nextValue > 0 ? nextValue : fallback;
+}
+
+function nonNegativeInt(value, fallback = 0) {
+  const nextValue = Number(value);
+  return Number.isFinite(nextValue) && nextValue >= 0 ? nextValue : fallback;
+}
+
+function licenseMatchesForm(license, form) {
+  return (
+    license.plan_name === form.plan_name &&
+    Number(license.max_users) === positiveInt(form.max_users, 1) &&
+    Number(license.max_universities) ===
+      positiveInt(form.max_universities, 1) &&
+    license.start_date === form.start_date &&
+    license.expire_date === form.expire_date &&
+    Boolean(license.status) === Boolean(form.status)
+  );
+}
+
+function NumericStepper({ value, onChange, min = 0, max, placeholder = "0" }) {
+  return (
+    <div className="numeric-stepper">
+      <input
+        type="text"
+        inputMode="numeric"
+        value={value}
+        onChange={(e) =>
+          onChange(integerInputValue(e.target.value, { min, max }))
+        }
+        onFocus={(e) => {
+          if (String(value) === String(min)) {
+            onChange("");
+          }
+          e.target.select();
+        }}
+        onBlur={() => {
+          if (value === "") {
+            onChange(min);
+          }
+        }}
+        placeholder={placeholder}
+      />
+      <div className="numeric-stepper-actions">
+        <button
+          type="button"
+          onClick={() => onChange(nextSteppedValue(value, 1, { min, max }))}
+          aria-label="Artır"
+        >
+          +
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange(nextSteppedValue(value, -1, { min, max }))}
+          aria-label="Azalt"
+        >
+          -
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function DashboardMetricCard({ tone, label, value, sub, children }) {
@@ -304,6 +451,51 @@ function RoleWaveChart({ activeUsers }) {
   );
 }
 
+function RoleDistributionChart({ users }) {
+  const roleCounts = users.reduce((acc, user) => {
+    const role = user.role_name || "UNKNOWN";
+    acc[role] = (acc[role] || 0) + 1;
+    return acc;
+  }, {});
+  const items = Object.entries(roleCounts)
+    .map(([role, value]) => ({
+      role,
+      label: ROLE_LABELS[role] || role,
+      value,
+      active: users.filter((user) => user.role_name === role && user.is_active)
+        .length,
+    }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 6);
+  const max = Math.max(...items.map((item) => item.value), 1);
+
+  if (!items.length) {
+    return <div className="chart-empty">Kullanıcı verisi yok.</div>;
+  }
+
+  return (
+    <div className="role-bars">
+      {items.map((item, index) => (
+        <div key={item.role} className="role-bar-row">
+          <div className="role-bar-head">
+            <span>{item.label}</span>
+            <b>{item.value}</b>
+          </div>
+          <div className="role-bar-track">
+            <span
+              style={{
+                width: `${Math.max(7, (item.value / max) * 100)}%`,
+                background: DASH_COLORS[index % DASH_COLORS.length],
+              }}
+            />
+          </div>
+          <small>{item.active} aktif</small>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function DonutChart({ items, total, center, emptyText }) {
   if (!items.length || total <= 0) {
     return <div className="chart-empty">{emptyText}</div>;
@@ -368,16 +560,23 @@ function MenuBars({ menuAssignments }) {
       return day === index + 1;
     }).length;
   });
-  const fallback = [1, 1, 1, 1, Math.max(menuAssignments.length, 2)];
-  const values = counts.some(Boolean) ? counts : fallback;
-  const max = Math.max(...values, 1);
+  const max = Math.max(...counts, 1);
+
+  if (!counts.some(Boolean)) {
+    return <div className="chart-empty">Menü ataması verisi yok.</div>;
+  }
 
   return (
     <div className="menu-bars">
-      {values.map((value, index) => (
+      {counts.map((value, index) => (
         <div key={WEEK_DAYS[index]} className="menu-bar-col">
+          <strong>{value}</strong>
           <div className="menu-bar-track">
-            <span style={{ height: `${Math.max(12, (value / max) * 100)}%` }} />
+            <span
+              style={{
+                height: value ? `${Math.max(8, (value / max) * 100)}%` : "0%",
+              }}
+            />
           </div>
           <small>{WEEK_DAYS[index]}</small>
         </div>
@@ -513,7 +712,7 @@ function CateringDashboard({
             />
           </DashboardPanel>
           <DashboardPanel title="Roller ve Kullanıcılar">
-            <RoleWaveChart activeUsers={activeUsers} />
+            <RoleDistributionChart users={users} />
           </DashboardPanel>
           <DashboardPanel
             title="Üniversite Dağılımı"
@@ -554,9 +753,27 @@ function CateringManagementContent() {
   const [authMode, setAuthMode] = useState("login");
   const [fullName, setFullName] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
+
+  const resetAuthForm = () => {
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+    setFullName("");
+    setCompanyName("");
+    setAcceptedTerms(false);
+    setShowLoginPassword(false);
+    setShowRegisterPassword(false);
+    setShowConfirmPassword(false);
+    setAuthMode("login");
+  };
 
   const [dashboard, setDashboard] = useState(null);
   const [universities, setUniversities] = useState([]);
@@ -661,6 +878,30 @@ function CateringManagementContent() {
     return () => data.subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const syncSession = () => {
+      const hasMock = Boolean(localStorage.getItem(CATERING_SESSION_KEY));
+      if (!hasMock) {
+        setIsAuthed(false);
+        setCurrentUser(null);
+        setDashboard(null);
+        setUniversities([]);
+        setUsers([]);
+        setMenuAssignments([]);
+        setCompanies([]);
+        setModalType(null);
+        resetAuthForm();
+        setLoading(false);
+      }
+    };
+    window.addEventListener("storage", syncSession);
+    window.addEventListener("catering-session-changed", syncSession);
+    return () => {
+      window.removeEventListener("storage", syncSession);
+      window.removeEventListener("catering-session-changed", syncSession);
+    };
+  }, []);
+
   // Fetch current user details on auth
   useEffect(() => {
     if (!isAuthed) {
@@ -744,7 +985,7 @@ function CateringManagementContent() {
 
   // Load view data
   const loadData = (silent = false) => {
-    if (!isAuthed) return;
+    if (!isAuthed) return Promise.resolve();
     if (!silent) {
       setLoading(true);
     }
@@ -763,7 +1004,7 @@ function CateringManagementContent() {
       fetches.push(apiGet(`/companies/${currentUser.company_id}`));
     }
 
-    Promise.all(fetches)
+    return Promise.all(fetches)
       .then(
         ([dashboardData, universityData, userData, menuData, companyData]) => {
           setDashboard(dashboardData);
@@ -849,12 +1090,23 @@ function CateringManagementContent() {
     try {
       let data;
       let sessionToken;
+      const normalizedEmail = email.trim().toLowerCase();
+
+      if (!isValidEmail(normalizedEmail)) {
+        throw new Error("Geçerli bir e-posta girin.");
+      }
+      if (!password) {
+        throw new Error("Şifrenizi girin.");
+      }
 
       try {
+        if (!isSupabaseConfigured) {
+          throw new Error("Supabase yapilandirilmamis, yerel login deneniyor.");
+        }
         // 1. Try signing in via Supabase Auth
         const { data: authData, error: authError } =
           await supabase.auth.signInWithPassword({
-            email,
+            email: normalizedEmail,
             password,
           });
         if (authError) throw authError;
@@ -877,7 +1129,7 @@ function CateringManagementContent() {
         const response = await fetch(`${API_BASE_URL}/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ email: normalizedEmail, password }),
         });
         const fallbackData = await response.json();
         if (!response.ok) {
@@ -913,13 +1165,26 @@ function CateringManagementContent() {
     setInfo(null);
     setLoading(true);
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+      const validationErrors = getRegisterValidation({
+        companyName,
+        fullName,
+        email: normalizedEmail,
+        password,
+        confirmPassword,
+        acceptedTerms,
+      });
+      if (validationErrors.length > 0) {
+        throw new Error(validationErrors[0]);
+      }
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           company_name: companyName,
           full_name: fullName,
-          email,
+          email: normalizedEmail,
+          password,
           auth_user_id: crypto.randomUUID(),
           role_name: "CATERING_ADMIN",
         }),
@@ -953,15 +1218,13 @@ function CateringManagementContent() {
   async function signOut() {
     localStorage.removeItem(CATERING_SESSION_KEY);
     window.dispatchEvent(new Event("catering-session-changed"));
+    setIsAuthed(false);
+    setCurrentUser(null);
+    navigate("/modules/catering-management", { replace: true });
     if (isSupabaseConfigured) {
       await supabase.auth.signOut();
     }
-    setIsAuthed(false);
-    setEmail("");
-    setPassword("");
-    setFullName("");
-    setCompanyName("");
-    setAuthMode("login");
+    resetAuthForm();
     setError(null);
     setInfo(null);
     setDashboard(null);
@@ -969,8 +1232,6 @@ function CateringManagementContent() {
     setUsers([]);
     setMenuAssignments([]);
     setCompanies([]);
-    setCurrentUser(null);
-    navigate("/modules/catering-management");
   }
 
   // Action handlers
@@ -985,7 +1246,8 @@ function CateringManagementContent() {
       await apiPost(url, {
         university_name: univForm.university_name,
         city: univForm.city || null,
-        student_count: univForm.student_count || null,
+        student_count:
+          univForm.student_count === "" ? null : nonNegativeInt(univForm.student_count),
       });
       setModalType(null);
       setInfo("Üniversite başarıyla eklendi.");
@@ -1005,7 +1267,8 @@ function CateringManagementContent() {
       await apiPut(`/universities/${selectedUniv.id}`, {
         university_name: univForm.university_name,
         city: univForm.city || null,
-        student_count: univForm.student_count || null,
+        student_count:
+          univForm.student_count === "" ? null : nonNegativeInt(univForm.student_count),
         status: univForm.status,
       });
       setModalType(null);
@@ -1162,7 +1425,12 @@ function CateringManagementContent() {
     try {
       setLoading(true);
       setError(null);
-      await apiPost("/companies", companyForm);
+      await apiPost("/companies", {
+        ...companyForm,
+        tax_number: companyForm.tax_number || null,
+        max_users: positiveInt(companyForm.max_users, 1),
+        max_universities: positiveInt(companyForm.max_universities, 1),
+      });
       setModalType(null);
       setInfo("Firma ve lisansı başarıyla eklendi.");
       loadData();
@@ -1197,14 +1465,34 @@ function CateringManagementContent() {
   };
 
   const handleEditLicense = async () => {
-    if (!selectedCompany) return;
+    const companyId = selectedLicense?.company_id ?? selectedCompany?.id;
+    if (!companyId) return;
     try {
       setLoading(true);
       setError(null);
-      await apiPut(`/companies/${selectedCompany.id}/license`, licenseForm);
+      await apiPut(
+        `/companies/${companyId}/license`,
+        {
+          ...licenseForm,
+          max_users: positiveInt(licenseForm.max_users, 1),
+          max_universities: positiveInt(licenseForm.max_universities, 1),
+        },
+      );
+      const updatedLicense = await apiGet(`/companies/${companyId}/license`);
+      if (!licenseMatchesForm(updatedLicense, licenseForm)) {
+        throw new Error("Lisans kaydı doğrulanamadı. Lütfen tekrar deneyin.");
+      }
+      setSelectedLicense(updatedLicense);
+      setCompanies((items) =>
+        items.map((company) =>
+          company.id === companyId
+            ? { ...company, license: updatedLicense }
+            : company,
+        ),
+      );
       setModalType(null);
       setInfo("Lisans başarıyla güncellendi.");
-      loadData();
+      await loadData(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "İşlem başarısız.");
     } finally {
@@ -1384,6 +1672,18 @@ function CateringManagementContent() {
     );
   }
 
+  const normalizedAuthEmail = email.trim().toLowerCase();
+  const registerErrors = getRegisterValidation({
+    companyName,
+    fullName,
+    email: normalizedAuthEmail,
+    password,
+    confirmPassword,
+    acceptedTerms,
+  });
+  const loginDisabled = loading || !isValidEmail(normalizedAuthEmail) || !password;
+  const registerDisabled = loading || registerErrors.length > 0;
+
   if (!isAuthed) {
     return (
       <main className="login-shell">
@@ -1431,18 +1731,18 @@ function CateringManagementContent() {
                 />
               </div>
 
-              <div className="input-group">
-                <label>Şifre</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                />
-              </div>
+              <PasswordField
+                label="Şifre"
+                value={password}
+                onChange={setPassword}
+                visible={showLoginPassword}
+                onToggle={() => setShowLoginPassword((value) => !value)}
+                placeholder="••••••••"
+                autoComplete="current-password"
+              />
 
               <button
-                disabled={loading}
+                disabled={loginDisabled}
                 className="btn btn-primary"
                 onClick={signIn}
               >
@@ -1480,20 +1780,53 @@ function CateringManagementContent() {
                 />
               </div>
 
-              <div className="input-group">
-                <label>Şifre</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="•••••••• (En az 6 karakter)"
-                />
-              </div>
+              <PasswordField
+                label="Şifre"
+                value={password}
+                onChange={setPassword}
+                visible={showRegisterPassword}
+                onToggle={() => setShowRegisterPassword((value) => !value)}
+                placeholder="En az 6 karakter"
+                autoComplete="new-password"
+              />
 
               <PasswordStrength password={password} />
 
+              <PasswordField
+                label="Şifre Tekrar"
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+                visible={showConfirmPassword}
+                onToggle={() => setShowConfirmPassword((value) => !value)}
+                placeholder="Şifrenizi tekrar girin"
+                autoComplete="new-password"
+              />
+
+              <div className="auth-checklist">
+                {[
+                  ["Firma", companyName.trim().length >= 2],
+                  ["Ad soyad", fullName.trim().length >= 2],
+                  ["E-posta", isValidEmail(normalizedAuthEmail)],
+                  ["Güçlü şifre", getPasswordStrength(password).score >= 2],
+                  ["Şifre eşleşmesi", password && password === confirmPassword],
+                ].map(([label, ok]) => (
+                  <span key={label} className={ok ? "ok" : ""}>
+                    <Check size={12} /> {label}
+                  </span>
+                ))}
+              </div>
+
+              <label className="auth-consent">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                />
+                <span>Kullanım şartlarını ve veri işleme politikasını kabul ediyorum.</span>
+              </label>
+
               <button
-                disabled={loading}
+                disabled={registerDisabled}
                 className="btn btn-primary"
                 onClick={handleRegister}
               >
@@ -2091,10 +2424,14 @@ function CateringManagementContent() {
                               </td>
                               <td>
                                 <span className="badge badge-plan">
-                                  {comp.email ? "Professional" : "Starter"}
+                                  {comp.license?.plan_name ?? "-"}
                                 </span>
                               </td>
-                              <td>Detay için lisansı düzenleyin</td>
+                              <td>
+                                {comp.license
+                                  ? `${comp.license.max_universities} / ${comp.license.max_users}`
+                                  : "Lisans bilgisi yok"}
+                              </td>
                               <td className="actions-col-wide">
                                 <button
                                   className="icon-btn btn-edit"
@@ -2213,14 +2550,12 @@ function CateringManagementContent() {
                     </div>
                     <div className="input-group">
                       <label>Öğrenci Sayısı</label>
-                      <input
-                        type="number"
+                      <NumericStepper
                         value={univForm.student_count}
-                        onChange={(e) =>
-                          setUnivForm({
-                            ...univForm,
-                            student_count: parseInt(e.target.value) || 0,
-                          })
+                        min={0}
+                        placeholder="0"
+                        onChange={(student_count) =>
+                          setUnivForm({ ...univForm, student_count })
                         }
                       />
                     </div>
@@ -2554,17 +2889,19 @@ function CateringManagementContent() {
                   </div>
                   <div className="input-row">
                     <div className="input-group">
-                      <label>Vergi Numarası</label>
+                      <label>Vergi / TC Numarası</label>
                       <input
                         type="text"
+                        inputMode="numeric"
+                        maxLength={11}
                         value={companyForm.tax_number}
                         onChange={(e) =>
                           setCompanyForm({
                             ...companyForm,
-                            tax_number: e.target.value,
+                            tax_number: digitsOnly(e.target.value, 11),
                           })
                         }
-                        placeholder="Örn. 9988776655"
+                        placeholder="11 haneli numara"
                       />
                     </div>
                     <div className="input-group">
@@ -2635,27 +2972,26 @@ function CateringManagementContent() {
                         </div>
                         <div className="input-group">
                           <label>Max Üniversite Limiti</label>
-                          <input
-                            type="number"
+                          <NumericStepper
                             value={companyForm.max_universities}
-                            onChange={(e) =>
+                            min={1}
+                            placeholder="1"
+                            onChange={(max_universities) =>
                               setCompanyForm({
                                 ...companyForm,
-                                max_universities: parseInt(e.target.value) || 1,
+                                max_universities,
                               })
                             }
                           />
                         </div>
                         <div className="input-group">
                           <label>Max Kullanıcı Limiti</label>
-                          <input
-                            type="number"
+                          <NumericStepper
                             value={companyForm.max_users}
-                            onChange={(e) =>
-                              setCompanyForm({
-                                ...companyForm,
-                                max_users: parseInt(e.target.value) || 1,
-                              })
+                            min={1}
+                            placeholder="1"
+                            onChange={(max_users) =>
+                              setCompanyForm({ ...companyForm, max_users })
                             }
                           />
                         </div>
@@ -2743,27 +3079,26 @@ function CateringManagementContent() {
                     </div>
                     <div className="input-group">
                       <label>Maksimum Üniversite</label>
-                      <input
-                        type="number"
+                      <NumericStepper
                         value={licenseForm.max_universities}
-                        onChange={(e) =>
+                        min={1}
+                        placeholder="1"
+                        onChange={(max_universities) =>
                           setLicenseForm({
                             ...licenseForm,
-                            max_universities: parseInt(e.target.value) || 1,
+                            max_universities,
                           })
                         }
                       />
                     </div>
                     <div className="input-group">
                       <label>Maksimum Kullanıcı</label>
-                      <input
-                        type="number"
+                      <NumericStepper
                         value={licenseForm.max_users}
-                        onChange={(e) =>
-                          setLicenseForm({
-                            ...licenseForm,
-                            max_users: parseInt(e.target.value) || 1,
-                          })
+                        min={1}
+                        placeholder="1"
+                        onChange={(max_users) =>
+                          setLicenseForm({ ...licenseForm, max_users })
                         }
                       />
                     </div>

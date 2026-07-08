@@ -3,6 +3,20 @@ import { getIngredients, createIngredient, deleteIngredient } from "../api/ingre
 
 const emptyForm = { name: "", unit: "kg", stock: 0, calories: 0, protein: 0, iron: 0, price: 0, expiry_date: "" };
 
+function numericValue(value) {
+  const normalized = String(value)
+    .replace(",", ".")
+    .replace(/[^\d.]/g, "")
+    .replace(/(\..*)\./g, "$1")
+    .replace(/^0+(?=\d)/, "");
+  if (!normalized || normalized === ".") return "";
+  return normalized;
+}
+
+function numericPayloadValue(value) {
+  return value === "" ? 0 : Number(value);
+}
+
 const daysUntil = (dateStr) => {
   if (!dateStr) return null;
   const diff = new Date(dateStr) - new Date(new Date().toDateString());
@@ -27,7 +41,15 @@ export default function Ingredients() {
 
   const handleAdd = async () => {
     if (!form.name) return;
-    await createIngredient({ ...form, expiry_date: form.expiry_date || null });
+    await createIngredient({
+      ...form,
+      stock: numericPayloadValue(form.stock),
+      price: numericPayloadValue(form.price),
+      calories: numericPayloadValue(form.calories),
+      protein: numericPayloadValue(form.protein),
+      iron: numericPayloadValue(form.iron),
+      expiry_date: form.expiry_date || null,
+    });
     setForm(emptyForm);
     refresh();
   };
@@ -55,8 +77,31 @@ export default function Ingredients() {
           {fields.map(({ label, key, type, placeholder }) => (
             <div key={key}>
               <div style={fieldLabel}>{label}</div>
-              <input type={type} value={form[key]} placeholder={placeholder}
-                onChange={(e) => setForm({ ...form, [key]: type === "number" ? parseFloat(e.target.value) || 0 : e.target.value })}
+              <input
+                type={type === "number" ? "text" : type}
+                inputMode={type === "number" ? "decimal" : undefined}
+                value={form[key]}
+                placeholder={placeholder}
+                onFocus={(e) => {
+                  if (type === "number" && Number(form[key]) === 0) {
+                    setForm({ ...form, [key]: "" });
+                  }
+                  e.target.select();
+                }}
+                onBlur={() => {
+                  if (type === "number" && form[key] === "") {
+                    setForm({ ...form, [key]: 0 });
+                  }
+                }}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    [key]:
+                      type === "number"
+                        ? numericValue(e.target.value)
+                        : e.target.value,
+                  })
+                }
                 style={input} />
             </div>
           ))}

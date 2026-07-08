@@ -162,6 +162,118 @@
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
 }
 
+.catering-management-scope .password-field {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.catering-management-scope .password-field input {
+    padding-right: 44px;
+}
+
+.catering-management-scope .password-toggle {
+    position: absolute;
+    right: 8px;
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 6px;
+    display: grid;
+    place-items: center;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.catering-management-scope .password-toggle:hover {
+    background: var(--primary-light);
+    color: var(--primary-color);
+}
+
+.catering-management-scope .auth-checklist {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--surface2, #f8f9fc);
+}
+
+.catering-management-scope .auth-checklist span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.catering-management-scope .auth-checklist span.ok {
+    color: var(--success-color);
+}
+
+.catering-management-scope .auth-consent {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr);
+    gap: 9px;
+    align-items: start;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.catering-management-scope .auth-consent input {
+    width: 18px;
+    height: 18px;
+    min-height: 18px;
+    padding: 0;
+    accent-color: var(--primary-color);
+}
+
+.catering-management-scope .numeric-stepper {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 32px;
+    width: 100%;
+}
+
+.catering-management-scope .numeric-stepper input {
+    border-radius: 8px 0 0 8px;
+    border-right: 0;
+}
+
+.catering-management-scope .numeric-stepper-actions {
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+}
+
+.catering-management-scope .numeric-stepper-actions button {
+    width: 32px;
+    border: 1px solid var(--border-color);
+    background: var(--surface2, #f8f9fc);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.catering-management-scope .numeric-stepper-actions button:first-child {
+    border-radius: 0 8px 0 0;
+}
+
+.catering-management-scope .numeric-stepper-actions button:last-child {
+    border-top: 0;
+    border-radius: 0 0 8px 0;
+}
+
+.catering-management-scope .numeric-stepper-actions button:hover {
+    background: var(--primary-light);
+    color: var(--primary-color);
+}
+
 /* Buttons */
 .catering-management-scope .btn {
     display: inline-flex;
@@ -1400,6 +1512,58 @@
     font-weight: 800;
 }
 
+.catering-management-scope .role-bars {
+    display: grid;
+    gap: 13px;
+    min-height: 220px;
+    align-content: center;
+}
+
+.catering-management-scope .role-bar-row {
+    display: grid;
+    gap: 6px;
+}
+
+.catering-management-scope .role-bar-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+}
+
+.catering-management-scope .role-bar-head span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text2);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.catering-management-scope .role-bar-head b {
+    color: var(--text);
+    font-size: 13px;
+}
+
+.catering-management-scope .role-bar-track {
+    height: 9px;
+    border-radius: 999px;
+    background: var(--surface3, #e5e7eb);
+    overflow: hidden;
+}
+
+.catering-management-scope .role-bar-track span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+}
+
+.catering-management-scope .role-bar-row small {
+    color: var(--text3);
+    font-size: 11px;
+    font-weight: 700;
+}
+
 .catering-management-scope .donut-layout {
     display: flex;
     align-items: center;
@@ -1504,9 +1668,16 @@
 
 .catering-management-scope .menu-bar-col {
     display: grid;
+    grid-template-rows: 18px 1fr 16px;
     gap: 8px;
     align-items: end;
     height: 100%;
+}
+
+.catering-management-scope .menu-bar-col strong {
+    color: var(--text);
+    text-align: center;
+    font-size: 12px;
 }
 
 .catering-management-scope .menu-bar-track {

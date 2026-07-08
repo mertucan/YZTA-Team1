@@ -3,6 +3,11 @@ import { getAbsences, createAbsence, deleteAbsence } from "../api/absences";
 
 const emptyForm = { student_id: 0, absence_date: "" };
 
+function numericValue(value) {
+  const digits = String(value).replace(/\D/g, "").replace(/^0+(?=\d)/, "");
+  return digits ? Number(digits) : "";
+}
+
 export default function Absences() {
   const [items, setItems] = useState([]);
   const [form, setForm] = useState(emptyForm);
@@ -65,11 +70,23 @@ export default function Absences() {
           <div>
             <div style={fieldLabel}>Öğrenci ID</div>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               value={form.student_id || ""}
               placeholder="Öğrenci ID"
+              onFocus={(e) => {
+                if (Number(form.student_id) === 0) {
+                  setForm({ ...form, student_id: "" });
+                }
+                e.target.select();
+              }}
+              onBlur={() => {
+                if (form.student_id === "") {
+                  setForm({ ...form, student_id: 0 });
+                }
+              }}
               onChange={(e) =>
-                setForm({ ...form, student_id: parseInt(e.target.value) || 0 })
+                setForm({ ...form, student_id: numericValue(e.target.value) })
               }
               style={input}
             />
