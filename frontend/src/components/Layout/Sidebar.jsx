@@ -6,7 +6,7 @@ const CATERING_SESSION_KEY = "catering_mock_session";
 
 const recordItems = [
   { to: "/ingredients", icon: "📦", label: "Malzeme Deposu" },
-  { to: "/meals", icon: "🍽️", label: "Yemekler" },
+  { to: "/meals", icon: "🍽️", label: "Yemek Kategorisi" },
   { to: "/students", icon: "🎓", label: "Öğrenciler" },
   { to: "/absences", icon: "✈️", label: "Devamsızlık" },
 ];
