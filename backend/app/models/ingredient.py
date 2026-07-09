@@ -10,6 +10,12 @@ class IngredientBase(BaseModel):
     protein: float = 0
     iron: float = 0
     price: float = 0
+    is_local: bool = False
+    origin_region: Optional[str] = None
+    season_start_month: Optional[int] = None
+    season_end_month: Optional[int] = None
+    market_price: Optional[float] = None
+    last_price_checked_at: Optional[date] = None
 
 
 class IngredientCreate(IngredientBase):
@@ -23,6 +29,12 @@ class IngredientUpdate(BaseModel):
     protein: Optional[float] = None
     iron: Optional[float] = None
     price: Optional[float] = None
+    is_local: Optional[bool] = None
+    origin_region: Optional[str] = None
+    season_start_month: Optional[int] = None
+    season_end_month: Optional[int] = None
+    market_price: Optional[float] = None
+    last_price_checked_at: Optional[date] = None
 
 
 class Ingredient(IngredientBase):
