@@ -1,12 +1,51 @@
 import { Fragment, useEffect, useState } from "react";
 import {
-  getIngredients, createIngredient, updateIngredient, deleteIngredient,
-  getBatches, createBatch, deleteBatch,
+  getIngredients,
+  createIngredient,
+  updateIngredient,
+  deleteIngredient,
+  getBatches,
+  createBatch,
+  deleteBatch,
 } from "../api/ingredients";
 import { todayLocal } from "../utils/date";
 
-const emptyForm = { name: "", unit: "kg", calories: 0, protein: 0, iron: 0, price: 0 };
-const emptyBatchForm = { quantity: "", purchase_date: todayLocal(), expiry_date: "" };
+const MONTHS = [
+  { value: "", label: "—" },
+  { value: 1, label: "Ocak" },
+  { value: 2, label: "Şubat" },
+  { value: 3, label: "Mart" },
+  { value: 4, label: "Nisan" },
+  { value: 5, label: "Mayıs" },
+  { value: 6, label: "Haziran" },
+  { value: 7, label: "Temmuz" },
+  { value: 8, label: "Ağustos" },
+  { value: 9, label: "Eylül" },
+  { value: 10, label: "Ekim" },
+  { value: 11, label: "Kasım" },
+  { value: 12, label: "Aralık" },
+];
+
+const emptyForm = {
+  name: "",
+  unit: "kg",
+  calories: 0,
+  protein: 0,
+  iron: 0,
+  price: 0,
+  is_local: false,
+  origin_region: "",
+  season_start_month: "",
+  season_end_month: "",
+  market_price: "",
+  last_price_checked_at: "",
+};
+
+const emptyBatchForm = {
+  quantity: "",
+  purchase_date: todayLocal(),
+  expiry_date: "",
+};
 
 function numericValue(value) {
   const normalized = String(value)
@@ -36,13 +75,40 @@ const expiryStyle = (days) => {
   return { color: "var(--green)", label: `${days} gün` };
 };
 
+function isInSeason(item) {
+  const start = item.season_start_month;
+  const end = item.season_end_month;
+  if (!start || !end) return false;
+  const m = new Date().getMonth() + 1;
+  return start <= end ? m >= start && m <= end : m >= start || m <= end;
+}
+
+function SeasonalBadge({ item }) {
+  const local = item.is_local === true;
+  const seasonal = isInSeason(item);
+  if (!local && !seasonal) return null;
+  return (
+    <span style={{ display: "inline-flex", gap: 4, flexWrap: "wrap" }}>
+      {local && <span style={badgeLocal}>🌍 Yerel</span>}
+      {seasonal && <span style={badgeSeason}>🌿 Mevsimde</span>}
+    </span>
+  );
+}
+
+/* ─── Parti Paneli ──────────────────────────────────────────────────────────── */
 function BatchPanel({ ingredient, onStockChanged }) {
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(emptyBatchForm);
 
-  const refresh = () => getBatches(ingredient.id).then(setBatches).finally(() => setLoading(false));
-  useEffect(() => { refresh(); }, [ingredient.id]);
+  const refresh = () =>
+    getBatches(ingredient.id)
+      .then(setBatches)
+      .finally(() => setLoading(false));
+
+  useEffect(() => {
+    refresh();
+  }, [ingredient.id]);
 
   const handleAdd = async () => {
     if (!form.quantity || !form.purchase_date) return;
@@ -64,83 +130,233 @@ function BatchPanel({ ingredient, onStockChanged }) {
 
   return (
     <div style={{ padding: "12px 18px 18px", background: "var(--surface2)" }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 8 }}>
+      {/* Mevsim / Yerellik bilgisi */}
+      {(ingredient.origin_region || ingredient.season_start_month) && (
+        <div
+          style={{
+            marginBottom: 10,
+            fontSize: 11,
+            color: "var(--text2)",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 10,
+          }}
+        >
+          {ingredient.origin_region && (
+            <span>
+              📍 <strong>Kaynak:</strong> {ingredient.origin_region}
+            </span>
+          )}
+          {ingredient.season_start_month && ingredient.season_end_month && (
+            <span>
+              📅 <strong>Sezon:</strong>{" "}
+              {
+                MONTHS.find((m) => m.value === ingredient.season_start_month)
+                  ?.label
+              }
+              {" – "}
+              {
+                MONTHS.find((m) => m.value === ingredient.season_end_month)
+                  ?.label
+              }
+              {isInSeason(ingredient) ? (
+                <span
+                  style={{
+                    color: "var(--green)",
+                    marginLeft: 4,
+                    fontWeight: 600,
+                  }}
+                >
+                  ✓ Şu an mevsimde
+                </span>
+              ) : (
+                <span style={{ color: "var(--text3)", marginLeft: 4 }}>
+                  (sezon dışı)
+                </span>
+              )}
+            </span>
+          )}
+          {ingredient.market_price > 0 && (
+            <span>
+              💹 <strong>Piyasa fiyatı:</strong>{" "}
+              {Number(ingredient.market_price).toFixed(2)} TL
+              {ingredient.price > 0 &&
+                ingredient.market_price > ingredient.price && (
+                  <span style={{ color: "var(--green)", marginLeft: 4 }}>
+                    (
+                    {Math.round(
+                      (1 - ingredient.price / ingredient.market_price) * 100,
+                    )}
+                    % avantajlı)
+                  </span>
+                )}
+            </span>
+          )}
+        </div>
+      )}
+
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          color: "var(--text3)",
+          textTransform: "uppercase",
+          letterSpacing: ".06em",
+          marginBottom: 8,
+        }}
+      >
         {ingredient.name} — Alınan Partiler
       </div>
-      {loading ? <div style={{ fontSize: 12, color: "var(--text3)" }}>Yükleniyor...</div> : (
-        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 10 }}>
+      {loading ? (
+        <div style={{ fontSize: 12, color: "var(--text3)" }}>Yükleniyor...</div>
+      ) : (
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            marginBottom: 10,
+          }}
+        >
           <thead>
-            <tr>{["Miktar", "Alınma Tarihi", "SKT", ""].map((h) => <th key={h} style={thSm}>{h}</th>)}</tr>
+            <tr>
+              {["Miktar", "Alınma Tarihi", "SKT", ""].map((h) => (
+                <th key={h} style={thSm}>
+                  {h}
+                </th>
+              ))}
+            </tr>
           </thead>
           <tbody>
             {batches.length === 0 && (
-              <tr><td style={tdSm} colSpan={4}>Henüz parti eklenmemiş.</td></tr>
+              <tr>
+                <td style={tdSm} colSpan={4}>
+                  Henüz parti eklenmemiş.
+                </td>
+              </tr>
             )}
             {batches.map((b) => {
               const days = daysUntil(b.expiry_date);
               const exp = expiryStyle(days);
               return (
                 <tr key={b.id}>
-                  <td style={{ ...tdSm, fontFamily: "var(--mono)", fontWeight: 600 }}>{b.quantity} {ingredient.unit}</td>
+                  <td
+                    style={{
+                      ...tdSm,
+                      fontFamily: "var(--mono)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {b.quantity} {ingredient.unit}
+                  </td>
                   <td style={tdSm}>{b.purchase_date}</td>
-                  <td style={{ ...tdSm, fontWeight: 600, color: exp.color }}>{exp.label}</td>
-                  <td style={tdSm}><button onClick={() => handleDelete(b.id)} style={btnXs}>Sil</button></td>
+                  <td style={{ ...tdSm, fontWeight: 600, color: exp.color }}>
+                    {exp.label}
+                  </td>
+                  <td style={tdSm}>
+                    <button onClick={() => handleDelete(b.id)} style={btnXs}>
+                      Sil
+                    </button>
+                  </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       )}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 8, alignItems: "end" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr auto",
+          gap: 8,
+          alignItems: "end",
+        }}
+      >
         <div>
           <div style={fieldLabelSm}>Miktar ({ingredient.unit})</div>
           <input
-            type="text" inputMode="decimal" value={form.quantity} placeholder="0"
-            onChange={(e) => setForm({ ...form, quantity: numericValue(e.target.value) })}
+            type="text"
+            inputMode="decimal"
+            value={form.quantity}
+            placeholder="0"
+            onChange={(e) =>
+              setForm({ ...form, quantity: numericValue(e.target.value) })
+            }
             style={inputSm}
           />
         </div>
         <div>
           <div style={fieldLabelSm}>Alınma Tarihi</div>
-          <input type="date" value={form.purchase_date} onChange={(e) => setForm({ ...form, purchase_date: e.target.value })} style={inputSm} />
+          <input
+            type="date"
+            value={form.purchase_date}
+            onChange={(e) =>
+              setForm({ ...form, purchase_date: e.target.value })
+            }
+            style={inputSm}
+          />
         </div>
         <div>
           <div style={fieldLabelSm}>Son Kul. Tarihi</div>
-          <input type="date" value={form.expiry_date} onChange={(e) => setForm({ ...form, expiry_date: e.target.value })} style={inputSm} />
+          <input
+            type="date"
+            value={form.expiry_date}
+            onChange={(e) => setForm({ ...form, expiry_date: e.target.value })}
+            style={inputSm}
+          />
         </div>
-        <button onClick={handleAdd} style={btnPrimarySm}>+ Parti Ekle</button>
+        <button onClick={handleAdd} style={btnPrimarySm}>
+          + Parti Ekle
+        </button>
       </div>
     </div>
   );
 }
 
+/* ─── Ana Sayfa ─────────────────────────────────────────────────────────────── */
 export default function Ingredients() {
-  const [items, setItems]     = useState([]);
-  const [form, setForm]       = useState(emptyForm);
+  const [items, setItems] = useState([]);
+  const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [search, setSearch] = useState("");
 
-  const refresh = () => getIngredients().then(setItems).finally(() => setLoading(false));
-  useEffect(() => { refresh(); }, []);
+  const refresh = () =>
+    getIngredients()
+      .then(setItems)
+      .finally(() => setLoading(false));
+  useEffect(() => {
+    refresh();
+  }, []);
 
-  const fields = [
-    { label: "Malzeme Adı",  key: "name",        type: "text" },
-    { label: "Fiyat (TL)",   key: "price",       type: "number" },
-    { label: "Kalori",       key: "calories",    type: "number" },
-    { label: "Protein (g)",  key: "protein",     type: "number" },
-    { label: "Demir (mg)",   key: "iron",        type: "number" },
+  /* Temel sayısal alanlar */
+  const basicFields = [
+    { label: "Malzeme Adı", key: "name", type: "text" },
+    { label: "Fiyat (TL)", key: "price", type: "number" },
+    { label: "Kalori", key: "calories", type: "number" },
+    { label: "Protein (g)", key: "protein", type: "number" },
+    { label: "Demir (mg)", key: "iron", type: "number" },
   ];
+
+  const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
   const handleSubmit = async () => {
     if (!form.name) return;
     const payload = {
-      ...form,
+      name: form.name,
+      unit: form.unit,
       price: numericPayloadValue(form.price),
       calories: numericPayloadValue(form.calories),
       protein: numericPayloadValue(form.protein),
       iron: numericPayloadValue(form.iron),
+      is_local: Boolean(form.is_local),
+      origin_region: form.origin_region || null,
+      season_start_month:
+        form.season_start_month !== "" ? Number(form.season_start_month) : null,
+      season_end_month:
+        form.season_end_month !== "" ? Number(form.season_end_month) : null,
+      market_price: form.market_price !== "" ? Number(form.market_price) : null,
+      last_price_checked_at: form.last_price_checked_at || null,
     };
     if (editingId) {
       await updateIngredient(editingId, payload);
@@ -155,9 +371,20 @@ export default function Ingredients() {
   const startEdit = (item) => {
     setEditingId(item.id);
     setForm({
-      name: item.name, unit: item.unit, price: item.price,
-      calories: item.calories, protein: item.protein, iron: item.iron,
+      name: item.name,
+      unit: item.unit,
+      price: item.price,
+      calories: item.calories,
+      protein: item.protein,
+      iron: item.iron,
+      is_local: Boolean(item.is_local),
+      origin_region: item.origin_region ?? "",
+      season_start_month: item.season_start_month ?? "",
+      season_end_month: item.season_end_month ?? "",
+      market_price: item.market_price ?? "",
+      last_price_checked_at: item.last_price_checked_at ?? "",
     });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const cancelEdit = () => {
@@ -165,17 +392,36 @@ export default function Ingredients() {
     setForm(emptyForm);
   };
 
+  const filtered = items.filter((i) =>
+    i.name.toLowerCase().includes(search.toLowerCase()),
+  );
+
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 20, fontWeight: 600 }}>📦 Malzeme Deposu</div>
-        <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 3 }}>Güncel stok durumu</div>
+        <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 3 }}>
+          Güncel stok durumu
+        </div>
       </div>
 
+      {/* ── Form ── */}
       <div style={card}>
-        <div style={cardHd}>{editingId ? "✏️ Malzemeyi Düzenle" : "➕ Yeni Malzeme Ekle"}</div>
-        <div style={{ padding: 18, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, alignItems: "end" }}>
-          {fields.map(({ label, key, type }) => (
+        <div style={cardHd}>
+          {editingId ? "✏️ Malzemeyi Düzenle" : "➕ Yeni Malzeme Ekle"}
+        </div>
+
+        {/* Temel bilgiler */}
+        <div
+          style={{
+            padding: "16px 18px 8px",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+            gap: 10,
+            alignItems: "end",
+          }}
+        >
+          {basicFields.map(({ label, key, type }) => (
             <div key={key}>
               <div style={fieldLabel}>{label}</div>
               <input
@@ -183,40 +429,202 @@ export default function Ingredients() {
                 inputMode={type === "number" ? "decimal" : undefined}
                 value={form[key]}
                 onFocus={(e) => {
-                  if (type === "number" && Number(form[key]) === 0) {
-                    setForm({ ...form, [key]: "" });
-                  }
+                  if (type === "number" && Number(form[key]) === 0)
+                    setField(key, "");
                   e.target.select();
                 }}
                 onBlur={() => {
-                  if (type === "number" && form[key] === "") {
-                    setForm({ ...form, [key]: 0 });
-                  }
+                  if (type === "number" && form[key] === "") setField(key, 0);
                 }}
                 onChange={(e) =>
-                  setForm({
-                    ...form,
-                    [key]: type === "number" ? numericValue(e.target.value) : e.target.value,
-                  })
+                  setField(
+                    key,
+                    type === "number"
+                      ? numericValue(e.target.value)
+                      : e.target.value,
+                  )
                 }
-                style={input} />
+                style={input}
+              />
             </div>
           ))}
           <div>
             <div style={fieldLabel}>Birim</div>
-            <select value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} style={input}>
-              {["kg", "lt", "adet", "paket", "kutu"].map((u) => <option key={u}>{u}</option>)}
+            <select
+              value={form.unit}
+              onChange={(e) => setField("unit", e.target.value)}
+              style={input}
+            >
+              {["kg", "lt", "adet", "paket", "kutu"].map((u) => (
+                <option key={u}>{u}</option>
+              ))}
             </select>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={handleSubmit} style={{ ...btnPrimary, flex: 1 }}>{editingId ? "Güncelle" : "Ekle"}</button>
-            {editingId && <button onClick={cancelEdit} style={btnSm}>İptal</button>}
+        </div>
+
+        {/* Mevsimsel & Yerellik bilgileri */}
+        <div
+          style={{
+            margin: "0 18px 8px",
+            borderTop: "1px solid var(--border2)",
+            paddingTop: 12,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: "var(--text3)",
+              textTransform: "uppercase",
+              letterSpacing: ".06em",
+              marginBottom: 10,
+            }}
+          >
+            🌿 Mevsimsel & Yerellik Bilgileri
           </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+              gap: 10,
+              alignItems: "end",
+            }}
+          >
+            <div>
+              <div style={fieldLabel}>Sezon Başlangıcı</div>
+              <select
+                value={form.season_start_month}
+                onChange={(e) => setField("season_start_month", e.target.value)}
+                style={input}
+              >
+                {MONTHS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <div style={fieldLabel}>Sezon Bitişi</div>
+              <select
+                value={form.season_end_month}
+                onChange={(e) => setField("season_end_month", e.target.value)}
+                style={input}
+              >
+                {MONTHS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <div style={fieldLabel}>Kaynak Bölge</div>
+              <input
+                type="text"
+                placeholder="Örn: Antalya / İzmir"
+                value={form.origin_region}
+                onChange={(e) => setField("origin_region", e.target.value)}
+                style={input}
+              />
+            </div>
+
+            <div>
+              <div style={fieldLabel}>Piyasa Fiyatı (TL)</div>
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="Karşılaştırma için"
+                value={form.market_price}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) =>
+                  setField("market_price", numericValue(e.target.value))
+                }
+                style={input}
+              />
+            </div>
+
+            <div>
+              <div style={fieldLabel}>Fiyat Kontrol Tarihi</div>
+              <input
+                type="date"
+                value={form.last_price_checked_at}
+                onChange={(e) =>
+                  setField("last_price_checked_at", e.target.value)
+                }
+                style={input}
+              />
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                paddingBottom: 2,
+              }}
+            >
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 7,
+                  cursor: "pointer",
+                  fontSize: 13,
+                  color: "var(--text)",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={Boolean(form.is_local)}
+                  onChange={(e) => setField("is_local", e.target.checked)}
+                  style={{
+                    width: 15,
+                    height: 15,
+                    accentColor: "var(--accent)",
+                  }}
+                />
+                <span>
+                  <strong>Yerel Ürün</strong>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: "var(--text3)",
+                      fontWeight: 400,
+                    }}
+                  >
+                    Bölgesel / yerli tedarik
+                  </div>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Kaydet butonu */}
+        <div style={{ padding: "8px 18px 18px", display: "flex", gap: 8 }}>
+          <button onClick={handleSubmit} style={btnPrimary}>
+            {editingId ? "Güncelle" : "Ekle"}
+          </button>
+          {editingId && (
+            <button onClick={cancelEdit} style={btnSm}>
+              İptal
+            </button>
+          )}
         </div>
       </div>
 
+      {/* ── Tablo ── */}
       <div style={card}>
-        <div style={cardHd}>🗃️ Stok Listesi <span style={{ fontWeight: 400, color: "var(--text3)" }}>(her malzeme kendi partilerinin toplamıdır — detay için satıra tıklayın)</span></div>
+        <div style={cardHd}>
+          🗃️ Stok Listesi{" "}
+          <span style={{ fontWeight: 400, color: "var(--text3)" }}>
+            (her malzeme kendi partilerinin toplamıdır — detay için satıra
+            tıklayın)
+          </span>
+        </div>
         <div style={{ padding: "12px 18px" }}>
           <input
             type="text"
@@ -226,56 +634,261 @@ export default function Ingredients() {
             style={input}
           />
         </div>
-        {loading ? <div style={{ padding: 24, color: "var(--text3)" }}>Yükleniyor...</div> : (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>{["", "Malzeme", "Birim", "Toplam Stok", "Fiyat", "Kalori", "Protein", "Demir", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
-            </thead>
-            <tbody>
-              {items.filter((i) => i.name.toLowerCase().includes(search.toLowerCase())).map((i) => (
-                <Fragment key={i.id}>
-                  <tr style={{ cursor: "pointer" }} onClick={() => setExpandedId(expandedId === i.id ? null : i.id)}>
-                    <td style={{ ...td, width: 22, color: "var(--text3)" }}>{expandedId === i.id ? "▾" : "▸"}</td>
-                    <td style={td}><span style={{ fontWeight: 500, color: "var(--text)" }}>{i.name}</span></td>
-                    <td style={td}>{i.unit}</td>
-                    <td style={{ ...td, fontFamily: "var(--mono)", fontWeight: 600, color: i.stock < 20 ? "var(--red)" : i.stock < 50 ? "var(--amber)" : "var(--green)" }}>{i.stock}</td>
-                    <td style={td}>{i.price?.toFixed(2)} TL</td>
-                    <td style={td}>{i.calories} kcal</td>
-                    <td style={td}>{i.protein} g</td>
-                    <td style={td}>{i.iron} mg</td>
-                    <td style={td} onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => startEdit(i)} style={btnSm}>Düzenle</button>{" "}
-                      <button onClick={() => deleteIngredient(i.id).then(refresh)} style={btnSm}>Sil</button>
-                    </td>
-                  </tr>
-                  {expandedId === i.id && (
-                    <tr>
-                      <td colSpan={9} style={{ padding: 0, borderBottom: "1px solid var(--border)" }}>
-                        <BatchPanel ingredient={i} onStockChanged={refresh} />
+        {loading ? (
+          <div style={{ padding: 24, color: "var(--text3)" }}>
+            Yükleniyor...
+          </div>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table
+              style={{
+                width: "100%",
+                minWidth: 820,
+                borderCollapse: "collapse",
+              }}
+            >
+              <thead>
+                <tr>
+                  {[
+                    "",
+                    "Malzeme",
+                    "Birim",
+                    "Stok",
+                    "Fiyat",
+                    "Kalori",
+                    "Protein",
+                    "Demir",
+                    "Yerel / Mevsim",
+                    "",
+                  ].map((h) => (
+                    <th key={h} style={th}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((i) => (
+                  <Fragment key={i.id}>
+                    <tr
+                      style={{ cursor: "pointer" }}
+                      onClick={() =>
+                        setExpandedId(expandedId === i.id ? null : i.id)
+                      }
+                    >
+                      <td style={{ ...td, width: 22, color: "var(--text3)" }}>
+                        {expandedId === i.id ? "▾" : "▸"}
+                      </td>
+                      <td style={td}>
+                        <span style={{ fontWeight: 500, color: "var(--text)" }}>
+                          {i.name}
+                        </span>
+                      </td>
+                      <td style={td}>{i.unit}</td>
+                      <td
+                        style={{
+                          ...td,
+                          fontFamily: "var(--mono)",
+                          fontWeight: 600,
+                          color:
+                            i.stock < 20
+                              ? "var(--red)"
+                              : i.stock < 50
+                                ? "var(--amber)"
+                                : "var(--green)",
+                        }}
+                      >
+                        {i.stock}
+                      </td>
+                      <td style={td}>{Number(i.price || 0).toFixed(2)} TL</td>
+                      <td style={td}>{i.calories} kcal</td>
+                      <td style={td}>{i.protein} g</td>
+                      <td style={td}>{i.iron} mg</td>
+                      <td style={td}>
+                        <SeasonalBadge item={i} />
+                      </td>
+                      <td style={td} onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => startEdit(i)} style={btnSm}>
+                          Düzenle
+                        </button>{" "}
+                        <button
+                          onClick={() => deleteIngredient(i.id).then(refresh)}
+                          style={btnSm}
+                        >
+                          Sil
+                        </button>
                       </td>
                     </tr>
-                  )}
-                </Fragment>
-              ))}
-            </tbody>
-          </table>
+                    {expandedId === i.id && (
+                      <tr>
+                        <td
+                          colSpan={10}
+                          style={{
+                            padding: 0,
+                            borderBottom: "1px solid var(--border)",
+                          }}
+                        >
+                          <BatchPanel ingredient={i} onStockChanged={refresh} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={10}
+                      style={{
+                        ...td,
+                        textAlign: "center",
+                        color: "var(--text3)",
+                      }}
+                    >
+                      Malzeme bulunamadı.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
   );
 }
 
-const card       = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow)", marginBottom: 16 };
-const cardHd     = { padding: "14px 18px 12px", borderBottom: "1px solid var(--border)", fontSize: 13, fontWeight: 600 };
-const fieldLabel = { fontSize: 11, color: "var(--text2)", marginBottom: 5, fontWeight: 500 };
-const fieldLabelSm = { fontSize: 10, color: "var(--text2)", marginBottom: 4, fontWeight: 500 };
-const input      = { width: "100%", background: "var(--surface2)", border: "1px solid var(--border2)", borderRadius: 7, padding: "7px 12px", fontSize: 13, color: "var(--text)", outline: "none" };
-const inputSm    = { width: "100%", background: "var(--surface)", border: "1px solid var(--border2)", borderRadius: 6, padding: "6px 10px", fontSize: 12, color: "var(--text)", outline: "none" };
-const th         = { textAlign: "left", fontSize: 10, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".06em", padding: "10px 18px", borderBottom: "1px solid var(--border)" };
-const thSm       = { textAlign: "left", fontSize: 9, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".06em", padding: "6px 8px", borderBottom: "1px solid var(--border2)" };
-const td         = { padding: "10px 18px", fontSize: 12, color: "var(--text2)", borderBottom: "1px solid var(--border)" };
-const tdSm       = { padding: "6px 8px", fontSize: 12, color: "var(--text2)", borderBottom: "1px solid var(--border2)" };
-const btnPrimary = { background: "var(--accent)", border: "none", color: "#fff", padding: "8px 18px", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer" };
-const btnPrimarySm = { background: "var(--accent)", border: "none", color: "#fff", padding: "6px 14px", borderRadius: 7, fontSize: 11, fontWeight: 500, cursor: "pointer" };
-const btnSm      = { background: "var(--surface2)", border: "1px solid var(--border2)", color: "var(--text2)", padding: "4px 10px", borderRadius: 6, fontSize: 11, cursor: "pointer" };
-const btnXs      = { background: "var(--surface)", border: "1px solid var(--border2)", color: "var(--text2)", padding: "2px 8px", borderRadius: 5, fontSize: 10, cursor: "pointer" };
+/* ─── Stiller ───────────────────────────────────────────────────────────────── */
+const card = {
+  background: "var(--surface)",
+  border: "1px solid var(--border)",
+  borderRadius: "var(--radius)",
+  boxShadow: "var(--shadow)",
+  marginBottom: 16,
+};
+const cardHd = {
+  padding: "14px 18px 12px",
+  borderBottom: "1px solid var(--border)",
+  fontSize: 13,
+  fontWeight: 600,
+};
+const fieldLabel = {
+  fontSize: 11,
+  color: "var(--text2)",
+  marginBottom: 5,
+  fontWeight: 500,
+};
+const fieldLabelSm = {
+  fontSize: 10,
+  color: "var(--text2)",
+  marginBottom: 4,
+  fontWeight: 500,
+};
+const input = {
+  width: "100%",
+  background: "var(--surface2)",
+  border: "1px solid var(--border2)",
+  borderRadius: 7,
+  padding: "7px 12px",
+  fontSize: 13,
+  color: "var(--text)",
+  outline: "none",
+  boxSizing: "border-box",
+};
+const inputSm = {
+  width: "100%",
+  background: "var(--surface)",
+  border: "1px solid var(--border2)",
+  borderRadius: 6,
+  padding: "6px 10px",
+  fontSize: 12,
+  color: "var(--text)",
+  outline: "none",
+};
+const th = {
+  textAlign: "left",
+  fontSize: 10,
+  fontWeight: 700,
+  color: "var(--text3)",
+  textTransform: "uppercase",
+  letterSpacing: ".06em",
+  padding: "10px 18px",
+  borderBottom: "1px solid var(--border)",
+};
+const thSm = {
+  textAlign: "left",
+  fontSize: 9,
+  fontWeight: 700,
+  color: "var(--text3)",
+  textTransform: "uppercase",
+  letterSpacing: ".06em",
+  padding: "6px 8px",
+  borderBottom: "1px solid var(--border2)",
+};
+const td = {
+  padding: "10px 18px",
+  fontSize: 12,
+  color: "var(--text2)",
+  borderBottom: "1px solid var(--border)",
+};
+const tdSm = {
+  padding: "6px 8px",
+  fontSize: 12,
+  color: "var(--text2)",
+  borderBottom: "1px solid var(--border2)",
+};
+const btnPrimary = {
+  background: "var(--accent)",
+  border: "none",
+  color: "#fff",
+  padding: "8px 20px",
+  borderRadius: 8,
+  fontSize: 12,
+  fontWeight: 500,
+  cursor: "pointer",
+};
+const btnPrimarySm = {
+  background: "var(--accent)",
+  border: "none",
+  color: "#fff",
+  padding: "6px 14px",
+  borderRadius: 7,
+  fontSize: 11,
+  fontWeight: 500,
+  cursor: "pointer",
+};
+const btnSm = {
+  background: "var(--surface2)",
+  border: "1px solid var(--border2)",
+  color: "var(--text2)",
+  padding: "4px 10px",
+  borderRadius: 6,
+  fontSize: 11,
+  cursor: "pointer",
+};
+const btnXs = {
+  background: "var(--surface)",
+  border: "1px solid var(--border2)",
+  color: "var(--text2)",
+  padding: "2px 8px",
+  borderRadius: 5,
+  fontSize: 10,
+  cursor: "pointer",
+};
+const badgeLocal = {
+  background: "rgba(99,102,241,.12)",
+  color: "var(--accent)",
+  border: "1px solid rgba(99,102,241,.25)",
+  borderRadius: 999,
+  padding: "2px 7px",
+  fontSize: 10,
+  fontWeight: 600,
+};
+const badgeSeason = {
+  background: "rgba(34,197,94,.12)",
+  color: "#16a34a",
+  border: "1px solid rgba(34,197,94,.25)",
+  borderRadius: 999,
+  padding: "2px 7px",
+  fontSize: 10,
+  fontWeight: 600,
+};

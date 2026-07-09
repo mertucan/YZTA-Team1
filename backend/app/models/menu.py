@@ -60,3 +60,33 @@ class WeeklyMenuDetail(WeeklyMenu):
 
 class WeeklyMenuStatusUpdate(BaseModel):
     status: str
+
+
+class SeasonalMenuRevision(BaseModel):
+    menu_item_id: int
+    day_of_week: str
+    category: str
+    current_meal_id: int
+    current_meal_name: str
+    current_cost: float
+    suggested_meal_id: int
+    suggested_meal_name: str
+    suggested_cost: float
+    estimated_savings: float
+    seasonal_score: float
+    local_score: float
+    price_advantage_score: float
+    local_ingredient_ratio: float
+    seasonal_ingredients: list[str] = []
+    local_ingredients: list[str] = []
+    opportunity_ingredients: list[str] = []
+    reason: str
+
+
+class SeasonalMenuRevisionResponse(BaseModel):
+    menu_id: int
+    week_start_date: date
+    total_estimated_savings: float
+    average_local_ingredient_ratio: float
+    revision_count: int
+    revisions: list[SeasonalMenuRevision] = []

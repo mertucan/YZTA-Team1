@@ -7,8 +7,9 @@ from app.models.menu import (
     WeeklyMenuStatusUpdate,
     WeeklyMenuCreateManual,
     WeeklyMenuMealItemCreate,
+    SeasonalMenuRevisionResponse,
 )
-from app.services.menu_ai import MenuAIError, generate_weekly_menu
+from app.services.menu_ai import MenuAIError, generate_weekly_menu, suggest_seasonal_revisions
 
 router = APIRouter(prefix="/menus", tags=["menus"])
 
@@ -128,6 +129,14 @@ def update_menu_status(menu_id: int, payload: WeeklyMenuStatusUpdate):
     if not res.data:
         raise HTTPException(status_code=404, detail="Menu not found")
     return res.data[0]
+
+
+@router.get("/{menu_id}/seasonal-revisions", response_model=SeasonalMenuRevisionResponse)
+def get_seasonal_revisions(menu_id: int):
+    try:
+        return suggest_seasonal_revisions(menu_id)
+    except MenuAIError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.delete("/{menu_id}", status_code=204)
