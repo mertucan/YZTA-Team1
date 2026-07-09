@@ -5,19 +5,21 @@ from app.models.absence import Absence, AbsenceCreate
 
 router = APIRouter(prefix="/absences", tags=["absences"])
 
+_JOINED_SELECT = "id, absence_date, students(id, first_name, last_name, national_id)"
 
-@router.get("/", response_model=list[Absence])
+
+@router.get("/")
 def list_absences():
-    res = get_db().table("student_absences").select("*").execute()
+    res = get_db().table("student_absences").select(_JOINED_SELECT).execute()
     return res.data
 
 
-@router.get("/student/{student_id}", response_model=list[Absence])
+@router.get("/student/{student_id}")
 def get_student_absences(student_id: int):
     res = (
         get_db()
         .table("student_absences")
-        .select("*")
+        .select(_JOINED_SELECT)
         .eq("student_id", student_id)
         .execute()
     )

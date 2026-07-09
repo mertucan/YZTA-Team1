@@ -37,6 +37,7 @@ export default function Meals() {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0]);
   const [editingId, setEditingId] = useState(null);
+  const [search, setSearch] = useState("");
 
   const refresh = () => getMeals().then(setItems).finally(() => setLoading(false));
   useEffect(() => {
@@ -107,8 +108,8 @@ export default function Meals() {
   }, [items]);
 
   const visibleItems = useMemo(
-    () => items.filter((m) => m.category === activeCategory),
-    [items, activeCategory]
+    () => items.filter((m) => m.category === activeCategory && m.name.toLowerCase().includes(search.toLowerCase())),
+    [items, activeCategory, search]
   );
 
   return (
@@ -194,6 +195,15 @@ export default function Meals() {
         </div>
         <div style={{ padding: "10px 18px 2px", fontSize: 13, fontWeight: 600, color: "var(--text2)" }}>
           🍽️ {activeCategory} Listesi
+        </div>
+        <div style={{ padding: "8px 18px 12px" }}>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="🔍 Bu kategoride yemek ara..."
+            style={input}
+          />
         </div>
         {loading ? <div style={{ padding: 24, color: "var(--text3)" }}>Yükleniyor...</div> : (
           visibleItems.length === 0 ? (
