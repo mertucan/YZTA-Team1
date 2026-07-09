@@ -1,6 +1,5 @@
 import json
 from datetime import date
-from math import floor
 
 from google import genai
 from google.genai import types
@@ -8,7 +7,15 @@ from google.genai import types
 from app.config import settings
 from app.database import get_db
 
-DAYS_OF_WEEK = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma"]
+ALL_DAYS = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
+CATEGORIES = [
+    "Çorba",
+    "Ana Yemek",
+    "Ara Sıcak",
+    "Tahıl (Pilav/Makarna)",
+    "Yoğurt/Salata",
+    "Tatlı/Meyve",
+]
 
 DAILY_CALORIE_TARGET = 800
 DAILY_PROTEIN_TARGET_G = 30
@@ -17,30 +24,20 @@ DAILY_IRON_TARGET_MG = 5
 RESPONSE_SCHEMA = {
     "type": "object",
     "properties": {
-        "days": {
+        "picks": {
             "type": "array",
             "items": {
                 "type": "object",
                 "properties": {
                     "day": {"type": "string"},
-                    "meal_name": {"type": "string"},
-                    "items": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "ingredient_id": {"type": "integer"},
-                                "quantity": {"type": "number"},
-                            },
-                            "required": ["ingredient_id", "quantity"],
-                        },
-                    },
+                    "category": {"type": "string"},
+                    "meal_id": {"type": "integer"},
                 },
-                "required": ["day", "meal_name", "items"],
+                "required": ["day", "category", "meal_id"],
             },
         },
     },
-    "required": ["days"],
+    "required": ["picks"],
 }
 
 
@@ -48,42 +45,75 @@ class MenuAIError(Exception):
     pass
 
 
-def _fetch_ingredients() -> dict[int, dict]:
-    res = get_db().table("ingredients").select("*").gt("stock", 0).execute()
-    return {row["id"]: row for row in res.data}
+def _fetch_catalog() -> list[dict]:
+    res = get_db().table("meals").select(
+        "id, name, category, portions, calories, protein, iron, "
+        "meal_ingredients(quantity, ingredient_id, ingredients(name, unit, price))"
+    ).execute()
+    return res.data
 
 
-def _build_ingredient_context(ingredients: dict[int, dict]) -> str:
-    lines = [
-        f"- id={i['id']} | {i['name']} | stok={i['stock']}{i['unit']} | "
-        f"fiyat={i.get('price', 0)}TL/{i['unit']} | kalori={i.get('calories', 0)} | "
-        f"protein={i.get('protein', 0)}g | demir={i.get('iron', 0)}mg"
-        for i in ingredients.values()
-    ]
-    return "\n".join(lines)
+def _fetch_stock_map() -> dict[int, float]:
+    res = get_db().table("ingredients").select("id, stock").execute()
+    return {row["id"]: float(row["stock"] or 0) for row in res.data}
 
 
-def _build_prompt(budget: float, ingredients: dict[int, dict], extra_instructions: str | None) -> str:
-    context = _build_ingredient_context(ingredients)
-    extra_block = (
-        f"\nOkul yöneticisinin ek talimatı (buna öncelik ver): {extra_instructions}\n"
-        if extra_instructions else ""
+def _meal_cost_per_portion(meal: dict) -> float:
+    portions = max(meal.get("portions") or 1, 1)
+    total = sum(
+        float(it["quantity"]) * float((it.get("ingredients") or {}).get("price") or 0)
+        for it in (meal.get("meal_ingredients") or [])
     )
-    return f"""Sen bir okul yemekhanesi için beslenme uzmanı yapay zekasısın.
+    return round(total / portions, 2)
 
-Aşağıda depoda STOKTA OLAN malzemelerin listesi var (yalnızca bu malzemeleri kullanabilirsin):
-{context}
 
-Görev: Pazartesi'den Cuma'ya kadar 5 günlük bir okul yemekhanesi öğle yemeği menüsü oluştur.
+def _meal_score(meal: dict, cost_per_portion: float) -> float:
+    price = max(cost_per_portion, 0.01)
+    nutrition = (
+        float(meal.get("calories") or 0) / DAILY_CALORIE_TARGET
+        + float(meal.get("protein") or 0) / DAILY_PROTEIN_TARGET_G
+        + float(meal.get("iron") or 0) / DAILY_IRON_TARGET_MG
+    )
+    return nutrition / price
+
+
+def _is_makeable(meal: dict, stock_map: dict[int, float]) -> bool:
+    for it in meal.get("meal_ingredients") or []:
+        needed = float(it["quantity"])
+        available = stock_map.get(it["ingredient_id"], 0)
+        if needed > available:
+            return False
+    return True
+
+
+def _consume(meal: dict, stock_map: dict[int, float]) -> None:
+    for it in meal.get("meal_ingredients") or []:
+        iid = it["ingredient_id"]
+        stock_map[iid] = stock_map.get(iid, 0) - float(it["quantity"])
+
+
+def _build_gemini_prompt(by_category: dict[str, list[dict]], budget: float, extra_instructions: str | None) -> str:
+    lines = []
+    for category, meals in by_category.items():
+        for m in meals:
+            cost = _meal_cost_per_portion(m)
+            lines.append(
+                f"- meal_id={m['id']} | kategori={category} | {m['name']} | "
+                f"porsiyon başı ~{cost}TL | {m.get('calories', 0)}kcal"
+            )
+    catalog_text = "\n".join(lines)
+    extra_block = f"\nEk talimat (öncelikli): {extra_instructions}\n" if extra_instructions else ""
+    return f"""Sen bir okul yemekhanesi menü planlama asistanısın. Aşağıda depodaki mevcut malzemelerle
+ŞU AN YAPILABİLECEK yemeklerin kataloğu var (kategori bazında, meal_id ile):
+{catalog_text}
+
+Görev: Pazartesi'den Pazar'a kadar (7 gün) her gün, yukarıdaki her kategoriden
+(Çorba, Ana Yemek, Ara Sıcak, Tahıl (Pilav/Makarna), Yoğurt/Salata, Tatlı/Meyve) BİRER yemek seç.
+Aynı yemeği hafta içinde art arda günlerde tekrar etme, çeşitlilik sağla.
 {extra_block}
-Kurallar:
-- Sadece yukarıda listelenen malzemeleri ve ingredient_id değerlerini kullan.
-- Her malzemenin kullandığın miktarı, o malzemenin stok miktarını aşmamalı.
-- Haftalık toplam maliyet (tüm günlerin malzeme fiyat * miktar toplamı) {budget} TL bütçesini kesinlikle aşmamalı, ama bütçeyi verimli kullan: toplam maliyet bütçenin yaklaşık %85-100'üne yakın olsun.
-- Her gün için günlük hedeflere olabildiğince yaklaş: ~{DAILY_CALORIE_TARGET} kalori, ~{DAILY_PROTEIN_TARGET_G}g protein, ~{DAILY_IRON_TARGET_MG}mg demir.
-- Her gün en az 1, en fazla 4 malzemeden oluşan tek bir yemek öner (meal_name kısa ve anlamlı olsun, örn. "Tavuk Sote ve Pilav").
-- Yöneticinin ek talimatı varsa, yukarıdaki kurallarla çelişmediği sürece onu uygula.
-- Sadece istenen JSON şemasına uygun çıktı üret, başka açıklama ekleme.
+Haftalık bütçe yaklaşık {budget} TL. Bütçeyi göz önünde bulundur ama her gün her kategoriden
+bir seçim yapmayı önceliklendir.
+Sadece istenen JSON şemasına uygun çıktı üret, başka açıklama ekleme.
 """
 
 
@@ -93,162 +123,120 @@ def _client() -> genai.Client:
     return genai.Client(api_key=settings.gemini_api_key)
 
 
-def _ingredient_score(ingredient: dict) -> float:
-    price = max(float(ingredient.get("price") or 0), 0.01)
-    calories = float(ingredient.get("calories") or 0)
-    protein = float(ingredient.get("protein") or 0)
-    iron = float(ingredient.get("iron") or 0)
-    nutrition_score = (
-        calories / DAILY_CALORIE_TARGET
-        + protein / DAILY_PROTEIN_TARGET_G
-        + iron / DAILY_IRON_TARGET_MG
-    )
-    return nutrition_score / price
-
-
-def _fallback_plan(budget: float, ingredients: dict[int, dict]) -> dict:
-    remaining_stock = {ingredient_id: float(row.get("stock") or 0) for ingredient_id, row in ingredients.items()}
-    ranked = sorted(ingredients.values(), key=_ingredient_score, reverse=True)
-    if not ranked:
-        return {"days": []}
-
-    daily_budget = max(budget / len(DAYS_OF_WEEK), 0)
-    days = []
-    for index, day in enumerate(DAYS_OF_WEEK):
-        day_items = []
-        spent = 0.0
-        candidates = ranked[index:] + ranked[:index]
-
-        for ingredient in candidates:
-            if len(day_items) >= 4:
-                break
-            ingredient_id = ingredient["id"]
-            stock_left = remaining_stock.get(ingredient_id, 0)
-            if stock_left <= 0:
-                continue
-
-            price = max(float(ingredient.get("price") or 0), 0.01)
-            item_budget = max((daily_budget - spent) / max(1, 4 - len(day_items)), price)
-            quantity = min(stock_left, item_budget / price)
-            if quantity <= 0:
-                continue
-
-            if str(ingredient.get("unit", "")).lower() == "adet":
-                quantity = max(1, floor(quantity))
-            else:
-                quantity = round(quantity, 2)
-
-            cost = quantity * price
-            if budget and spent + cost > daily_budget * 1.05 and day_items:
-                continue
-
-            day_items.append({"ingredient_id": ingredient_id, "quantity": quantity})
-            remaining_stock[ingredient_id] = stock_left - quantity
-            spent += cost
-
-        if not day_items:
-            ingredient = ranked[index % len(ranked)]
-            quantity = min(remaining_stock.get(ingredient["id"], 0), 1)
-            if quantity > 0:
-                day_items.append({"ingredient_id": ingredient["id"], "quantity": quantity})
-                remaining_stock[ingredient["id"]] -= quantity
-
-        main_name = ingredients[day_items[0]["ingredient_id"]]["name"] if day_items else "Günün Menüsü"
-        days.append({"day": day, "meal_name": f"{main_name} Menüsü", "items": day_items})
-
-    return {"days": days}
-
-
-def _generate_with_gemini(budget: float, ingredients: dict[int, dict], extra_instructions: str | None) -> dict:
+def _gemini_picks(by_category: dict[str, list[dict]], budget: float, extra_instructions: str | None) -> list[dict]:
     response = _client().models.generate_content(
         model=settings.gemini_model,
-        contents=_build_prompt(budget, ingredients, extra_instructions),
+        contents=_build_gemini_prompt(by_category, budget, extra_instructions),
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
             response_schema=RESPONSE_SCHEMA,
         ),
     )
-    return json.loads(response.text or "{}")
+    parsed = json.loads(response.text or "{}")
+    return parsed.get("picks", [])
 
 
-def _materialize_menu(parsed: dict, ingredients: dict[int, dict]) -> list[dict]:
-    item_rows = []
-    used_stock: dict[int, float] = {}
-
-    for day_index, day_entry in enumerate(parsed.get("days", [])):
-        day_name = day_entry.get("day") or DAYS_OF_WEEK[day_index % len(DAYS_OF_WEEK)]
-        meal_name = day_entry.get("meal_name") or "Menü"
-        for raw_item in day_entry.get("items", []):
-            ingredient = ingredients.get(raw_item.get("ingredient_id"))
-            if ingredient is None:
-                continue
-
-            stock_left = float(ingredient["stock"]) - used_stock.get(ingredient["id"], 0)
-            quantity = max(0.0, min(float(raw_item.get("quantity", 0)), stock_left))
-            if quantity <= 0:
-                continue
-
-            used_stock[ingredient["id"]] = used_stock.get(ingredient["id"], 0) + quantity
-            cost = quantity * float(ingredient.get("price", 0))
-            calories = quantity * float(ingredient.get("calories", 0))
-            protein = quantity * float(ingredient.get("protein", 0))
-            iron = quantity * float(ingredient.get("iron", 0))
-
-            item_rows.append({
-                "day_of_week": day_name,
-                "meal_name": meal_name,
-                "ingredient_id": ingredient["id"],
-                "quantity": quantity,
-                "estimated_cost": round(cost, 2),
-                "calories": round(calories, 2),
-                "protein": round(protein, 2),
-                "iron": round(iron, 2),
-            })
-
-    return item_rows
+def _deterministic_pick(candidates: list[dict], rotation_idx: int, over_budget: bool) -> dict:
+    if over_budget:
+        ordered = sorted(candidates, key=lambda m: _meal_cost_per_portion(m))
+    else:
+        ordered = sorted(candidates, key=lambda m: _meal_score(m, _meal_cost_per_portion(m)), reverse=True)
+    return ordered[rotation_idx % len(ordered)]
 
 
 def generate_weekly_menu(week_start_date: date, budget: float, extra_instructions: str | None = None) -> dict:
-    ingredients = _fetch_ingredients()
-    if not ingredients:
-        raise MenuAIError("Stokta malzeme bulunamadığı için menü oluşturulamıyor.")
+    """Depodaki mevcut malzemelerle şu an yapılabilecek yemek kataloğundan (Yemek Kategorisi)
+    7 günlük, kategori kategori dolu bir haftalık menü üretir. Önce Gemini'den öneri istenir;
+    başarısız olursa veya bir öneri artık yapılamaz hale gelmişse (stok tükendiyse) besin/fiyat
+    skoruna göre deterministik seçimle tamamlanır — bu yüzden GEMINI_API_KEY olmasa da çalışır.
+    """
+    catalog = _fetch_catalog()
+    if not catalog:
+        raise MenuAIError("Yemek kataloğunda hiç kayıt yok.")
 
+    stock_map = _fetch_stock_map()
+    by_category: dict[str, list[dict]] = {c: [m for m in catalog if m["category"] == c] for c in CATEGORIES}
+    meals_by_id = {m["id"]: m for m in catalog}
+
+    gemini_picks_by_slot: dict[tuple[str, str], int] = {}
     try:
-        parsed = _generate_with_gemini(budget, ingredients, extra_instructions)
-        item_rows = _materialize_menu(parsed, ingredients)
-    except MenuAIError:
-        raise
+        for p in _gemini_picks(by_category, budget, extra_instructions):
+            gemini_picks_by_slot[(p.get("day"), p.get("category"))] = p.get("meal_id")
     except Exception:
-        parsed = _fallback_plan(budget, ingredients)
-        item_rows = _materialize_menu(parsed, ingredients)
+        gemini_picks_by_slot = {}
 
-    if not item_rows:
-        parsed = _fallback_plan(budget, ingredients)
-        item_rows = _materialize_menu(parsed, ingredients)
+    rotation_idx = {c: 0 for c in CATEGORIES}
+    running_cost = 0.0
+    picks: list[tuple[str, str, dict]] = []
 
-    if not item_rows:
-        raise MenuAIError("Geçerli hiçbir menü kalemi üretilemedi.")
+    for day in ALL_DAYS:
+        for category in CATEGORIES:
+            pool = [m for m in by_category.get(category, []) if _is_makeable(m, stock_map)]
+            if not pool:
+                continue
 
-    total_cost = sum(row["estimated_cost"] for row in item_rows)
-    total_calories = sum(row["calories"] for row in item_rows)
-    total_protein = sum(row["protein"] for row in item_rows)
-    total_iron = sum(row["iron"] for row in item_rows)
+            chosen = None
+            gemini_choice_id = gemini_picks_by_slot.get((day, category))
+            if gemini_choice_id is not None:
+                candidate = meals_by_id.get(gemini_choice_id)
+                if candidate and candidate["category"] == category and _is_makeable(candidate, stock_map):
+                    chosen = candidate
+
+            if chosen is None:
+                over_budget = budget > 0 and running_cost > budget
+                chosen = _deterministic_pick(pool, rotation_idx[category], over_budget)
+                rotation_idx[category] += 1
+
+            _consume(chosen, stock_map)
+            portions = max(chosen.get("portions") or 1, 1)
+            running_cost += _meal_cost_per_portion(chosen) * portions
+            picks.append((day, category, chosen))
+
+    if not picks:
+        raise MenuAIError("Depodaki malzemelerle hiçbir yemek üretilemedi. Malzeme Deposu stoklarını kontrol edin.")
 
     db = get_db()
     menu_res = db.table("weekly_menus").insert({
         "week_start_date": week_start_date.isoformat(),
         "budget": budget,
-        "total_cost": round(total_cost, 2),
-        "total_calories": round(total_calories, 2),
-        "total_protein": round(total_protein, 2),
-        "total_iron": round(total_iron, 2),
+        "total_cost": 0,
+        "total_calories": 0,
+        "total_protein": 0,
+        "total_iron": 0,
         "status": "draft",
         "notes": extra_instructions,
     }).execute()
     menu = menu_res.data[0]
 
-    for row in item_rows:
-        row["weekly_menu_id"] = menu["id"]
-    items_res = db.table("weekly_menu_items").insert(item_rows).execute()
+    item_rows = []
+    for day, category, meal in picks:
+        portions = max(meal.get("portions") or 1, 1)
+        cost_per_portion = _meal_cost_per_portion(meal)
+        item_rows.append({
+            "weekly_menu_id": menu["id"],
+            "day_of_week": day,
+            "category": category,
+            "meal_id": meal["id"],
+            "meal_name": meal["name"],
+            "portions": portions,
+            "estimated_cost": cost_per_portion,
+            "calories": meal.get("calories") or 0,
+            "protein": meal.get("protein") or 0,
+            "iron": meal.get("iron") or 0,
+        })
+    db.table("weekly_menu_items").insert(item_rows).execute()
 
-    return {**menu, "items": items_res.data}
+    total_cost = sum(r["estimated_cost"] * r["portions"] for r in item_rows)
+    total_calories = sum(r["calories"] for r in item_rows)
+    total_protein = sum(r["protein"] for r in item_rows)
+    total_iron = sum(r["iron"] for r in item_rows)
+    db.table("weekly_menus").update({
+        "total_cost": round(total_cost, 2),
+        "total_calories": round(total_calories, 2),
+        "total_protein": round(total_protein, 2),
+        "total_iron": round(total_iron, 2),
+    }).eq("id", menu["id"]).execute()
+
+    final = db.table("weekly_menus").select("*").eq("id", menu["id"]).single().execute()
+    items_res = db.table("weekly_menu_items").select("*").eq("weekly_menu_id", menu["id"]).execute()
+    return {**final.data, "items": items_res.data}
