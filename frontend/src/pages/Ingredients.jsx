@@ -3,9 +3,10 @@ import {
   getIngredients, createIngredient, updateIngredient, deleteIngredient,
   getBatches, createBatch, deleteBatch,
 } from "../api/ingredients";
+import { todayLocal } from "../utils/date";
 
 const emptyForm = { name: "", unit: "kg", calories: 0, protein: 0, iron: 0, price: 0 };
-const emptyBatchForm = { quantity: "", purchase_date: new Date().toISOString().slice(0, 10), expiry_date: "" };
+const emptyBatchForm = { quantity: "", purchase_date: todayLocal(), expiry_date: "" };
 
 function numericValue(value) {
   const normalized = String(value)
@@ -119,6 +120,7 @@ export default function Ingredients() {
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [search, setSearch] = useState("");
 
   const refresh = () => getIngredients().then(setItems).finally(() => setLoading(false));
   useEffect(() => { refresh(); }, []);
@@ -215,13 +217,22 @@ export default function Ingredients() {
 
       <div style={card}>
         <div style={cardHd}>🗃️ Stok Listesi <span style={{ fontWeight: 400, color: "var(--text3)" }}>(her malzeme kendi partilerinin toplamıdır — detay için satıra tıklayın)</span></div>
+        <div style={{ padding: "12px 18px" }}>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="🔍 Malzeme ara..."
+            style={input}
+          />
+        </div>
         {loading ? <div style={{ padding: 24, color: "var(--text3)" }}>Yükleniyor...</div> : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>{["", "Malzeme", "Birim", "Toplam Stok", "Fiyat", "Kalori", "Protein", "Demir", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
             </thead>
             <tbody>
-              {items.map((i) => (
+              {items.filter((i) => i.name.toLowerCase().includes(search.toLowerCase())).map((i) => (
                 <Fragment key={i.id}>
                   <tr style={{ cursor: "pointer" }} onClick={() => setExpandedId(expandedId === i.id ? null : i.id)}>
                     <td style={{ ...td, width: 22, color: "var(--text3)" }}>{expandedId === i.id ? "▾" : "▸"}</td>

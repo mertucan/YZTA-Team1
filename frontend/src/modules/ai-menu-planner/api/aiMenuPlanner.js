@@ -20,3 +20,6 @@ export const removeMenuItem = (menuId, itemId) =>
 
 export const approveMenu = (id) =>
   client.patch(`/menus/${id}/status`, { status: "approved" }).then((r) => r.data);
+
+export const deleteMenu = (id) =>
+  client.delete(`/menus/${id}`).then((r) => r.data);

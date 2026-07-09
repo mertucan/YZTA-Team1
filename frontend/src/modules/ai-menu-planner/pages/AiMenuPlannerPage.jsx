@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
-import { getMenus, getMenu, generateMenu, createManualMenu, addMealItem, removeMenuItem, approveMenu } from "../api/aiMenuPlanner";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { getMenus, getMenu, generateMenu, createManualMenu, addMealItem, removeMenuItem, approveMenu, deleteMenu } from "../api/aiMenuPlanner";
 import { getIngredients } from "../../../api/ingredients";
 import { getMeals } from "../../../api/meals";
+import { formatLocalDate, todayLocal } from "../../../utils/date";
 
 const DAYS_OF_WEEK = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
 const CATEGORIES = [
@@ -17,7 +18,7 @@ const nextMonday = () => {
   const d = new Date();
   const diff = (8 - d.getDay()) % 7 || 7;
   d.setDate(d.getDate() + diff);
-  return d.toISOString().slice(0, 10);
+  return formatLocalDate(d);
 };
 
 const budgetStatus = (totalCost, budget) => {
@@ -37,11 +38,114 @@ function numericValue(value) {
   return normalized;
 }
 
+function MenuDetailPanel({ menu, ingredientsById, mealsByCategory, getPicker, setPickerField, onAddMeal, onRemoveItem, onApprove, onDelete }) {
+  const itemsByDay = useMemo(() => {
+    return menu.items.reduce((acc, item) => {
+      (acc[item.day_of_week] ??= []).push(item);
+      return acc;
+    }, {});
+  }, [menu]);
+
+  const status = budgetStatus(menu.total_cost, menu.budget);
+
+  return (
+    <div>
+      {menu.notes && (
+        <div style={{ padding: "10px 18px", fontSize: 12, color: "var(--text2)", background: "var(--surface)", borderBottom: "1px solid var(--border)" }}>
+          💬 Yönetici talimatı: <em>{menu.notes}</em>
+        </div>
+      )}
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 14, padding: 18 }}>
+        {[
+          { label: "Harcanan",        value: `${menu.total_cost.toFixed(2)} TL`, color: status.color },
+          { label: "Bütçe",           value: `${menu.budget.toFixed(2)} TL`,     color: "var(--accent)" },
+          { label: "Kalan Bütçe",     value: `${(menu.budget - menu.total_cost).toFixed(2)} TL`, color: menu.budget - menu.total_cost < 0 ? "var(--red)" : "var(--green)" },
+          { label: "Toplam Kalori",   value: `${menu.total_calories.toFixed(0)} kcal`, color: "var(--purple)" },
+          { label: "Protein / Demir", value: `${menu.total_protein.toFixed(0)}g / ${menu.total_iron.toFixed(1)}mg`, color: "var(--green)" },
+        ].map((s) => (
+          <div key={s.label} style={{ background: "var(--surface)", borderRadius: 8, padding: "12px 14px", border: "1px solid var(--border)" }}>
+            <div style={{ fontSize: 10, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 4 }}>{s.label}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "var(--mono)", color: s.color }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ padding: "0 18px 14px", fontSize: 11, fontWeight: 700, color: status.color }}>{status.label}</div>
+
+      <div style={{ display: "flex", gap: 10, padding: "0 18px 18px", overflowX: "auto" }}>
+        {DAYS_OF_WEEK.map((day) => {
+          const dayItems = itemsByDay[day] || [];
+          const aiItems = dayItems.filter((it) => it.ingredient_id);
+          const mealItems = dayItems.filter((it) => it.meal_id);
+          const sel = getPicker(day);
+          return (
+            <div key={day} style={{ flex: "0 0 170px", border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", display: "flex", flexDirection: "column", background: "var(--surface)" }}>
+              <div style={{ background: "var(--surface2)", padding: "8px 10px", fontSize: 11, fontWeight: 700 }}>{day}</div>
+              <div style={{ padding: 10, flex: 1 }}>
+                {aiItems.length > 0 && (
+                  <>
+                    <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>{aiItems[0].meal_name}</div>
+                    {aiItems.map((item) => {
+                      const ing = ingredientsById[item.ingredient_id];
+                      return (
+                        <div key={item.id} style={{ fontSize: 11, color: "var(--text2)", marginBottom: 2 }}>
+                          {ing?.name || `#${item.ingredient_id}`} — {item.quantity}{ing?.unit || ""}
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+
+                {mealItems.length === 0 && aiItems.length === 0 && (
+                  <div style={{ fontSize: 11, color: "var(--text3)", marginBottom: 6 }}>—</div>
+                )}
+
+                {mealItems.map((item) => (
+                  <div key={item.id} style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                    fontSize: 11, background: "var(--surface2)", borderRadius: 6, padding: "4px 7px", marginBottom: 4,
+                  }}>
+                    <div>
+                      <div style={{ fontWeight: 600 }}>{item.meal_name}</div>
+                      <div style={{ color: "var(--text3)", fontSize: 10 }}>{item.category} · {item.calories} kcal</div>
+                    </div>
+                    <button onClick={() => onRemoveItem(item.id)} style={btnX}>✕</button>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ padding: 8, borderTop: "1px solid var(--border)", background: "var(--surface2)" }}>
+                <select value={sel.category} onChange={(e) => setPickerField(day, "category", e.target.value)} style={inputXs}>
+                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <select value={sel.meal_id} onChange={(e) => setPickerField(day, "meal_id", e.target.value)} style={{ ...inputXs, marginTop: 4 }}>
+                  <option value="">Yemek seçin...</option>
+                  {(mealsByCategory[sel.category] || []).map((m) => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+                <button onClick={() => onAddMeal(day)} disabled={!sel.meal_id} style={{ ...btnSm, width: "100%", marginTop: 4 }}>+ Ekle</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ display: "flex", gap: 8, padding: "0 18px 18px" }}>
+        {menu.status !== "approved" && <button onClick={onApprove} style={btnSm}>Onayla</button>}
+        {menu.status === "draft" && <button onClick={onDelete} style={{ ...btnSm, color: "var(--red)" }}>🗑 Menüyü Sil</button>}
+      </div>
+    </div>
+  );
+}
+
 export default function AiMenuPlannerPage() {
   const [ingredientsById, setIngredientsById] = useState({});
   const [meals, setMeals]           = useState([]);
   const [menus, setMenus]           = useState([]);
-  const [current, setCurrent]       = useState(null);
+  const [expandedId, setExpandedId]         = useState(null);
+  const [expandedDetail, setExpandedDetail] = useState(null);
+  const [showPast, setShowPast]     = useState(false);
   const [weekStartDate, setWeekStartDate] = useState(nextMonday());
   const [budget, setBudget]         = useState(1000);
   const [extraInstructions, setExtraInstructions] = useState("");
@@ -50,7 +154,6 @@ export default function AiMenuPlannerPage() {
   const [picker, setPicker]         = useState({});
 
   const refreshMenus = () => getMenus().then(setMenus);
-  const refreshCurrent = (id) => getMenu(id).then(setCurrent);
 
   useEffect(() => {
     getIngredients().then((list) => {
@@ -66,6 +169,23 @@ export default function AiMenuPlannerPage() {
     return map;
   }, [meals]);
 
+  const openMenu = async (id) => {
+    if (expandedId === id) {
+      setExpandedId(null);
+      setExpandedDetail(null);
+      return;
+    }
+    setPicker({});
+    const detail = await getMenu(id);
+    setExpandedId(id);
+    setExpandedDetail(detail);
+  };
+
+  const refreshExpanded = async () => {
+    if (!expandedId) return;
+    setExpandedDetail(await getMenu(expandedId));
+  };
+
   const handleGenerate = async () => {
     setGenerating(true);
     setError(null);
@@ -75,7 +195,9 @@ export default function AiMenuPlannerPage() {
         budget: parseFloat(budget) || 0,
         extra_instructions: extraInstructions.trim() || null,
       });
-      setCurrent(menu);
+      setPicker({});
+      setExpandedId(menu.id);
+      setExpandedDetail(menu);
       refreshMenus();
     } catch (e) {
       setError(e.response?.data?.detail || "Menü oluşturulamadı. GEMINI_API_KEY tanımlı mı kontrol edin.");
@@ -88,7 +210,9 @@ export default function AiMenuPlannerPage() {
     setError(null);
     try {
       const menu = await createManualMenu({ week_start_date: weekStartDate, budget: parseFloat(budget) || 0 });
-      setCurrent(menu);
+      setPicker({});
+      setExpandedId(menu.id);
+      setExpandedDetail(menu);
       refreshMenus();
     } catch (e) {
       setError(e.response?.data?.detail || "Boş menü oluşturulamadı.");
@@ -96,9 +220,18 @@ export default function AiMenuPlannerPage() {
   };
 
   const handleApprove = async () => {
-    if (!current) return;
-    const updated = await approveMenu(current.id);
-    setCurrent({ ...current, status: updated.status });
+    if (!expandedDetail) return;
+    const updated = await approveMenu(expandedDetail.id);
+    setExpandedDetail({ ...expandedDetail, status: updated.status });
+    refreshMenus();
+  };
+
+  const handleDelete = async (id) => {
+    await deleteMenu(id);
+    if (expandedId === id) {
+      setExpandedId(null);
+      setExpandedDetail(null);
+    }
     refreshMenus();
   };
 
@@ -111,31 +244,83 @@ export default function AiMenuPlannerPage() {
   };
 
   const handleAddMeal = async (day) => {
-    if (!current) return;
+    if (!expandedDetail) return;
     const sel = getPicker(day);
     if (!sel.meal_id) return;
-    await addMealItem(current.id, { day_of_week: day, category: sel.category, meal_id: Number(sel.meal_id) });
-    await refreshCurrent(current.id);
+    await addMealItem(expandedDetail.id, { day_of_week: day, category: sel.category, meal_id: Number(sel.meal_id) });
+    await refreshExpanded();
     refreshMenus();
     setPickerField(day, "meal_id", "");
   };
 
   const handleRemoveItem = async (itemId) => {
-    if (!current) return;
-    await removeMenuItem(current.id, itemId);
-    await refreshCurrent(current.id);
+    if (!expandedDetail) return;
+    await removeMenuItem(expandedDetail.id, itemId);
+    await refreshExpanded();
     refreshMenus();
   };
 
-  const itemsByDay = useMemo(() => {
-    if (!current) return {};
-    return current.items.reduce((acc, item) => {
-      (acc[item.day_of_week] ??= []).push(item);
-      return acc;
-    }, {});
-  }, [current]);
+  const today = todayLocal();
+  const currentMenus = useMemo(
+    () => menus.filter((m) => m.week_start_date >= today).sort((a, b) => a.week_start_date.localeCompare(b.week_start_date)),
+    [menus]
+  );
+  const pastMenus = useMemo(
+    () => menus.filter((m) => m.week_start_date < today).sort((a, b) => b.week_start_date.localeCompare(a.week_start_date)),
+    [menus]
+  );
 
-  const status = current ? budgetStatus(current.total_cost, current.budget) : null;
+  const renderMenuTable = (list, emptyMsg) => (
+    list.length === 0 ? (
+      <div style={{ padding: 24, color: "var(--text3)", fontSize: 12 }}>{emptyMsg}</div>
+    ) : (
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead>
+          <tr>{["Hafta", "Bütçe", "Harcanan", "Kalan", "Durum", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
+        </thead>
+        <tbody>
+          {list.map((m) => {
+            const remaining = m.budget - m.total_cost;
+            const isOpen = expandedId === m.id;
+            return (
+              <Fragment key={m.id}>
+                <tr>
+                  <td style={td}>{m.week_start_date}</td>
+                  <td style={td}>{m.budget.toFixed(2)} TL</td>
+                  <td style={td}>{m.total_cost.toFixed(2)} TL</td>
+                  <td style={{ ...td, fontWeight: 600, color: remaining < 0 ? "var(--red)" : "var(--green)" }}>{remaining.toFixed(2)} TL</td>
+                  <td style={td}>{m.status === "approved" ? "✓ Onaylandı" : "Taslak"}</td>
+                  <td style={td}>
+                    <button onClick={() => openMenu(m.id)} style={btnSm}>{isOpen ? "Kapat" : "Görüntüle"}</button>{" "}
+                    {m.status === "draft" && (
+                      <button onClick={() => handleDelete(m.id)} style={{ ...btnSm, color: "var(--red)" }}>Sil</button>
+                    )}
+                  </td>
+                </tr>
+                {isOpen && expandedDetail && (
+                  <tr>
+                    <td colSpan={6} style={{ padding: 0, borderBottom: "1px solid var(--border)", background: "var(--surface2)" }}>
+                      <MenuDetailPanel
+                        menu={expandedDetail}
+                        ingredientsById={ingredientsById}
+                        mealsByCategory={mealsByCategory}
+                        getPicker={getPicker}
+                        setPickerField={setPickerField}
+                        onAddMeal={handleAddMeal}
+                        onRemoveItem={handleRemoveItem}
+                        onApprove={handleApprove}
+                        onDelete={() => handleDelete(m.id)}
+                      />
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+    )
+  );
 
   return (
     <div>
@@ -190,127 +375,20 @@ export default function AiMenuPlannerPage() {
         {error && <div style={{ padding: "0 18px 16px", fontSize: 12, color: "var(--red)" }}>{error}</div>}
       </div>
 
-      {current && (
-        <div style={card}>
-          <div style={{ ...cardHd, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span>🗓️ {current.week_start_date} Haftası {current.status === "approved" ? "· ✓ Onaylandı" : "· Taslak"}</span>
-            {current.status !== "approved" && (
-              <button onClick={handleApprove} style={btnSm}>Onayla</button>
-            )}
-          </div>
-          {current.notes && (
-            <div style={{ padding: "10px 18px", fontSize: 12, color: "var(--text2)", background: "var(--surface2)", borderBottom: "1px solid var(--border)" }}>
-              💬 Yönetici talimatı: <em>{current.notes}</em>
-            </div>
-          )}
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 14, padding: 18 }}>
-            {[
-              { label: "Harcanan",        value: `${current.total_cost.toFixed(2)} TL`, color: status.color },
-              { label: "Bütçe",           value: `${current.budget.toFixed(2)} TL`,     color: "var(--accent)" },
-              { label: "Kalan Bütçe",     value: `${(current.budget - current.total_cost).toFixed(2)} TL`, color: current.budget - current.total_cost < 0 ? "var(--red)" : "var(--green)" },
-              { label: "Toplam Kalori",   value: `${current.total_calories.toFixed(0)} kcal`, color: "var(--purple)" },
-              { label: "Protein / Demir", value: `${current.total_protein.toFixed(0)}g / ${current.total_iron.toFixed(1)}mg`, color: "var(--green)" },
-            ].map((s) => (
-              <div key={s.label} style={{ background: "var(--surface2)", borderRadius: 8, padding: "12px 14px", border: "1px solid var(--border)" }}>
-                <div style={{ fontSize: 10, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 4 }}>{s.label}</div>
-                <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "var(--mono)", color: s.color }}>{s.value}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{ padding: "0 18px 14px", fontSize: 11, fontWeight: 700, color: status.color }}>{status.label}</div>
-
-          <div style={{ display: "flex", gap: 10, padding: "0 18px 18px", overflowX: "auto" }}>
-            {DAYS_OF_WEEK.map((day) => {
-              const dayItems = itemsByDay[day] || [];
-              const aiItems = dayItems.filter((it) => it.ingredient_id);
-              const mealItems = dayItems.filter((it) => it.meal_id);
-              const sel = getPicker(day);
-              return (
-                <div key={day} style={{ flex: "0 0 170px", border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                  <div style={{ background: "var(--surface2)", padding: "8px 10px", fontSize: 11, fontWeight: 700 }}>{day}</div>
-                  <div style={{ padding: 10, flex: 1 }}>
-                    {aiItems.length > 0 && (
-                      <>
-                        <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>{aiItems[0].meal_name}</div>
-                        {aiItems.map((item) => {
-                          const ing = ingredientsById[item.ingredient_id];
-                          return (
-                            <div key={item.id} style={{ fontSize: 11, color: "var(--text2)", marginBottom: 2 }}>
-                              {ing?.name || `#${item.ingredient_id}`} — {item.quantity}{ing?.unit || ""}
-                            </div>
-                          );
-                        })}
-                      </>
-                    )}
-
-                    {mealItems.length === 0 && aiItems.length === 0 && (
-                      <div style={{ fontSize: 11, color: "var(--text3)", marginBottom: 6 }}>—</div>
-                    )}
-
-                    {mealItems.map((item) => (
-                      <div key={item.id} style={{
-                        display: "flex", justifyContent: "space-between", alignItems: "center",
-                        fontSize: 11, background: "var(--surface2)", borderRadius: 6, padding: "4px 7px", marginBottom: 4,
-                      }}>
-                        <div>
-                          <div style={{ fontWeight: 600 }}>{item.meal_name}</div>
-                          <div style={{ color: "var(--text3)", fontSize: 10 }}>{item.category} · {item.calories} kcal</div>
-                        </div>
-                        <button onClick={() => handleRemoveItem(item.id)} style={btnX}>✕</button>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div style={{ padding: 8, borderTop: "1px solid var(--border)", background: "var(--surface2)" }}>
-                    <select value={sel.category} onChange={(e) => setPickerField(day, "category", e.target.value)} style={inputXs}>
-                      {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                    <select value={sel.meal_id} onChange={(e) => setPickerField(day, "meal_id", e.target.value)} style={{ ...inputXs, marginTop: 4 }}>
-                      <option value="">Yemek seçin...</option>
-                      {(mealsByCategory[sel.category] || []).map((m) => (
-                        <option key={m.id} value={m.id}>{m.name}</option>
-                      ))}
-                    </select>
-                    <button onClick={() => handleAddMeal(day)} disabled={!sel.meal_id} style={{ ...btnSm, width: "100%", marginTop: 4 }}>+ Ekle</button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <div style={card}>
+        <div style={cardHd}>📆 Güncel Menüler <span style={{ fontWeight: 400, color: "var(--text3)" }}>(bugün ve sonraki günler, sırayla)</span></div>
+        {renderMenuTable(currentMenus, "Güncel bir menü yok.")}
+      </div>
 
       <div style={card}>
-        <div style={cardHd}>📜 Geçmiş Menüler</div>
-        {menus.length === 0 ? (
-          <div style={{ padding: 24, color: "var(--text3)", fontSize: 12 }}>Henüz oluşturulmuş menü yok.</div>
-        ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>{["Hafta", "Bütçe", "Harcanan", "Kalan", "Durum", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
-            </thead>
-            <tbody>
-              {menus.map((m) => {
-                const remaining = m.budget - m.total_cost;
-                return (
-                <tr key={m.id}>
-                  <td style={td}>{m.week_start_date}</td>
-                  <td style={td}>{m.budget.toFixed(2)} TL</td>
-                  <td style={td}>{m.total_cost.toFixed(2)} TL</td>
-                  <td style={{ ...td, fontWeight: 600, color: remaining < 0 ? "var(--red)" : "var(--green)" }}>{remaining.toFixed(2)} TL</td>
-                  <td style={td}>{m.status === "approved" ? "✓ Onaylandı" : "Taslak"}</td>
-                  <td style={td}>
-                    <button onClick={() => getMenu(m.id).then(setCurrent)} style={btnSm}>
-                      Görüntüle
-                    </button>
-                  </td>
-                </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
+        <div
+          style={{ ...cardHd, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
+          onClick={() => setShowPast(!showPast)}
+        >
+          <span>🗄️ Geçmiş Menüler <span style={{ fontWeight: 400, color: "var(--text3)" }}>({pastMenus.length})</span></span>
+          <span style={{ fontSize: 11, color: "var(--text3)" }}>{showPast ? "▲ Gizle" : "▼ Göster"}</span>
+        </div>
+        {showPast && renderMenuTable(pastMenus, "Geçmiş menü yok.")}
       </div>
     </div>
   );

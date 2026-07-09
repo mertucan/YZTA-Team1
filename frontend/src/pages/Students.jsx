@@ -18,6 +18,7 @@ export default function Students() {
   const [items, setItems]     = useState([]);
   const [form, setForm]       = useState(emptyForm);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch]   = useState("");
 
   const refresh = () => getStudents().then(setItems).finally(() => setLoading(false));
   useEffect(() => { refresh(); }, []);
@@ -95,13 +96,25 @@ export default function Students() {
 
       <div style={card}>
         <div style={cardHd}>👥 Öğrenci Listesi</div>
+        <div style={{ padding: "12px 18px" }}>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="🔍 İsim veya TC ile ara..."
+            style={input}
+          />
+        </div>
         {loading ? <div style={{ padding: 24, color: "var(--text3)" }}>Yükleniyor...</div> : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>{["Ad Soyad", "TC Kimlik No", "Yaş", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
             </thead>
             <tbody>
-              {items.map((s) => (
+              {items.filter((s) => {
+                const q = search.toLowerCase();
+                return `${s.first_name} ${s.last_name}`.toLowerCase().includes(q) || s.national_id.includes(search);
+              }).map((s) => (
                 <tr key={s.id}>
                   <td style={td}><span style={{ fontWeight: 500, color: "var(--text)" }}>{s.first_name} {s.last_name}</span></td>
                   <td style={{ ...td, fontFamily: "var(--mono)" }}>{s.national_id}</td>

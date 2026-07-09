@@ -1,16 +1,15 @@
 import { useEffect, useState } from "react";
 import { getAbsences, createAbsence, deleteAbsence } from "../api/absences";
+import { getStudents } from "../api/students";
 
 const emptyForm = { student_id: 0, absence_date: "" };
 
-function numericValue(value) {
-  const digits = String(value).replace(/\D/g, "").replace(/^0+(?=\d)/, "");
-  return digits ? Number(digits) : "";
-}
-
 export default function Absences() {
   const [items, setItems] = useState([]);
+  const [students, setStudents] = useState([]);
   const [form, setForm] = useState(emptyForm);
+  const [studentQuery, setStudentQuery] = useState("");
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
@@ -22,7 +21,19 @@ export default function Absences() {
       .finally(() => setLoading(false));
   useEffect(() => {
     refresh();
+    getStudents().then(setStudents);
   }, []);
+
+  const selectedStudent = students.find((s) => s.id === form.student_id);
+
+  const studentMatches = studentQuery
+    ? students
+        .filter((s) =>
+          `${s.first_name} ${s.last_name}`.toLowerCase().includes(studentQuery.toLowerCase()) ||
+          s.national_id.includes(studentQuery)
+        )
+        .slice(0, 8)
+    : [];
 
   const handleAdd = async () => {
     if (form.student_id <= 0 || !form.absence_date) return;
@@ -32,6 +43,7 @@ export default function Absences() {
     try {
       await createAbsence(form);
       setForm(emptyForm);
+      setStudentQuery("");
       setSuccess("Devamsızlık başarıyla eklendi.");
       refresh();
     } catch (err) {
@@ -67,29 +79,78 @@ export default function Absences() {
             alignItems: "end",
           }}
         >
-          <div>
-            <div style={fieldLabel}>Öğrenci ID</div>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={form.student_id || ""}
-              placeholder="Öğrenci ID"
-              onFocus={(e) => {
-                if (Number(form.student_id) === 0) {
-                  setForm({ ...form, student_id: "" });
-                }
-                e.target.select();
-              }}
-              onBlur={() => {
-                if (form.student_id === "") {
-                  setForm({ ...form, student_id: 0 });
-                }
-              }}
-              onChange={(e) =>
-                setForm({ ...form, student_id: numericValue(e.target.value) })
-              }
-              style={input}
-            />
+          <div style={{ position: "relative" }}>
+            <div style={fieldLabel}>Öğrenci</div>
+            {selectedStudent ? (
+              <div
+                style={{
+                  ...input,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span>
+                  {selectedStudent.first_name} {selectedStudent.last_name}{" "}
+                  <span style={{ color: "var(--text3)", fontFamily: "var(--mono)" }}>
+                    ({selectedStudent.national_id})
+                  </span>
+                </span>
+                <button
+                  onClick={() => setForm({ ...form, student_id: 0 })}
+                  style={{ ...btnSm, padding: "1px 8px" }}
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <input
+                type="text"
+                value={studentQuery}
+                placeholder="İsim veya TC ile ara..."
+                onChange={(e) => setStudentQuery(e.target.value)}
+                style={input}
+              />
+            )}
+            {!selectedStudent && studentQuery && studentMatches.length > 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  right: 0,
+                  zIndex: 10,
+                  background: "var(--surface)",
+                  border: "1px solid var(--border2)",
+                  borderRadius: 7,
+                  marginTop: 4,
+                  boxShadow: "var(--shadow)",
+                  maxHeight: 220,
+                  overflowY: "auto",
+                }}
+              >
+                {studentMatches.map((s) => (
+                  <div
+                    key={s.id}
+                    onClick={() => {
+                      setForm({ ...form, student_id: s.id });
+                      setStudentQuery("");
+                    }}
+                    style={{
+                      padding: "8px 12px",
+                      fontSize: 12,
+                      cursor: "pointer",
+                      borderBottom: "1px solid var(--border)",
+                    }}
+                  >
+                    {s.first_name} {s.last_name}{" "}
+                    <span style={{ color: "var(--text3)", fontFamily: "var(--mono)" }}>
+                      ({s.national_id})
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <div>
             <div style={fieldLabel}>Tarih</div>
@@ -140,6 +201,15 @@ export default function Absences() {
 
       <div style={card}>
         <div style={cardHd}>📅 Devamsızlık Listesi</div>
+        <div style={{ padding: "12px 18px" }}>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="🔍 İsim veya TC ile ara..."
+            style={input}
+          />
+        </div>
         {loading ? (
           <div style={{ padding: 24, color: "var(--text3)" }}>
             Yükleniyor...
@@ -148,7 +218,7 @@ export default function Absences() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                {["Öğrenci ID", "Tarih", ""].map((h) => (
+                {["Ad Soyad", "TC Kimlik No", "Tarih", ""].map((h) => (
                   <th key={h} style={th}>
                     {h}
                   </th>
@@ -156,9 +226,17 @@ export default function Absences() {
               </tr>
             </thead>
             <tbody>
-              {items.map((a) => (
+              {items
+                .filter((a) => {
+                  const q = search.toLowerCase();
+                  const s = a.students;
+                  if (!s) return false;
+                  return `${s.first_name} ${s.last_name}`.toLowerCase().includes(q) || s.national_id.includes(search);
+                })
+                .map((a) => (
                 <tr key={a.id}>
-                  <td style={td}>{a.student_id}</td>
+                  <td style={td}>{a.students?.first_name} {a.students?.last_name}</td>
+                  <td style={{ ...td, fontFamily: "var(--mono)" }}>{a.students?.national_id}</td>
                   <td style={{ ...td, fontFamily: "var(--mono)" }}>
                     {a.absence_date}
                   </td>
