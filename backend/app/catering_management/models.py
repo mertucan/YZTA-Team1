@@ -21,6 +21,7 @@ class Role(str, enum.Enum):
     system_support = "SYSTEM_SUPPORT"
     warehouse_staff = "WAREHOUSE_STAFF"
     purchasing_staff = "PURCHASING_STAFF"
+    researcher = "RESEARCHER"
 
 
 class LicensePlan(str, enum.Enum):
@@ -131,4 +132,25 @@ class UniversityMenuAssignment(Base):
     company: Mapped[Company] = relationship()
     university: Mapped[University] = relationship()
     assigner: Mapped[UserProfile] = relationship()
+
+
+class ResearchExportRequest(Base):
+    __tablename__ = "research_export_requests"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    requested_by: Mapped[int] = mapped_column(ForeignKey("user_profiles.id", ondelete="CASCADE"), index=True)
+    recipient_email: Mapped[str] = mapped_column(String(255), nullable=False)
+    recipient_name: Mapped[str | None] = mapped_column(String(120))
+    start_date: Mapped[date | None] = mapped_column(Date)
+    end_date: Mapped[date | None] = mapped_column(Date)
+    record_count: Mapped[int] = mapped_column(Integer, default=0)
+    subject_count: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(40), default="CREATED", index=True)
+    delivery_message: Mapped[str | None] = mapped_column(String)
+    brevo_message_id: Mapped[str | None] = mapped_column(String(120))
+    download_token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    download_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    requester: Mapped[UserProfile] = relationship()
 

@@ -7,6 +7,7 @@ from app.routers import (
     ingredients,
     meals,
     menus,
+    research_exports,
     student_health_flags,
     student_meals,
     students,
@@ -31,6 +32,7 @@ app.include_router(absences.router)
 app.include_router(student_meals.router)
 app.include_router(student_health_flags.router)
 app.include_router(menus.router)
+app.include_router(research_exports.router)
 register_catering_routes(app)
 
 

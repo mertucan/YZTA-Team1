@@ -23,6 +23,27 @@ const roleLabels = {
   UNIVERSITY_ADMIN: "Üniversite Yöneticisi",
   DIETITIAN: "Diyetisyen",
   CHEF: "Şef",
+  FINANCE_MANAGER: "Finans Yöneticisi",
+  OPERATIONS_MANAGER: "Operasyon Yöneticisi",
+  STUDENT: "Öğrenci",
+  SYSTEM_SUPPORT: "Sistem Destek",
+  WAREHOUSE_STAFF: "Depo Görevlisi",
+  PURCHASING_STAFF: "Satın Alma Sorumlusu",
+  RESEARCHER: "Araştırmacı",
+};
+
+const moduleRoles = {
+  "health-tracker": ["DIETITIAN", "RESEARCHER"],
+  "student-health-flags": ["DIETITIAN", "UNIVERSITY_ADMIN"],
+  "ai-menu-planner": ["DIETITIAN", "CHEF"],
+  "research-export": ["RESEARCHER", "UNIVERSITY_ADMIN"],
+};
+
+const recordRoles = {
+  "/ingredients": ["CHEF", "OPERATIONS_MANAGER", "WAREHOUSE_STAFF", "PURCHASING_STAFF"],
+  "/meals": ["DIETITIAN", "CHEF"],
+  "/students": ["UNIVERSITY_ADMIN", "DIETITIAN", "RESEARCHER"],
+  "/absences": ["UNIVERSITY_ADMIN", "OPERATIONS_MANAGER"],
 };
 
 function readCateringSession() {
@@ -56,9 +77,17 @@ export default function Sidebar() {
   const logoRoute = isCateringUser ? dashboardRoute : "/";
 
   const visibleModules = useMemo(() => {
-    if (!isCateringUser) return modules;
-    return modules.filter((mod) => !["health-tracker", "student-health-flags", "catering-management"].includes(mod.id));
-  }, [isCateringUser]);
+    if (!isCateringUser) return modules.filter((mod) => mod.id === "catering-management");
+    if (["CATERING_ADMIN", "SUPER_ADMIN"].includes(role)) {
+      return modules.filter((mod) => !["health-tracker", "student-health-flags", "catering-management"].includes(mod.id));
+    }
+    return modules.filter((mod) => moduleRoles[mod.id]?.includes(role));
+  }, [isCateringUser, role]);
+
+  const visibleRecordItems = useMemo(() => {
+    if (!isCateringUser || ["CATERING_ADMIN", "SUPER_ADMIN"].includes(role)) return recordItems;
+    return recordItems.filter((item) => recordRoles[item.to]?.includes(role));
+  }, [isCateringUser, role]);
 
   const displayName = user?.full_name || user?.email || "Yönetici";
   const displayRole = role ? (roleLabels[role] || role) : "Yemekhane Müdürü";
@@ -84,17 +113,21 @@ export default function Sidebar() {
           <span style={s.ico}>🏠</span> Dashboard
         </NavLink>
 
-        <button onClick={() => setRecordsOpen((open) => !open)} style={s.groupBtn}>
-          <span style={{ ...s.sectionLabel, flex: 1 }}>Kayıtlar</span>
-          <span style={{ fontSize: 10, color: "var(--text3)" }}>{recordsOpen ? "▾" : "▸"}</span>
-        </button>
-        {recordsOpen && recordItems.map((item) => (
-          <NavLink key={item.to} to={item.to} style={subNavStyle}>
-            <span style={s.ico}>{item.icon}</span> {item.label}
-          </NavLink>
-        ))}
+        {visibleRecordItems.length > 0 && (
+          <>
+            <button onClick={() => setRecordsOpen((open) => !open)} style={s.groupBtn}>
+              <span style={{ ...s.sectionLabel, flex: 1 }}>Kayıtlar</span>
+              <span style={{ fontSize: 10, color: "var(--text3)" }}>{recordsOpen ? "▾" : "▸"}</span>
+            </button>
+            {recordsOpen && visibleRecordItems.map((item) => (
+              <NavLink key={item.to} to={item.to} style={subNavStyle}>
+                <span style={s.ico}>{item.icon}</span> {item.label}
+              </NavLink>
+            ))}
+          </>
+        )}
 
-        {isCateringUser && (
+        {isCateringUser && ["CATERING_ADMIN", "SUPER_ADMIN"].includes(role) && (
           <>
             <div style={{ ...s.sectionLabel, padding: "14px 8px 5px" }}>Catering Yönetimi</div>
             {cateringItems.map((item) => (
