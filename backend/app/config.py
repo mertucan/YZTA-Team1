@@ -21,6 +21,12 @@ class Settings(BaseSettings):
     )
     gemini_api_key: Optional[str] = None
     gemini_model: str = "gemini-2.5-flash"
+    research_export_salt: Optional[str] = None
+    research_export_min_subjects: int = 5
+    research_export_link_ttl_hours: int = 24
+    brevo_api_key: Optional[str] = None
+    brevo_sender_email: Optional[str] = None
+    brevo_sender_name: str = "YemekhanAI"
 
 
 settings = Settings()
