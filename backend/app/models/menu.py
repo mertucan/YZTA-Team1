@@ -6,18 +6,28 @@ from datetime import date
 class WeeklyMenuGenerate(BaseModel):
     week_start_date: date
     budget: float
+    portions: int = 40
     extra_instructions: Optional[str] = None
 
 
 class WeeklyMenuCreateManual(BaseModel):
     week_start_date: date
     budget: float = 0
+    portions: int = 40
 
 
 class WeeklyMenuMealItemCreate(BaseModel):
     day_of_week: str
     category: str
     meal_id: int
+
+
+class WeeklyMenuPortionsUpdate(BaseModel):
+    portions: int
+
+
+class WeeklyMenuItemPortionsUpdate(BaseModel):
+    portions: int
 
 
 class WeeklyMenuItem(BaseModel):
@@ -43,6 +53,7 @@ class WeeklyMenu(BaseModel):
     id: int
     week_start_date: date
     budget: float
+    portions: int = 40
     total_cost: float
     total_calories: float
     total_protein: float
