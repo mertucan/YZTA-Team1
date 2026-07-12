@@ -17,8 +17,12 @@ const startOfDay = (date) => {
 const sameDay = (a, b) => startOfDay(a).getTime() === startOfDay(b).getTime();
 
 function pickRepresentative(menusForWeek) {
+  // Önce onaylı menü; onaylı yoksa en dolu (en çok kalemli) taslak; eşitse en yeni.
   return [...menusForWeek].sort((a, b) => {
     if (a.status !== b.status) return a.status === "approved" ? -1 : 1;
+    const ai = a.items?.length || 0;
+    const bi = b.items?.length || 0;
+    if (ai !== bi) return bi - ai;
     return b.id - a.id;
   })[0];
 }
