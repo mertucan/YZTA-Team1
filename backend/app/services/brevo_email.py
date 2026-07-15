@@ -8,6 +8,9 @@ from app.config import settings
 
 BREVO_TRANSACTIONAL_EMAIL_URL = "https://api.brevo.com/v3/smtp/email"
 
+# Excel gibi programların CSV içeriğini UTF-8 olarak tanıyabilmesi için BOM
+UTF8_BOM = b"\xef\xbb\xbf"
+
 
 class BrevoConfigurationError(RuntimeError):
     pass
@@ -31,13 +34,20 @@ def send_export_email(
     if not is_brevo_configured():
         raise BrevoConfigurationError("Brevo API key or sender email is missing.")
 
+    # Excel (özellikle Windows/Türkçe yerel ayarlarda) BOM olmadan dosyayı
+    # UTF-8 yerine sistem kod sayfasıyla (ör. Windows-1254) açabiliyor ve
+    # bu da Türkçe karakterlerin bozulmasına yol açıyor. BOM ekleyerek
+    # dosyanın UTF-8 olarak tanınmasını garanti ediyoruz.
+    if not csv_content.startswith(UTF8_BOM):
+        csv_content = UTF8_BOM + csv_content
+
     payload = {
         "sender": {
             "name": settings.brevo_sender_name,
             "email": settings.brevo_sender_email,
         },
         "to": [{"email": recipient_email, "name": recipient_name or recipient_email}],
-        "subject": "YemekhanAI anonim beslenme verisi export'u",
+        "subject": "YemekhanAI Anonim Beslenme Verisi Export",
         "htmlContent": _build_html(metadata, filename),
         "attachment": [
             {

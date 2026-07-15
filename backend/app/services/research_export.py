@@ -1,6 +1,7 @@
 import csv
 import hashlib
 import hmac
+from decimal import Decimal
 from datetime import date
 from io import StringIO
 from typing import Any
@@ -19,6 +20,23 @@ EXPORT_FIELDS = [
     "iron",
 ]
 PAGE_SIZE = 1000
+TURKISH_ASCII_TRANSLATION = str.maketrans(
+    {
+        "ç": "c",
+        "Ç": "C",
+        "ğ": "g",
+        "Ğ": "G",
+        "ı": "i",
+        "I": "I",
+        "İ": "I",
+        "ö": "o",
+        "Ö": "O",
+        "ş": "s",
+        "Ş": "S",
+        "ü": "u",
+        "Ü": "U",
+    }
+)
 
 
 def _subject_code(student_id: Any) -> str:
@@ -45,6 +63,33 @@ def _age_group(age: Any) -> str | None:
     if value <= 54:
         return "45-54"
     return "55+"
+
+
+def _clean_text(value: Any) -> Any:
+    if not isinstance(value, str):
+        return value
+
+    mojibake_markers = ("Ã", "Ä", "Å", "Â")
+    if not any(marker in value for marker in mojibake_markers):
+        return value
+
+    for encoding in ("latin1", "cp1252"):
+        try:
+            repaired = value.encode(encoding).decode("utf-8")
+        except UnicodeError:
+            continue
+        if not any(marker in repaired for marker in mojibake_markers):
+            return repaired
+
+    return value
+
+
+def _format_csv_value(value: Any) -> Any:
+    if isinstance(value, str):
+        return _clean_text(value).translate(TURKISH_ASCII_TRANSLATION)
+    if isinstance(value, (float, Decimal)):
+        return f"{float(value):.2f}".replace(".", ",")
+    return value
 
 
 def fetch_anonymized_nutrition_rows(
@@ -83,8 +128,8 @@ def fetch_anonymized_nutrition_rows(
                     "subject_code": _subject_code(record.get("student_id")),
                     "age_group": _age_group(student.get("age")),
                     "consumed_at": record.get("consumed_at"),
-                    "meal_name": meal.get("name"),
-                    "meal_category": meal.get("category"),
+                    "meal_name": _clean_text(meal.get("name")),
+                    "meal_category": _clean_text(meal.get("category")),
                     "calories": meal.get("calories") or 0,
                     "protein": meal.get("protein") or 0,
                     "iron": meal.get("iron") or 0,
@@ -123,11 +168,18 @@ def build_export_preview(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 def rows_to_csv(rows: list[dict[str, Any]]) -> str:
     output = StringIO()
-    writer = csv.DictWriter(output, fieldnames=EXPORT_FIELDS, extrasaction="ignore")
+    output.write("sep=;\r\n")
+    writer = csv.DictWriter(output, fieldnames=EXPORT_FIELDS, extrasaction="ignore", delimiter=";")
     writer.writeheader()
-    writer.writerows(rows)
+    writer.writerows(
+        {
+            field: _format_csv_value(row.get(field))
+            for field in EXPORT_FIELDS
+        }
+        for row in rows
+    )
     return output.getvalue()
 
 
 def rows_to_csv_bytes(rows: list[dict[str, Any]]) -> bytes:
-    return rows_to_csv(rows).encode("utf-8-sig")
+    return rows_to_csv(rows).encode("cp1254", errors="replace")

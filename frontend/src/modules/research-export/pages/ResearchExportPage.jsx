@@ -44,6 +44,7 @@ export default function ResearchExportPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const filtersReady = (!filters.startDate || filters.startDate.length === 10)
     && (!filters.endDate || filters.endDate.length === 10);
@@ -181,25 +182,30 @@ export default function ResearchExportPage() {
       </div>
 
       <section style={{ ...s.panel, marginTop: 16 }}>
-        <div style={s.panelTitle}>Son Exportlar</div>
-        {history.length === 0 ? (
-          <div style={s.empty}>Henüz export kaydı yok.</div>
-        ) : (
-          <div style={s.historyList}>
-            {history.map((item) => (
-              <div key={item.id} style={s.historyItem}>
-                <div>
-                  <div style={s.historyTitle}>{item.recipient_email}</div>
-                  <div style={s.historyMeta}>
-                    {item.record_count} kayıt · {item.subject_count} özne · {formatDate(item.created_at)}
+        <button type="button" style={s.historyHeader} onClick={() => setHistoryOpen((open) => !open)}>
+          <span style={s.panelTitleInline}>Son Exportlar</span>
+          <span style={s.historyToggle}>{historyOpen ? "Kapat" : `Aç (${history.length})`}</span>
+        </button>
+        {historyOpen && (
+          history.length === 0 ? (
+            <div style={s.empty}>Henüz export kaydı yok.</div>
+          ) : (
+            <div style={s.historyList}>
+              {history.map((item) => (
+                <div key={item.id} style={s.historyItem}>
+                  <div>
+                    <div style={s.historyTitle}>{item.recipient_email}</div>
+                    <div style={s.historyMeta}>
+                      {item.record_count} kayıt · {item.subject_count} özne · {formatDate(item.created_at)}
+                    </div>
                   </div>
+                  <span style={{ ...s.status, ...statusStyle(item.status) }}>
+                    {statusLabels[item.status] || item.status}
+                  </span>
                 </div>
-                <span style={{ ...s.status, ...statusStyle(item.status) }}>
-                  {statusLabels[item.status] || item.status}
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )
         )}
       </section>
     </div>
@@ -240,6 +246,7 @@ const s = {
   grid: { display: "grid", gridTemplateColumns: "minmax(0, 1.15fr) minmax(320px, 0.85fr)", gap: 16 },
   panel: { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 18, boxShadow: "var(--shadow)" },
   panelTitle: { fontSize: 15, fontWeight: 700, marginBottom: 14, color: "var(--text)" },
+  panelTitleInline: { fontSize: 15, fontWeight: 700, color: "var(--text)" },
   stats: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12, marginBottom: 16 },
   metric: { background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 8, padding: 14, minHeight: 82 },
   metricLabel: { fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 },
@@ -259,6 +266,8 @@ const s = {
   warning: { color: "var(--amber)", background: "var(--amber-bg)", borderColor: "var(--amber-border)" },
   error: { color: "var(--red)", background: "var(--red-bg)", borderColor: "var(--red-border)" },
   empty: { color: "var(--text3)", fontSize: 13 },
+  historyHeader: { width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, background: "transparent", border: "none", padding: 0, margin: 0, cursor: "pointer", textAlign: "left" },
+  historyToggle: { border: "1px solid var(--border2)", borderRadius: 18, background: "var(--surface2)", color: "var(--text2)", padding: "5px 10px", fontSize: 12, fontWeight: 800, whiteSpace: "nowrap" },
   historyList: { display: "grid", gap: 8 },
   historyItem: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "10px 0", borderTop: "1px solid var(--border)" },
   historyTitle: { fontSize: 13, fontWeight: 700, color: "var(--text)" },

@@ -57,6 +57,9 @@ def create_user_for_company(db: Session, company_id: int, payload: UserCreate) -
     if payload.role_name == Role.university_admin.value and payload.university_id is None:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="University admin needs university_id")
 
+    if payload.role_name == Role.partner_company.value and payload.university_id is not None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Partner company users should not be assigned to a university")
+
     user = UserProfile(
         auth_user_id=payload.auth_user_id,
         company_id=company_id,

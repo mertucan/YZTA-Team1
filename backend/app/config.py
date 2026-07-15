@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Optional
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
@@ -27,6 +27,45 @@ class Settings(BaseSettings):
     brevo_api_key: Optional[str] = None
     brevo_sender_email: Optional[str] = None
     brevo_sender_name: str = "YemekhanAI"
+
+    @field_validator(
+        "gemini_api_key",
+        "research_export_salt",
+        "brevo_api_key",
+        "brevo_sender_email",
+        mode="before",
+    )
+    @classmethod
+    def _blank_optional_string_to_none(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
+    @field_validator("gemini_model", "brevo_sender_name", mode="before")
+    @classmethod
+    def _blank_string_to_default(cls, value: object, info: ValidationInfo) -> object:
+        defaults = {
+            "gemini_model": "gemini-2.5-flash",
+            "brevo_sender_name": "YemekhanAI",
+        }
+        if isinstance(value, str) and not value.strip():
+            return defaults[info.field_name]
+        return value
+
+    @field_validator(
+        "research_export_min_subjects",
+        "research_export_link_ttl_hours",
+        mode="before",
+    )
+    @classmethod
+    def _blank_int_to_default(cls, value: object, info: ValidationInfo) -> object:
+        defaults = {
+            "research_export_min_subjects": 5,
+            "research_export_link_ttl_hours": 24,
+        }
+        if isinstance(value, str) and not value.strip():
+            return defaults[info.field_name]
+        return value
 
 
 settings = Settings()

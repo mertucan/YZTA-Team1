@@ -51,6 +51,7 @@ const ROLE_LABELS = {
   WAREHOUSE_STAFF: "Depo Görevlisi",
   PURCHASING_STAFF: "Satın Alma Sorumlusu",
   RESEARCHER: "Araştırmacı",
+  PARTNER_COMPANY: "Partner Firma",
 };
 
 const REGISTER_ROLES = Object.entries(ROLE_LABELS).filter(
@@ -71,6 +72,7 @@ const ROLE_ACCESS = {
     "WAREHOUSE_STAFF",
     "PURCHASING_STAFF",
     "RESEARCHER",
+    "PARTNER_COMPANY",
   ],
   universities: ["SUPER_ADMIN", "CATERING_ADMIN", "UNIVERSITY_ADMIN"],
   users: [
@@ -2693,6 +2695,7 @@ function CateringManagementContent() {
                           setUserForm({
                             ...userForm,
                             role_name: e.target.value,
+                            university_id: e.target.value === "PARTNER_COMPANY" ? "" : userForm.university_id,
                           })
                         }
                       >
@@ -2712,11 +2715,15 @@ function CateringManagementContent() {
                         <option value="PURCHASING_STAFF">
                           Satın Alma Sorumlusu
                         </option>
+                        {currentUser?.role_name !== "UNIVERSITY_ADMIN" && (
+                          <option value="PARTNER_COMPANY">Partner Firma</option>
+                        )}
                       </select>
                     </div>
                   </div>
                   {userForm.role_name !== "SUPER_ADMIN" &&
-                    userForm.role_name !== "CATERING_ADMIN" && (
+                    userForm.role_name !== "CATERING_ADMIN" &&
+                    userForm.role_name !== "PARTNER_COMPANY" && (
                       <div className="input-group">
                         <label>Görevli Olduğu Üniversite</label>
                         <select

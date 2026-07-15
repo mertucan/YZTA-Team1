@@ -24,6 +24,7 @@ PUBLIC_REGISTER_ROLES = {
     Role.warehouse_staff.value,
     Role.purchasing_staff.value,
     Role.researcher.value,
+    Role.partner_company.value,
 }
 
 

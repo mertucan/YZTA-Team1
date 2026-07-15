@@ -27,6 +27,8 @@ class WeeklyMenuItem(BaseModel):
     meal_name: str
     ingredient_id: Optional[int] = None
     meal_id: Optional[int] = None
+    partner_product_integration_id: Optional[int] = None
+    source: Optional[str] = None
     category: Optional[str] = None
     quantity: Optional[float] = None
     portions: Optional[int] = None

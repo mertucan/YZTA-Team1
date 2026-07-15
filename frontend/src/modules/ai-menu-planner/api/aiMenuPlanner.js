@@ -1,6 +1,6 @@
 import client from "../../../api/client";
 
-export const getMenus = () => client.get("/menus").then((r) => r.data);
+export const getMenus = () => client.get("/menus/").then((r) => r.data);
 
 export const getMenu = (id) => client.get(`/menus/${id}`).then((r) => r.data);
 

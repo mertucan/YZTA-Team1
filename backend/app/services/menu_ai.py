@@ -1,11 +1,16 @@
 import json
+import logging
 from datetime import date
 
 from google import genai
 from google.genai import types
 
+from app.catering_management.core.database import SessionLocal
+from app.catering_management.models import PartnerProductIntegration
 from app.config import settings
 from app.database import get_db
+
+logger = logging.getLogger(__name__)
 
 ALL_DAYS = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
 CATEGORIES = [
@@ -40,6 +45,8 @@ RESPONSE_SCHEMA = {
     "required": ["picks"],
 }
 
+PARTNER_ID_OFFSET = 1_000_000_000
+
 
 class MenuAIError(Exception):
     pass
@@ -58,12 +65,77 @@ def _fetch_catalog() -> list[dict]:
     return res.data
 
 
+def _fetch_integrated_partner_products() -> list[dict]:
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(PartnerProductIntegration)
+            .filter(PartnerProductIntegration.status == "INTEGRATED")
+            .order_by(PartnerProductIntegration.updated_at.desc())
+            .limit(50)
+            .all()
+        )
+        products = []
+        for row in rows:
+            category = _normalize_partner_category(row.suggested_menu_category)
+            products.append(
+                {
+                    "id": PARTNER_ID_OFFSET + row.id,
+                    "partner_product_id": row.id,
+                    "name": f"{row.brand_name} {row.product_name}",
+                    "category": category,
+                    "portions": 1,
+                    "calories": float(row.calories or 0),
+                    "protein": float(row.protein or 0),
+                    "iron": 0,
+                    "sugar": float(row.sugar or 0),
+                    "sodium": float(row.sodium or 0),
+                    "meal_ingredients": [],
+                    "is_partner_product": True,
+                    "partner_brand": row.brand_name,
+                    "serving_size": row.serving_size,
+                    "target_segments": row.target_segments,
+                }
+            )
+        return products
+    finally:
+        db.close()
+
+
+def _normalize_partner_category(value: str | None) -> str:
+    normalized = (value or "").strip().casefold()
+    aliases = {
+        "corba": "Çorba",
+        "çorba": "Çorba",
+        "ana yemek": "Ana Yemek",
+        "ara sicak": "Ara Sıcak",
+        "ara sıcak": "Ara Sıcak",
+        "tahil": "Tahıl (Pilav/Makarna)",
+        "tahıl": "Tahıl (Pilav/Makarna)",
+        "pilav": "Tahıl (Pilav/Makarna)",
+        "makarna": "Tahıl (Pilav/Makarna)",
+        "yogurt/salata": "Yoğurt/Salata",
+        "yoğurt/salata": "Yoğurt/Salata",
+        "yogurt": "Yoğurt/Salata",
+        "yoğurt": "Yoğurt/Salata",
+        "salata": "Yoğurt/Salata",
+        "tatli/meyve": "Tatlı/Meyve",
+        "tatlı/meyve": "Tatlı/Meyve",
+        "tatli": "Tatlı/Meyve",
+        "tatlı": "Tatlı/Meyve",
+        "meyve": "Tatlı/Meyve",
+    }
+    return aliases.get(normalized, value or "Ana Yemek")
+
+
 def _fetch_stock_map() -> dict[int, float]:
     res = get_db().table("ingredients").select("id, stock").execute()
     return {row["id"]: float(row["stock"] or 0) for row in res.data}
 
 
 def _meal_cost_per_portion(meal: dict) -> float:
+    if meal.get("is_partner_product"):
+        return float(meal.get("estimated_cost") or 0)
     portions = max(meal.get("portions") or 1, 1)
     total = sum(
         float(it["quantity"]) * float((it.get("ingredients") or {}).get("price") or 0)
@@ -73,7 +145,7 @@ def _meal_cost_per_portion(meal: dict) -> float:
 
 
 def _meal_score(meal: dict, cost_per_portion: float) -> float:
-    price = max(cost_per_portion, 0.01)
+    price = max(cost_per_portion, 5 if meal.get("is_partner_product") else 0.01)
     nutrition = (
         float(meal.get("calories") or 0) / DAILY_CALORIE_TARGET
         + float(meal.get("protein") or 0) / DAILY_PROTEIN_TARGET_G
@@ -161,11 +233,13 @@ def _meal_seasonal_metrics(meal: dict, month: int) -> dict:
 def _meal_opportunity_score(meal: dict, month: int) -> float:
     cost = _meal_cost_per_portion(meal)
     metrics = _meal_seasonal_metrics(meal, month)
+    partner_bonus = 1 if meal.get("is_partner_product") else 0
     return (
         _meal_score(meal, cost)
         + metrics["seasonal_score"] * 2
         + metrics["local_score"] * 1.5
         + metrics["price_advantage_score"] * 2
+        + partner_bonus
     )
 
 
@@ -206,6 +280,12 @@ def _build_gemini_prompt(
                 tags.append(
                     f"fiyat-avantaji:%{round(metrics['price_advantage_score'] * 100)}"
                 )
+            if m.get("is_partner_product"):
+                tags.append("entegre-partner-urun")
+                if m.get("serving_size"):
+                    tags.append(f"porsiyon:{m['serving_size']}")
+                if m.get("target_segments"):
+                    tags.append(f"hedef:{m['target_segments']}")
             tag_str = " | " + " | ".join(tags) if tags else ""
             lines.append(
                 f"- meal_id={m['id']} | kategori={category} | {m['name']} | "
@@ -293,6 +373,8 @@ def suggest_seasonal_revisions(menu_id: int) -> dict:
         item for item in items_res.data if item.get("meal_id") and item.get("category")
     ]
     catalog = _fetch_catalog()
+    partner_products = _fetch_integrated_partner_products()
+    catalog = [*catalog, *partner_products]
     stock_map = _fetch_stock_map()
 
     revisions = []
@@ -415,17 +497,25 @@ def generate_weekly_menu(
     try:
         for p in _gemini_picks(by_category, budget, extra_instructions, month):
             gemini_picks_by_slot[(p.get("day"), p.get("category"))] = p.get("meal_id")
-    except Exception:
+    except Exception as exc:
+        logger.warning("Gemini menu planning failed; using deterministic fallback: %s", exc)
         gemini_picks_by_slot = {}
 
     rotation_idx = {c: 0 for c in CATEGORIES}
     running_cost = 0.0
     picks: list[tuple[str, str, dict]] = []
+    used_partner_product_ids: set[int] = set()
 
     for day in ALL_DAYS:
         for category in CATEGORIES:
             pool = [
-                m for m in by_category.get(category, []) if _is_makeable(m, stock_map)
+                m
+                for m in by_category.get(category, [])
+                if _is_makeable(m, stock_map)
+                and (
+                    not m.get("is_partner_product")
+                    or m["partner_product_id"] not in used_partner_product_ids
+                )
             ]
             if not pool:
                 continue
@@ -438,6 +528,10 @@ def generate_weekly_menu(
                     candidate
                     and candidate["category"] == category
                     and _is_makeable(candidate, stock_map)
+                    and (
+                        not candidate.get("is_partner_product")
+                        or candidate["partner_product_id"] not in used_partner_product_ids
+                    )
                 ):
                     chosen = candidate
 
@@ -449,6 +543,8 @@ def generate_weekly_menu(
                 rotation_idx[category] += 1
 
             _consume(chosen, stock_map)
+            if chosen.get("is_partner_product"):
+                used_partner_product_ids.add(chosen["partner_product_id"])
             portions = max(chosen.get("portions") or 1, 1)
             running_cost += _meal_cost_per_portion(chosen) * portions
             picks.append((day, category, chosen))
@@ -486,7 +582,9 @@ def generate_weekly_menu(
                 "weekly_menu_id": menu["id"],
                 "day_of_week": day,
                 "category": category,
-                "meal_id": meal["id"],
+                "meal_id": None if meal.get("is_partner_product") else meal["id"],
+                "partner_product_integration_id": meal.get("partner_product_id"),
+                "source": "PARTNER_PRODUCT" if meal.get("is_partner_product") else "CATALOG",
                 "meal_name": meal["name"],
                 "portions": portions,
                 "estimated_cost": cost_per_portion,
