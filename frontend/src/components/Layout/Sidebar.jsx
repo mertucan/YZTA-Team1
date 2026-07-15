@@ -34,8 +34,9 @@ const roleLabels = {
 };
 
 const moduleRoles = {
-  "health-tracker": ["DIETITIAN", "RESEARCHER"],
-  "student-health-flags": ["DIETITIAN", "UNIVERSITY_ADMIN"],
+  "health-tracker": ["DIETITIAN", "RESEARCHER", "UNIVERSITY_ADMIN", "CATERING_ADMIN", "SUPER_ADMIN"],
+  "health-risk-analysis": ["DIETITIAN", "RESEARCHER", "UNIVERSITY_ADMIN", "CATERING_ADMIN", "SUPER_ADMIN"],
+  "student-health-flags": ["DIETITIAN", "UNIVERSITY_ADMIN", "SUPER_ADMIN"],
   "ai-menu-planner": ["DIETITIAN", "CHEF"],
   "research-export": ["RESEARCHER", "UNIVERSITY_ADMIN"],
   "university-quality-integration": ["UNIVERSITY_ADMIN", "SUPER_ADMIN"],
@@ -82,10 +83,10 @@ export default function Sidebar() {
   const visibleModules = useMemo(() => {
     if (!isCateringUser) return modules.filter((mod) => mod.id === "catering-management");
     if (role === "SUPER_ADMIN") {
-      return modules.filter((mod) => !["health-tracker", "student-health-flags", "catering-management"].includes(mod.id));
+      return modules.filter((mod) => mod.id !== "catering-management");
     }
     if (role === "CATERING_ADMIN") {
-      return modules.filter((mod) => !["health-tracker", "student-health-flags", "catering-management", "university-quality-integration"].includes(mod.id));
+      return modules.filter((mod) => moduleRoles[mod.id]?.includes(role));
     }
     return modules.filter((mod) => moduleRoles[mod.id]?.includes(role));
   }, [isCateringUser, role]);

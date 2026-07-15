@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routers import (
     absences,
     dashboard,
+    health_risk_analysis,
     ingredients,
     meals,
     menus,
@@ -27,6 +28,7 @@ app.add_middleware(
 )
 
 app.include_router(dashboard.router)
+app.include_router(health_risk_analysis.router)
 app.include_router(ingredients.router)
 app.include_router(meals.router)
 app.include_router(students.router)
