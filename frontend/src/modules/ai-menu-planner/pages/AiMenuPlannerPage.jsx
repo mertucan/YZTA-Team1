@@ -298,7 +298,9 @@ function MenuDetailPanel({
         {DAYS_OF_WEEK.map((day) => {
           const dayItems = itemsByDay[day] || [];
           const aiItems = dayItems.filter((it) => it.ingredient_id);
-          const mealItems = dayItems.filter((it) => it.meal_id);
+          const mealItems = dayItems.filter(
+            (it) => it.meal_id || it.source === "PARTNER_PRODUCT" || it.partner_product_integration_id,
+          );
           const sel = getPicker(day);
           return (
             <div key={day} style={dayCard}>
@@ -369,7 +371,9 @@ function MenuDetailPanel({
                     <div>
                       <div style={{ fontWeight: 600 }}>{item.meal_name}</div>
                       <div style={{ color: "var(--text3)", fontSize: 10 }}>
-                        {item.category} · {item.calories} kcal
+                        {item.source === "PARTNER_PRODUCT" || item.partner_product_integration_id
+                          ? "Partner urun"
+                          : item.category} · {item.calories} kcal
                       </div>
                     </div>
                     <button onClick={() => onRemoveItem(item.id)} style={btnX}>

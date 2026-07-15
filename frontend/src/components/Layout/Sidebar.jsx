@@ -30,6 +30,7 @@ const roleLabels = {
   WAREHOUSE_STAFF: "Depo Görevlisi",
   PURCHASING_STAFF: "Satın Alma Sorumlusu",
   RESEARCHER: "Araştırmacı",
+  PARTNER_COMPANY: "Partner Firma",
 };
 
 const moduleRoles = {
@@ -37,6 +38,8 @@ const moduleRoles = {
   "student-health-flags": ["DIETITIAN", "UNIVERSITY_ADMIN"],
   "ai-menu-planner": ["DIETITIAN", "CHEF"],
   "research-export": ["RESEARCHER", "UNIVERSITY_ADMIN"],
+  "university-quality-integration": ["UNIVERSITY_ADMIN", "SUPER_ADMIN"],
+  "partner-products": ["PARTNER_COMPANY", "DIETITIAN", "CHEF", "CATERING_ADMIN", "SUPER_ADMIN"],
 };
 
 const recordRoles = {
@@ -78,8 +81,11 @@ export default function Sidebar() {
 
   const visibleModules = useMemo(() => {
     if (!isCateringUser) return modules.filter((mod) => mod.id === "catering-management");
-    if (["CATERING_ADMIN", "SUPER_ADMIN"].includes(role)) {
+    if (role === "SUPER_ADMIN") {
       return modules.filter((mod) => !["health-tracker", "student-health-flags", "catering-management"].includes(mod.id));
+    }
+    if (role === "CATERING_ADMIN") {
+      return modules.filter((mod) => !["health-tracker", "student-health-flags", "catering-management", "university-quality-integration"].includes(mod.id));
     }
     return modules.filter((mod) => moduleRoles[mod.id]?.includes(role));
   }, [isCateringUser, role]);
