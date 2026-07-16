@@ -16,6 +16,7 @@ import {
   deleteMenu,
   updateMenuPortions,
   updateMenuItemPortions,
+  replaceMenuItemMeal,
   getSeasonalRevisions,
 } from "../api/aiMenuPlanner";
 import { getIngredients } from "../../../api/ingredients";
@@ -42,6 +43,38 @@ const nextMonday = () => {
   d.setDate(d.getDate() + diff);
   return formatLocalDate(d);
 };
+
+// Haftalar Pazartesi–Pazar bloklarıdır: seçilen herhangi bir tarih haftasının Pazartesi'sine yapışır.
+const snapToMonday = (dateStr) => {
+  const d = new Date(`${dateStr}T00:00:00`);
+  if (isNaN(d)) return dateStr;
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return formatLocalDate(d);
+};
+
+const TR_MONTHS_FULL = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+// Hafta etiketi aralıklı yazılır: "20-26 Temmuz" (ay değişiyorsa "28 Temmuz - 3 Ağustos").
+const weekRangeLabel = (mondayStr) => {
+  const start = new Date(`${mondayStr}T00:00:00`);
+  if (isNaN(start)) return "";
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  const sm = TR_MONTHS_FULL[start.getMonth()];
+  const em = TR_MONTHS_FULL[end.getMonth()];
+  return sm === em
+    ? `${start.getDate()}-${end.getDate()} ${sm}`
+    : `${start.getDate()} ${sm} - ${end.getDate()} ${em}`;
+};
+
+const startOfToday = () => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+// İçinde bulunduğumuz haftanın Pazartesi'si — seçilebilecek en erken hafta.
+// (Snap'in geçmişe düşebildiği tek durum budur: bugün Pazartesi değilse bile bu haftanın Pazartesi'si seçilebilir.)
+const currentMonday = () => snapToMonday(formatLocalDate(new Date()));
 
 const budgetStatus = (totalCost, budget) => {
   const pct = budget ? (totalCost / budget) * 100 : 0;
@@ -107,7 +140,7 @@ function plainBadges(rev) {
 }
 
 // ─── Tek yemek kalemi (kendi kişi sayısı düzenlenebilir) ───
-function MealItemRow({ item, onRemoveItem, onChangeItemPortions, canRemove }) {
+function MealItemRow({ item, onRemoveItem, onChangeItemPortions, readOnly }) {
   const [val, setVal] = useState(String(item.portions ?? ""));
   useEffect(() => { setVal(String(item.portions ?? "")); }, [item.portions]);
   const apply = () => {
@@ -123,22 +156,26 @@ function MealItemRow({ item, onRemoveItem, onChangeItemPortions, canRemove }) {
             <div style={{ fontWeight: 600 }}>{item.meal_name}</div>
             <div style={{ color: "var(--text3)", fontSize: 10 }}>{item.category} · {item.calories} kcal</div>
           </div>
-          {canRemove && <button onClick={() => onRemoveItem(item.id)} style={btnX} title="Kaldır">✕</button>}
+          {!readOnly && <button onClick={() => onRemoveItem(item.id)} style={btnX} title="Kaldır">✕</button>}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
-          <span style={{ fontSize: 10, color: "var(--text3)" }}>👥</span>
-          <input
-            value={val}
-            inputMode="numeric"
-            onChange={(e) => setVal(e.target.value.replace(/\D/g, ""))}
-            onFocus={(e) => e.target.select()}
-            onBlur={apply}
-            onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
-            style={{ ...inputXs, width: 46, padding: "2px 5px", textAlign: "center" }}
-            title="Bu yemeği kaç kişi yiyecek"
-          />
-          <span style={{ fontSize: 10, color: "var(--text3)" }}>kişi</span>
-        </div>
+        {readOnly ? (
+          <div style={{ fontSize: 10, color: "var(--text3)", marginTop: 4 }}>👥 {item.portions ?? "—"} kişi</div>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
+            <span style={{ fontSize: 10, color: "var(--text3)" }}>👥</span>
+            <input
+              value={val}
+              inputMode="numeric"
+              onChange={(e) => setVal(e.target.value.replace(/\D/g, ""))}
+              onFocus={(e) => e.target.select()}
+              onBlur={apply}
+              onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+              style={{ ...inputXs, width: 46, padding: "2px 5px", textAlign: "center" }}
+              title="Bu yemeği kaç kişi yiyecek"
+            />
+            <span style={{ fontSize: 10, color: "var(--text3)" }}>kişi</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -149,8 +186,8 @@ function DayCard({ day, dayItems, mealsByCategory, ingredientsById, picker, onPi
   const aiItems = dayItems.filter((it) => it.ingredient_id);
   const mealItems = dayItems.filter((it) => it.meal_id);
   return (
-    <div style={dayCard}>
-      <div style={dayCardHd}>{day}</div>
+    <div style={{ ...dayCard, opacity: readOnly ? 0.65 : 1 }}>
+      <div style={dayCardHd}>{day}{readOnly && <span style={{ fontWeight: 400, color: "var(--text3)" }}> · 🔒 geçti</span>}</div>
       <div style={{ padding: 10, flex: 1 }}>
         {mealItems.length === 0 && aiItems.length === 0 && <div style={{ fontSize: 11, color: "var(--text3)" }}>—</div>}
         {mealItems.map((item) => (
@@ -159,7 +196,7 @@ function DayCard({ day, dayItems, mealsByCategory, ingredientsById, picker, onPi
             item={item}
             onRemoveItem={onRemoveItem}
             onChangeItemPortions={onChangeItemPortions}
-            canRemove={!readOnly}
+            readOnly={readOnly}
           />
         ))}
         {aiItems.length > 0 && (
@@ -275,24 +312,30 @@ function MenuDetailPanel({ menu, ingredientsById, mealsByCategory, studentCount,
         </div>
       </div>
 
-      {/* GÜNLÜK PLAN — onaylı menü de düzenlenebilir; değişiklikler Dashboard'a yansır */}
-      <SectionTitle>🗓️ Günlük Plan {isApproved && <span style={{ fontWeight: 400, color: "var(--text3)" }}>(onaylı — düzenlemeler Dashboard'a yansır)</span>}</SectionTitle>
+      {/* GÜNLÜK PLAN — onaylı menü de düzenlenebilir; yalnızca geçmiş günler kilitli.
+          Değişiklikler Dashboard'a yansır. */}
+      <SectionTitle>🗓️ Günlük Plan {isApproved && <span style={{ fontWeight: 400, color: "var(--text3)" }}>(onaylı — bugün ve sonrası düzenlenebilir, geçmiş günler kilitli)</span>}</SectionTitle>
       <div style={dayGrid}>
-        {DAYS_OF_WEEK.map((day) => (
-          <DayCard
-            key={day}
-            day={day}
-            dayItems={itemsByDay[day] || []}
-            mealsByCategory={mealsByCategory}
-            ingredientsById={ingredientsById}
-            picker={getPicker(day)}
-            onPickerField={setPickerField}
-            onAddMeal={onAddMeal}
-            onRemoveItem={onRemoveItem}
-            onChangeItemPortions={onChangeItemPortions}
-            readOnly={false}
-          />
-        ))}
+        {DAYS_OF_WEEK.map((day, idx) => {
+          const dayDate = new Date(`${menu.week_start_date}T00:00:00`);
+          dayDate.setDate(dayDate.getDate() + idx);
+          const dayLocked = dayDate < startOfToday();
+          return (
+            <DayCard
+              key={day}
+              day={day}
+              dayItems={itemsByDay[day] || []}
+              mealsByCategory={mealsByCategory}
+              ingredientsById={ingredientsById}
+              picker={getPicker(day)}
+              onPickerField={setPickerField}
+              onAddMeal={onAddMeal}
+              onRemoveItem={onRemoveItem}
+              onChangeItemPortions={onChangeItemPortions}
+              readOnly={dayLocked}
+            />
+          );
+        })}
       </div>
 
       {/* İŞLEMLER */}
@@ -313,7 +356,7 @@ function SectionTitle({ children }) {
   return <div style={{ padding: "12px 18px 8px", fontSize: 12, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: ".04em" }}>{children}</div>;
 }
 
-function RevisionModal({ data, onClose }) {
+function RevisionModal({ data, onClose, onApply, applyingId }) {
   if (!data) return null;
   return (
     <div onClick={onClose} style={overlay}>
@@ -335,10 +378,23 @@ function RevisionModal({ data, onClose }) {
             {data.revisions.map((rev) => (
               <div key={rev.menu_item_id} style={{ background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 8, padding: "10px 12px" }}>
                 <div style={{ fontSize: 11, color: "var(--text3)", marginBottom: 4 }}>{rev.day_of_week} — {rev.category}</div>
-                <div style={{ fontSize: 12, marginBottom: 6 }}>
-                  <span style={{ color: "var(--red)", fontWeight: 600 }}>{rev.current_meal_name}</span>
-                  <span style={{ color: "var(--text3)", margin: "0 6px" }}>→</span>
-                  <span style={{ color: "var(--green)", fontWeight: 600 }}>{rev.suggested_meal_name}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
+                  <div style={{ fontSize: 12 }}>
+                    <span style={{ color: "var(--red)", fontWeight: 600 }}>{rev.current_meal_name}</span>
+                    <span style={{ color: "var(--text3)", margin: "0 6px" }}>→</span>
+                    <span style={{ color: "var(--green)", fontWeight: 600 }}>{rev.suggested_meal_name}</span>
+                  </div>
+                  {rev._applied ? (
+                    <span style={{ ...pill, borderColor: "var(--green)", color: "var(--green)", fontWeight: 700 }}>✓ Uygulandı</span>
+                  ) : (
+                    <button
+                      onClick={() => onApply(rev)}
+                      disabled={applyingId != null}
+                      style={{ ...btnPrimary, padding: "5px 14px", opacity: applyingId != null && applyingId !== rev.menu_item_id ? 0.6 : 1 }}
+                    >
+                      {applyingId === rev.menu_item_id ? "Uygulanıyor..." : "✓ Uygula"}
+                    </button>
+                  )}
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                   {plainBadges(rev).map((b, i) => <span key={i} style={{ ...pill, borderColor: b.color, color: b.color }}>{b.text}</span>)}
@@ -363,7 +419,6 @@ export default function AiMenuPlannerSuggestionPage() {
 
   // Tek aktif menü/taslak (sekmelerin hemen altında önizlenir; listede "ortada açılmaz")
   const [active, setActive] = useState(null);
-  const [lastDraftId, setLastDraftId] = useState(null); // create butonuyla üretilen son taslak
 
   const [createMode, setCreateMode] = useState("ai");
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -380,6 +435,7 @@ export default function AiMenuPlannerSuggestionPage() {
   const [picker, setPicker] = useState({});
   const [seasonalRevisions, setSeasonalRevisions] = useState(null);
   const [revisionsLoading, setRevisionsLoading] = useState(false);
+  const [applyingRevisionId, setApplyingRevisionId] = useState(null);
 
   const refreshMenus = () => getMenus().then(setMenus);
 
@@ -414,19 +470,21 @@ export default function AiMenuPlannerSuggestionPage() {
     setSeasonalRevisions(null);
   };
 
-  // Yeni üretimden önce, create butonuyla üretilmiş önceki ONAYLANMAMIŞ taslağı sil (birikme yok)
-  const dropPreviousDraft = async () => {
-    if (lastDraftId) {
-      try { await deleteMenu(lastDraftId); } catch { /* zaten yoksa geç */ }
-      setLastDraftId(null);
-    }
+  // Hafta benzersizdir: o hafta (Pzt–Paz) için herhangi bir menü/taslak varsa yenisi üretilemez.
+  const weekConflict = () => {
+    const target = snapToMonday(weekStartDate);
+    return menus.find((m) => snapToMonday(m.week_start_date) === target);
   };
 
   const handleGenerate = async () => {
+    const conflict = weekConflict();
+    if (conflict) {
+      setError(`${weekRangeLabel(snapToMonday(weekStartDate))} haftası için zaten ${conflict.status === "approved" ? "onaylı" : "taslak"} bir menü var. Her hafta için tek menü üretilebilir — mevcut menüyü aşağıdaki listeden açıp düzenleyin veya silin.`);
+      return;
+    }
     setGenerating(true);
     setError(null);
     try {
-      await dropPreviousDraft();
       const seasonalParts = [];
       if (seasonalMode) seasonalParts.push(seasonalInstruction);
       if (localPriority) seasonalParts.push("Yerel üretici veya bölge bilgisi olan malzemeleri, maliyet ve besin dengesi uygunsa önceliklendir.");
@@ -439,7 +497,6 @@ export default function AiMenuPlannerSuggestionPage() {
         extra_instructions: combinedInstructions || null,
       });
       setActiveFresh(menu);
-      setLastDraftId(menu.id);
       refreshMenus();
     } catch (e) {
       setError(e.response?.data?.detail || "Menü oluşturulamadı. GEMINI_API_KEY tanımlı mı kontrol edin.");
@@ -449,16 +506,19 @@ export default function AiMenuPlannerSuggestionPage() {
   };
 
   const handleCreateManual = async () => {
+    const conflict = weekConflict();
+    if (conflict) {
+      setError(`${weekRangeLabel(snapToMonday(weekStartDate))} haftası için zaten ${conflict.status === "approved" ? "onaylı" : "taslak"} bir menü var. Her hafta için tek menü üretilebilir — mevcut menüyü aşağıdaki listeden açıp düzenleyin veya silin.`);
+      return;
+    }
     setError(null);
     try {
-      await dropPreviousDraft();
       const menu = await createManualMenu({
         week_start_date: weekStartDate,
         budget: parseFloat(budget) || 0,
         portions: Number(portionsInput) || 40,
       });
       setActiveFresh(menu);
-      setLastDraftId(menu.id);
       refreshMenus();
     } catch (e) {
       setError(e.response?.data?.detail || "Boş menü oluşturulamadı.");
@@ -469,7 +529,6 @@ export default function AiMenuPlannerSuggestionPage() {
     if (!active) return;
     const updated = await approveMenu(active.id);
     setActive({ ...active, status: updated.status });
-    if (active.id === lastDraftId) setLastDraftId(null); // artık kalıcı, atılmayacak
     refreshMenus();
   };
 
@@ -477,7 +536,6 @@ export default function AiMenuPlannerSuggestionPage() {
   const handleApproveById = async (id) => {
     await approveMenu(id);
     if (active && active.id === id) setActive({ ...active, status: "approved" });
-    if (lastDraftId === id) setLastDraftId(null);
     refreshMenus();
   };
 
@@ -508,8 +566,31 @@ export default function AiMenuPlannerSuggestionPage() {
   const handleDelete = async (id) => {
     await deleteMenu(id);
     if (active && active.id === id) setActive(null);
-    if (lastDraftId === id) setLastDraftId(null);
     refreshMenus();
+  };
+
+  // Mevsimsel revizyon önerisini teker teker uygula: kalemdeki yemek önerilenle değişir,
+  // kişi sayısı korunur, maliyet yeniden hesaplanır ve Dashboard'a yansır.
+  const handleApplyRevision = async (rev) => {
+    if (!active) return;
+    setApplyingRevisionId(rev.menu_item_id);
+    try {
+      const updated = await replaceMenuItemMeal(active.id, rev.menu_item_id, rev.suggested_meal_id);
+      setActive(updated);
+      refreshMenus();
+      setSeasonalRevisions((prev) =>
+        prev
+          ? {
+              ...prev,
+              revisions: prev.revisions.map((r) =>
+                r.menu_item_id === rev.menu_item_id ? { ...r, _applied: true } : r
+              ),
+            }
+          : prev
+      );
+    } finally {
+      setApplyingRevisionId(null);
+    }
   };
 
   const openFromList = async (id) => {
@@ -565,7 +646,7 @@ export default function AiMenuPlannerSuggestionPage() {
           <tbody>
             {list.map((m) => (
               <tr key={m.id} style={active && active.id === m.id ? { background: "var(--accent-bg)" } : undefined}>
-                <td style={td}>{m.week_start_date}</td>
+                <td style={td}>{weekRangeLabel(snapToMonday(m.week_start_date))}</td>
                 <td style={td}>{m.portions || 40}</td>
                 <td style={td}>{m.budget.toFixed(0)} TL</td>
                 <td style={td}>{m.total_cost.toFixed(0)} TL</td>
@@ -605,8 +686,22 @@ export default function AiMenuPlannerSuggestionPage() {
         <div style={{ padding: 18 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, alignItems: "end" }}>
             <div>
-              <div style={fieldLabel}>Hafta Başlangıcı (Pazartesi)</div>
-              <input type="date" value={weekStartDate} onChange={(e) => setWeekStartDate(e.target.value)} style={input} />
+              <div style={fieldLabel}>
+                Hafta <span style={{ color: "var(--accent)", fontWeight: 700 }}>{weekRangeLabel(weekStartDate)}</span>
+              </div>
+              {/* Hangi güne tıklanırsa tıklansın o haftanın Pazartesi'sine yapışır (hafta hafta seçim).
+                  Geçmiş hafta seçilemez; snap yalnızca bu haftanın Pazartesi'sine geriye düşebilir. */}
+              <input
+                type="date"
+                value={weekStartDate}
+                min={currentMonday()}
+                onChange={(e) => {
+                  const snapped = snapToMonday(e.target.value);
+                  const floor = currentMonday();
+                  setWeekStartDate(snapped < floor ? floor : snapped);
+                }}
+                style={input}
+              />
             </div>
             <div>
               <div style={fieldLabel}>Haftalık Bütçe (TL)</div>
@@ -690,7 +785,7 @@ export default function AiMenuPlannerSuggestionPage() {
           <div style={{ borderTop: "2px solid var(--accent)", background: "var(--surface2)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 18px", flexWrap: "wrap", gap: 6 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)" }}>
-                {active.status === "approved" ? "✓ Onaylı Menü" : "📝 Aktif Taslak"} · {active.week_start_date} haftası
+                {active.status === "approved" ? "✓ Onaylı Menü" : "📝 Aktif Taslak"} · {weekRangeLabel(snapToMonday(active.week_start_date))} haftası
               </div>
               <button onClick={() => setActive(null)} style={btnSm}>Kapat</button>
             </div>
@@ -728,7 +823,12 @@ export default function AiMenuPlannerSuggestionPage() {
         {showPast && renderMenuTable(pastMenus, "Geçmiş menü yok.")}
       </div>
 
-      <RevisionModal data={seasonalRevisions} onClose={() => setSeasonalRevisions(null)} />
+      <RevisionModal
+        data={seasonalRevisions}
+        onClose={() => setSeasonalRevisions(null)}
+        onApply={handleApplyRevision}
+        applyingId={applyingRevisionId}
+      />
     </div>
   );
 }

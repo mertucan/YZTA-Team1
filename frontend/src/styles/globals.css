@@ -68,3 +68,7 @@ body {
 
 button { font-family: inherit; cursor: pointer; }
 input, select { font-family: inherit; }
+
+/* Yatay kaydırılan alanlarda scrollbar'ı gizle (sürükleyerek kaydırma kullanılır) */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

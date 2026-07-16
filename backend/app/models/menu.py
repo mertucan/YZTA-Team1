@@ -30,6 +30,10 @@ class WeeklyMenuItemPortionsUpdate(BaseModel):
     portions: int
 
 
+class WeeklyMenuItemMealUpdate(BaseModel):
+    meal_id: int
+
+
 class WeeklyMenuItem(BaseModel):
     id: int
     weekly_menu_id: int
