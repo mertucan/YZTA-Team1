@@ -18,6 +18,9 @@ export const updateMenuPortions = (id, portions) =>
 export const updateMenuItemPortions = (menuId, itemId, portions) =>
   client.patch(`/menus/${menuId}/items/${itemId}`, { portions }).then((r) => r.data);
 
+export const replaceMenuItemMeal = (menuId, itemId, mealId) =>
+  client.patch(`/menus/${menuId}/items/${itemId}/meal`, { meal_id: mealId }).then((r) => r.data);
+
 export const addMealItem = (menuId, { day_of_week, category, meal_id }) =>
   client
     .post(`/menus/${menuId}/items`, { day_of_week, category, meal_id })

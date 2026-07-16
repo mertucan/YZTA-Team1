@@ -47,7 +47,8 @@ def _recompute_nutrition(meal_id: int, portions: int) -> None:
 
 @router.get("/", response_model=list[Meal])
 def list_meals():
-    res = get_db().table("meals").select(MEAL_SELECT).execute()
+    # Sabit sıralama: güncellenen satırların listede yer değiştirmesini önler.
+    res = get_db().table("meals").select(MEAL_SELECT).order("id").execute()
     return [_to_meal_out(row) for row in res.data]
 
 

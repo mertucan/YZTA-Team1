@@ -7,6 +7,8 @@ import {
   getBatches,
   createBatch,
   deleteBatch,
+  getA101Prices,
+  fetchA101Price,
 } from "../api/ingredients";
 import { todayLocal } from "../utils/date";
 
@@ -43,6 +45,7 @@ const emptyForm = {
 
 const emptyBatchForm = {
   quantity: "",
+  unit_price: "",
   purchase_date: todayLocal(),
   expiry_date: "",
 };
@@ -95,6 +98,59 @@ function SeasonalBadge({ item }) {
   );
 }
 
+/* ─── A101 Fiyat Hücresi ────────────────────────────────────────────────────── */
+function A101Cell({ rec, error, busy, onFetch }) {
+  const fmtDate = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 120 }}>
+      {rec ? (
+        <>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {rec.unit_matched && rec.unit_price != null ? (
+              <span style={{ fontFamily: "var(--mono)", fontWeight: 700, color: "var(--text)" }}>
+                {Number(rec.unit_price).toFixed(2)} TL/{rec.pack_unit}
+              </span>
+            ) : (
+              <span style={{ color: "var(--amber)", fontSize: 11 }} title="Ürün birimi malzeme birimiyle eşleştirilemedi">
+                ⚠ birim eşleşmedi · {Number(rec.last_price || 0).toFixed(2)} TL
+              </span>
+            )}
+            <a
+              href={rec.product_url}
+              target="_blank"
+              rel="noreferrer"
+              title={`${rec.product_name || "Ürün"} — A101 sayfasını aç`}
+              style={{ textDecoration: "none", fontSize: 12 }}
+            >
+              ↗
+            </a>
+            <button onClick={onFetch} disabled={busy} style={btnXs} title="Fiyatı yeniden çek">
+              {busy ? "…" : "⟳"}
+            </button>
+          </div>
+          <div style={{ fontSize: 9, color: "var(--text3)" }} title={rec.product_name || ""}>
+            {(rec.product_name || "").slice(0, 26)}{(rec.product_name || "").length > 26 ? "…" : ""}
+          </div>
+          <div style={{ fontSize: 9, color: "var(--text3)" }}>🕒 {fmtDate(rec.checked_at)}</div>
+        </>
+      ) : (
+        <button onClick={onFetch} disabled={busy} style={btnXs}>
+          {busy ? "Çekiliyor…" : "🛒 Çek"}
+        </button>
+      )}
+      {error && (
+        <div style={{ fontSize: 9, color: "var(--red)", maxWidth: 150 }} title={error}>
+          {String(error).slice(0, 40)}…
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Parti Paneli ──────────────────────────────────────────────────────────── */
 function BatchPanel({ ingredient, onStockChanged }) {
   const [batches, setBatches] = useState([]);
@@ -114,6 +170,7 @@ function BatchPanel({ ingredient, onStockChanged }) {
     if (!form.quantity || !form.purchase_date) return;
     await createBatch(ingredient.id, {
       quantity: numericPayloadValue(form.quantity),
+      unit_price: form.unit_price !== "" ? Number(form.unit_price) : null,
       purchase_date: form.purchase_date,
       expiry_date: form.expiry_date || null,
     });
@@ -219,7 +276,7 @@ function BatchPanel({ ingredient, onStockChanged }) {
         >
           <thead>
             <tr>
-              {["Miktar", "Alınma Tarihi", "SKT", ""].map((h) => (
+              {["Miktar", "Birim Fiyat", "Alınma Tarihi", "SKT", ""].map((h) => (
                 <th key={h} style={thSm}>
                   {h}
                 </th>
@@ -229,7 +286,7 @@ function BatchPanel({ ingredient, onStockChanged }) {
           <tbody>
             {batches.length === 0 && (
               <tr>
-                <td style={tdSm} colSpan={4}>
+                <td style={tdSm} colSpan={5}>
                   Henüz parti eklenmemiş.
                 </td>
               </tr>
@@ -247,6 +304,11 @@ function BatchPanel({ ingredient, onStockChanged }) {
                     }}
                   >
                     {b.quantity} {ingredient.unit}
+                  </td>
+                  <td style={{ ...tdSm, fontFamily: "var(--mono)" }}>
+                    {b.unit_price != null && Number(b.unit_price) > 0
+                      ? `${Number(b.unit_price).toFixed(2)} TL/${ingredient.unit}`
+                      : "—"}
                   </td>
                   <td style={tdSm}>{b.purchase_date}</td>
                   <td style={{ ...tdSm, fontWeight: 600, color: exp.color }}>
@@ -266,7 +328,7 @@ function BatchPanel({ ingredient, onStockChanged }) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr auto",
+          gridTemplateColumns: "1fr 1fr 1fr 1fr auto",
           gap: 8,
           alignItems: "end",
         }}
@@ -280,6 +342,19 @@ function BatchPanel({ ingredient, onStockChanged }) {
             placeholder="0"
             onChange={(e) =>
               setForm({ ...form, quantity: numericValue(e.target.value) })
+            }
+            style={inputSm}
+          />
+        </div>
+        <div>
+          <div style={fieldLabelSm}>Birim Fiyat (TL/{ingredient.unit})</div>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={form.unit_price}
+            placeholder="0.00"
+            onChange={(e) =>
+              setForm({ ...form, unit_price: numericValue(e.target.value) })
             }
             style={inputSm}
           />
@@ -321,18 +396,62 @@ export default function Ingredients() {
   const [expandedId, setExpandedId] = useState(null);
   const [search, setSearch] = useState("");
 
+  // A101 fiyat eşleştirmeleri: {ingredient_id: kayit}
+  const [a101, setA101] = useState({});
+  const [a101Busy, setA101Busy] = useState(null); // ingredient_id | "all" | null
+  const [a101Progress, setA101Progress] = useState("");
+  const [a101Errors, setA101Errors] = useState({});
+
   const refresh = () =>
     getIngredients()
       .then(setItems)
       .finally(() => setLoading(false));
+  const refreshA101 = () =>
+    getA101Prices()
+      .then((list) => setA101(Object.fromEntries(list.map((r) => [r.ingredient_id, r]))))
+      .catch(() => {});
   useEffect(() => {
     refresh();
+    refreshA101();
   }, []);
 
-  /* Temel sayısal alanlar */
+  const handleFetchA101 = async (id) => {
+    setA101Busy(id);
+    setA101Errors((prev) => ({ ...prev, [id]: null }));
+    try {
+      const rec = await fetchA101Price(id);
+      setA101((prev) => ({ ...prev, [id]: rec }));
+      refresh(); // market_price alanı güncellenmiş olabilir
+    } catch (err) {
+      setA101Errors((prev) => ({ ...prev, [id]: err?.response?.data?.detail || "A101 verisi çekilemedi." }));
+    } finally {
+      setA101Busy(null);
+    }
+  };
+
+  // Tüm malzemeler için sırayla çek (siteyi yormamak için paralel değil)
+  const handleFetchAllA101 = async () => {
+    setA101Busy("all");
+    const list = [...items];
+    for (let i = 0; i < list.length; i++) {
+      setA101Progress(`${i + 1}/${list.length}`);
+      try {
+        const rec = await fetchA101Price(list[i].id);
+        setA101((prev) => ({ ...prev, [list[i].id]: rec }));
+        setA101Errors((prev) => ({ ...prev, [list[i].id]: null }));
+      } catch (err) {
+        setA101Errors((prev) => ({ ...prev, [list[i].id]: err?.response?.data?.detail || "çekilemedi" }));
+      }
+    }
+    setA101Progress("");
+    setA101Busy(null);
+    refresh();
+  };
+
+  /* Temel sayısal alanlar — fiyat artık burada değil: partiler (alımlar) üzerinden
+     miktar-ağırlıklı ortalama olarak otomatik hesaplanır */
   const basicFields = [
     { label: "Malzeme Adı", key: "name", type: "text" },
-    { label: "Fiyat (TL)", key: "price", type: "number" },
     { label: "Kalori", key: "calories", type: "number" },
     { label: "Protein (g)", key: "protein", type: "number" },
     { label: "Demir (mg)", key: "iron", type: "number" },
@@ -345,7 +464,6 @@ export default function Ingredients() {
     const payload = {
       name: form.name,
       unit: form.unit,
-      price: numericPayloadValue(form.price),
       calories: numericPayloadValue(form.calories),
       protein: numericPayloadValue(form.protein),
       iron: numericPayloadValue(form.iron),
@@ -618,12 +736,22 @@ export default function Ingredients() {
 
       {/* ── Tablo ── */}
       <div style={card}>
-        <div style={cardHd}>
-          🗃️ Stok Listesi{" "}
-          <span style={{ fontWeight: 400, color: "var(--text3)" }}>
-            (her malzeme kendi partilerinin toplamıdır — detay için satıra
-            tıklayın)
+        <div style={{ ...cardHd, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <span>
+            🗃️ Stok Listesi{" "}
+            <span style={{ fontWeight: 400, color: "var(--text3)" }}>
+              (her malzeme kendi partilerinin toplamıdır — detay için satıra
+              tıklayın)
+            </span>
           </span>
+          <button
+            onClick={handleFetchAllA101}
+            disabled={a101Busy !== null}
+            style={{ ...btnPrimary, opacity: a101Busy !== null ? 0.7 : 1 }}
+            title="Tüm malzemeler için A101'den güncel fiyat çeker (birim eşleştirmeli)"
+          >
+            {a101Busy === "all" ? `🛒 Çekiliyor... ${a101Progress}` : "🛒 A101 Veri Çek"}
+          </button>
         </div>
         <div style={{ padding: "12px 18px" }}>
           <input
@@ -654,7 +782,7 @@ export default function Ingredients() {
                     "Malzeme",
                     "Birim",
                     "Stok",
-                    "Fiyat",
+                    "A101 Fiyatı",
                     "Kalori",
                     "Protein",
                     "Demir",
@@ -700,7 +828,14 @@ export default function Ingredients() {
                       >
                         {i.stock}
                       </td>
-                      <td style={td}>{Number(i.price || 0).toFixed(2)} TL</td>
+                      <td style={td} onClick={(e) => e.stopPropagation()}>
+                        <A101Cell
+                          rec={a101[i.id]}
+                          error={a101Errors[i.id]}
+                          busy={a101Busy === i.id || a101Busy === "all"}
+                          onFetch={() => handleFetchA101(i.id)}
+                        />
+                      </td>
                       <td style={td}>{i.calories} kcal</td>
                       <td style={td}>{i.protein} g</td>
                       <td style={td}>{i.iron} mg</td>
