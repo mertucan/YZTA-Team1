@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { getStudents, createStudent, deleteStudent } from "../api/students";
+import { useEffect, useRef, useState } from "react";
+import { getStudents, createStudent, deleteStudent, bulkCreateStudents } from "../api/students";
+import { downloadTemplate, parseSheet, pickField } from "../utils/excel";
 
 const emptyForm = { first_name: "", last_name: "", national_id: "", age: 18 };
 
@@ -19,6 +20,9 @@ export default function Students() {
   const [form, setForm]       = useState(emptyForm);
   const [loading, setLoading] = useState(true);
   const [search, setSearch]   = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const fileInputRef = useRef(null);
 
   const refresh = () => getStudents().then(setItems).finally(() => setLoading(false));
   useEffect(() => { refresh(); }, []);
@@ -28,6 +32,62 @@ export default function Students() {
     await createStudent(form);
     setForm(emptyForm);
     refresh();
+  };
+
+  const handleDownloadTemplate = () => {
+    downloadTemplate(
+      ["Ad", "Soyad", "TC Kimlik No", "Yaş"],
+      [
+        ["Ahmet", "Yılmaz", "10000000099", 20],
+        ["Ayşe", "Demir", "10000000098", 19],
+      ],
+      "ogrenci_sablonu",
+      "Ogrenciler"
+    );
+  };
+
+  const handleFileSelected = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const rows = await parseSheet(file);
+      const parsed = [];
+      const formatErrors = [];
+      rows.forEach((row, idx) => {
+        const first_name = pickField(row, ["Ad", "Ad ", "İsim", "Isim", "first_name"]);
+        const last_name = pickField(row, ["Soyad", "last_name"]);
+        const national_id = digitsOnly(pickField(row, ["TC Kimlik No", "TC", "TCKN", "national_id"]));
+        const ageRaw = pickField(row, ["Yaş", "Yas", "age"]);
+        const age = Number(digitsOnly(ageRaw)) || 0;
+        const rowNo = idx + 2;
+
+        if (!first_name && !last_name && !national_id && !ageRaw) return; // boş satır atla
+        if (national_id.length !== 11) {
+          formatErrors.push({ row: rowNo, message: `TC Kimlik No 11 haneli olmalı (girilen: "${national_id}")` });
+          return;
+        }
+        if (!first_name) {
+          formatErrors.push({ row: rowNo, message: "Ad boş olamaz" });
+          return;
+        }
+        parsed.push({ first_name, last_name, national_id, age });
+      });
+
+      if (parsed.length === 0) {
+        setImportResult({ successCount: 0, errors: formatErrors, total: rows.length });
+      } else {
+        const { successCount, errors } = await bulkCreateStudents(parsed);
+        setImportResult({ successCount, errors: [...formatErrors, ...errors], total: parsed.length + formatErrors.length });
+        refresh();
+      }
+    } catch (err) {
+      setImportResult({ successCount: 0, errors: [{ row: "-", message: err?.message || "Dosya okunamadı." }], total: 0 });
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   const fields = [
@@ -44,7 +104,40 @@ export default function Students() {
       </div>
 
       <div style={card}>
-        <div style={cardHd}>➕ Yeni Öğrenci Ekle</div>
+        <div style={{ ...cardHd, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <span>➕ Yeni Öğrenci Ekle</span>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button onClick={handleDownloadTemplate} style={btnGhost}>⬇️ Örnek Şablon İndir</button>
+            <button onClick={() => fileInputRef.current?.click()} disabled={importing} style={{ ...btnPrimary, opacity: importing ? 0.7 : 1 }}>
+              {importing ? "Yükleniyor..." : "📄 Excel ile Yükle"}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={handleFileSelected}
+              style={{ display: "none" }}
+            />
+          </div>
+        </div>
+        {importResult && (
+          <div style={{ padding: "12px 18px", borderBottom: "1px solid var(--border)", fontSize: 12 }}>
+            <div style={{ color: "var(--green)", fontWeight: 600 }}>
+              ✓ {importResult.successCount} öğrenci eklendi{importResult.total ? ` (${importResult.total} satır işlendi)` : ""}.
+            </div>
+            {importResult.errors.length > 0 && (
+              <div style={{ marginTop: 6, color: "var(--red)" }}>
+                <div style={{ fontWeight: 600, marginBottom: 3 }}>⚠️ {importResult.errors.length} satır eklenemedi:</div>
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {importResult.errors.slice(0, 8).map((e, i) => (
+                    <li key={i}>Satır {e.row}: {e.message}</li>
+                  ))}
+                  {importResult.errors.length > 8 && <li>... ve {importResult.errors.length - 8} satır daha</li>}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
         <div style={{ padding: 18, display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr auto", gap: 10, alignItems: "end" }}>
           {fields.map(({ label, key, placeholder }) => (
             <div key={key}>
@@ -138,3 +231,4 @@ const th         = { textAlign: "left", fontSize: 10, fontWeight: 700, color: "v
 const td         = { padding: "10px 18px", fontSize: 12, color: "var(--text2)", borderBottom: "1px solid var(--border)" };
 const btnPrimary = { background: "var(--accent)", border: "none", color: "#fff", padding: "8px 18px", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer" };
 const btnSm      = { background: "var(--surface2)", border: "1px solid var(--border2)", color: "var(--text2)", padding: "4px 10px", borderRadius: 6, fontSize: 11, cursor: "pointer" };
+const btnGhost   = { background: "var(--surface2)", border: "1px solid var(--border2)", color: "var(--text)", padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer" };

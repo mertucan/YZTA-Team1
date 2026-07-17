@@ -1,8 +1,30 @@
-import { useEffect, useState } from "react";
-import { getAbsences, createAbsence, deleteAbsence } from "../api/absences";
+import { useEffect, useRef, useState } from "react";
+import { getAbsences, createAbsence, deleteAbsence, bulkCreateAbsences } from "../api/absences";
 import { getStudents } from "../api/students";
+import { downloadTemplate, parseSheet, pickField } from "../utils/excel";
 
 const emptyForm = { student_id: 0, absence_date: "" };
+
+// Excel'den gelen çeşitli tarih formatlarını YYYY-MM-DD'ye çevirir.
+function normalizeDate(raw) {
+  const value = String(raw || "").trim();
+  if (!value) return "";
+  // 2026-07-15
+  let m = value.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+  if (m) return `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`;
+  // 15.07.2026 veya 15/07/2026
+  m = value.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  // Excel seri numarası (nadir; raw:false ile genelde gelmez)
+  if (/^\d+$/.test(value)) {
+    const serial = Number(value);
+    if (serial > 59 && serial < 60000) {
+      const d = new Date(Date.UTC(1899, 11, 30) + serial * 86400000);
+      return d.toISOString().slice(0, 10);
+    }
+  }
+  return "";
+}
 
 export default function Absences() {
   const [items, setItems] = useState([]);
@@ -14,6 +36,9 @@ export default function Absences() {
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const fileInputRef = useRef(null);
 
   const refresh = () =>
     getAbsences()
@@ -23,6 +48,67 @@ export default function Absences() {
     refresh();
     getStudents().then(setStudents);
   }, []);
+
+  const handleDownloadTemplate = () => {
+    downloadTemplate(
+      ["TC Kimlik No", "Tarih (YYYY-AA-GG)"],
+      [
+        ["10000000002", "2026-07-15"],
+        ["10000000003", "2026-07-16"],
+      ],
+      "devamsizlik_sablonu",
+      "Devamsizlik"
+    );
+  };
+
+  const handleFileSelected = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const rows = await parseSheet(file);
+      // TC -> öğrenci id eşlemesi
+      const byNationalId = new Map(students.map((s) => [String(s.national_id), s.id]));
+      const parsed = [];
+      const formatErrors = [];
+      rows.forEach((row, idx) => {
+        const nationalId = String(pickField(row, ["TC Kimlik No", "TC", "TCKN", "national_id"])).replace(/\D/g, "");
+        const dateRaw = pickField(row, ["Tarih (YYYY-AA-GG)", "Tarih", "absence_date", "date"]);
+        const rowNo = idx + 2;
+
+        if (!nationalId && !dateRaw) return; // boş satır
+        if (nationalId.length !== 11) {
+          formatErrors.push({ row: rowNo, message: `Geçersiz TC Kimlik No: "${nationalId}"` });
+          return;
+        }
+        const student_id = byNationalId.get(nationalId);
+        if (!student_id) {
+          formatErrors.push({ row: rowNo, message: `TC "${nationalId}" ile kayıtlı öğrenci bulunamadı` });
+          return;
+        }
+        const absence_date = normalizeDate(dateRaw);
+        if (!absence_date) {
+          formatErrors.push({ row: rowNo, message: `Geçersiz tarih: "${dateRaw}" (YYYY-AA-GG bekleniyor)` });
+          return;
+        }
+        parsed.push({ student_id, absence_date, _row: rowNo });
+      });
+
+      if (parsed.length === 0) {
+        setImportResult({ successCount: 0, errors: formatErrors, total: rows.length });
+      } else {
+        const { successCount, errors } = await bulkCreateAbsences(parsed);
+        setImportResult({ successCount, errors: [...formatErrors, ...errors], total: parsed.length + formatErrors.length });
+        refresh();
+      }
+    } catch (err) {
+      setImportResult({ successCount: 0, errors: [{ row: "-", message: err?.message || "Dosya okunamadı." }], total: 0 });
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const selectedStudent = students.find((s) => s.id === form.student_id);
 
@@ -69,7 +155,40 @@ export default function Absences() {
       </div>
 
       <div style={card}>
-        <div style={cardHd}>➕ Devamsızlık Ekle</div>
+        <div style={{ ...cardHd, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <span>➕ Devamsızlık Ekle</span>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button onClick={handleDownloadTemplate} style={btnGhost}>⬇️ Örnek Şablon İndir</button>
+            <button onClick={() => fileInputRef.current?.click()} disabled={importing} style={{ ...btnPrimary, opacity: importing ? 0.7 : 1 }}>
+              {importing ? "Yükleniyor..." : "📄 Excel ile Yükle"}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={handleFileSelected}
+              style={{ display: "none" }}
+            />
+          </div>
+        </div>
+        {importResult && (
+          <div style={{ padding: "12px 18px", borderBottom: "1px solid var(--border)", fontSize: 12 }}>
+            <div style={{ color: "var(--green, #38a169)", fontWeight: 600 }}>
+              ✓ {importResult.successCount} devamsızlık eklendi{importResult.total ? ` (${importResult.total} satır işlendi)` : ""}.
+            </div>
+            {importResult.errors.length > 0 && (
+              <div style={{ marginTop: 6, color: "var(--red, #e53e3e)" }}>
+                <div style={{ fontWeight: 600, marginBottom: 3 }}>⚠️ {importResult.errors.length} satır eklenemedi:</div>
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {importResult.errors.slice(0, 8).map((e, i) => (
+                    <li key={i}>Satır {e.row}: {e.message}</li>
+                  ))}
+                  {importResult.errors.length > 8 && <li>... ve {importResult.errors.length - 8} satır daha</li>}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
         <div
           style={{
             padding: 18,
@@ -320,5 +439,15 @@ const btnSm = {
   padding: "4px 10px",
   borderRadius: 6,
   fontSize: 11,
+  cursor: "pointer",
+};
+const btnGhost = {
+  background: "var(--surface2)",
+  border: "1px solid var(--border2)",
+  color: "var(--text)",
+  padding: "8px 14px",
+  borderRadius: 8,
+  fontSize: 12,
+  fontWeight: 500,
   cursor: "pointer",
 };

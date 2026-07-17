@@ -4,13 +4,22 @@ export const getMenus = () => client.get("/menus/").then((r) => r.data);
 
 export const getMenu = (id) => client.get(`/menus/${id}`).then((r) => r.data);
 
-export const generateMenu = ({ week_start_date, budget, extra_instructions }) =>
+export const generateMenu = ({ week_start_date, budget, portions, extra_instructions }) =>
   client
-    .post("/menus/generate", { week_start_date, budget, extra_instructions })
+    .post("/menus/generate", { week_start_date, budget, portions, extra_instructions })
     .then((r) => r.data);
 
-export const createManualMenu = ({ week_start_date, budget }) =>
-  client.post("/menus/manual", { week_start_date, budget }).then((r) => r.data);
+export const createManualMenu = ({ week_start_date, budget, portions }) =>
+  client.post("/menus/manual", { week_start_date, budget, portions }).then((r) => r.data);
+
+export const updateMenuPortions = (id, portions) =>
+  client.patch(`/menus/${id}/portions`, { portions }).then((r) => r.data);
+
+export const updateMenuItemPortions = (menuId, itemId, portions) =>
+  client.patch(`/menus/${menuId}/items/${itemId}`, { portions }).then((r) => r.data);
+
+export const replaceMenuItemMeal = (menuId, itemId, mealId) =>
+  client.patch(`/menus/${menuId}/items/${itemId}/meal`, { meal_id: mealId }).then((r) => r.data);
 
 export const addMealItem = (menuId, { day_of_week, category, meal_id }) =>
   client

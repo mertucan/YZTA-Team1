@@ -16,9 +16,35 @@ const startOfDay = (date) => {
 
 const sameDay = (a, b) => startOfDay(a).getTime() === startOfDay(b).getTime();
 
+// Haftalar Pazartesi bazlıdır; hafta ortası tarihle kaydedilmiş menüler de aynı haftada gruplansın.
+const mondayOf = (date) => {
+  const d = startOfDay(date);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d;
+};
+
+const isoLocal = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+// Geçici ağ/başlangıç hatalarında kullanıcıya buton göstermeden kendiliğinden tekrar dene.
+async function withRetry(fn, tries = 3, delayMs = 1200) {
+  for (let i = 0; i < tries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (i === tries - 1) throw err;
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+}
+
 function pickRepresentative(menusForWeek) {
+  // Önce onaylı menü; onaylı yoksa en dolu (en çok kalemli) taslak; eşitse en yeni.
   return [...menusForWeek].sort((a, b) => {
     if (a.status !== b.status) return a.status === "approved" ? -1 : 1;
+    const ai = a.items?.length || 0;
+    const bi = b.items?.length || 0;
+    if (ai !== bi) return bi - ai;
     return b.id - a.id;
   })[0];
 }
@@ -55,14 +81,15 @@ export default function Dashboard() {
   const loadAll = () => {
     setLoading(true);
     setStatsError(false);
-    getDashboardStats()
+    // Otomatik retry: ilk açılışta backend geç yanıt verirse buton beklemeden kendisi toparlar.
+    withRetry(() => getDashboardStats())
       .then(setStats)
       .catch(() => setStatsError(true))
       .finally(() => setLoading(false));
 
-    getMenus()
+    withRetry(() => getMenus())
       .then(async (list) => {
-        const results = await Promise.allSettled(list.map((m) => getMenu(m.id)));
+        const results = await Promise.allSettled(list.map((m) => withRetry(() => getMenu(m.id), 2, 800)));
         setMenusDetailed(results.filter((r) => r.status === "fulfilled").map((r) => r.value));
       })
       .catch(() => setMenusDetailed([]));
@@ -74,7 +101,9 @@ export default function Dashboard() {
     if (!menusDetailed) return [];
     const byWeek = new Map();
     menusDetailed.forEach((m) => {
-      const key = m.week_start_date;
+      // Aynı takvim haftasına (Pzt bazlı) düşen tüm menüler tek kartta birleşir —
+      // hafta ortası tarihle kaydedilmiş menüler ikinci bir "BU HAFTA" kartı üretemez.
+      const key = isoLocal(mondayOf(new Date(`${m.week_start_date}T00:00:00`)));
       if (!byWeek.has(key)) byWeek.set(key, []);
       byWeek.get(key).push(m);
     });
@@ -82,7 +111,7 @@ export default function Dashboard() {
     return Array.from(byWeek.entries())
       .map(([weekStartStr, menusForWeek]) => {
         const menu = pickRepresentative(menusForWeek);
-        const weekStart = startOfDay(new Date(weekStartStr));
+        const weekStart = startOfDay(new Date(`${weekStartStr}T00:00:00`));
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekEnd.getDate() + 6);
         const isCurrent = today >= weekStart && today <= weekEnd;
@@ -92,10 +121,18 @@ export default function Dashboard() {
       .sort((a, b) => a.weekStart - b.weekStart);
   }, [menusDetailed]);
 
+  // Açılışta bu haftanın kartını yatayda ortala (layout otursun diye kısa gecikmeyle, animasyonsuz).
   useEffect(() => {
-    if (currentWeekRef.current) {
-      currentWeekRef.current.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-    }
+    if (!weekCards.length) return;
+    const t = setTimeout(() => {
+      const card = currentWeekRef.current;
+      const sc = scrollerRef.current;
+      if (!card || !sc) return;
+      const cardRect = card.getBoundingClientRect();
+      const scRect = sc.getBoundingClientRect();
+      sc.scrollLeft += (cardRect.left - scRect.left) - (scRect.width - cardRect.width) / 2;
+    }, 80);
+    return () => clearTimeout(t);
   }, [weekCards.length]);
 
   const handlePointerDown = (e) => {
@@ -169,6 +206,7 @@ export default function Dashboard() {
       ) : (
         <div
           ref={scrollerRef}
+          className="no-scrollbar"
           onMouseDown={handlePointerDown}
           onMouseMove={handlePointerMove}
           onMouseUp={endDrag}
@@ -179,6 +217,8 @@ export default function Dashboard() {
             cursor: isDragging ? "grabbing" : "grab",
             userSelect: isDragging ? "none" : "auto",
             scrollSnapType: isDragging ? "none" : "x proximity",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
           }}
         >
           {weekCards.map(({ menu, weekStart, weekEnd, isCurrent, isPast }) => {

@@ -474,13 +474,17 @@ def _revision_reason(metrics: dict, savings: float) -> str:
 
 
 def generate_weekly_menu(
-    week_start_date: date, budget: float, extra_instructions: str | None = None
+    week_start_date: date, budget: float, extra_instructions: str | None = None, portions: int = 40
 ) -> dict:
     """Depodaki mevcut malzemelerle şu an yapılabilecek yemek kataloğundan (Yemek Kategorisi)
     7 günlük, kategori kategori dolu bir haftalık menü üretir. Önce Gemini'den öneri istenir;
     başarısız olursa veya bir öneri artık yapılamaz hale gelmişse (stok tükendiyse) besin/fiyat
     skoruna göre deterministik seçimle tamamlanır — bu yüzden GEMINI_API_KEY olmasa da çalışır.
+
+    portions: menü kaç kişi/porsiyon için — her kalemin porsiyonu bu değere eşitlenir, toplam
+    maliyet buna göre ölçeklenir (Dashboard kalem porsiyonundan kişi/toplam/kişi başı hesaplar).
     """
+    portions = max(int(portions or 40), 1)
     catalog = _fetch_catalog()
     if not catalog:
         raise MenuAIError("Yemek kataloğunda hiç kayıt yok.")
@@ -545,7 +549,7 @@ def generate_weekly_menu(
             _consume(chosen, stock_map)
             if chosen.get("is_partner_product"):
                 used_partner_product_ids.add(chosen["partner_product_id"])
-            portions = max(chosen.get("portions") or 1, 1)
+            # NOT: menü seviyesindeki `portions` parametresini ezmemek için ayrı değişken.
             running_cost += _meal_cost_per_portion(chosen) * portions
             picks.append((day, category, chosen))
 
@@ -561,6 +565,7 @@ def generate_weekly_menu(
             {
                 "week_start_date": week_start_date.isoformat(),
                 "budget": budget,
+                "portions": portions,
                 "total_cost": 0,
                 "total_calories": 0,
                 "total_protein": 0,
@@ -575,7 +580,6 @@ def generate_weekly_menu(
 
     item_rows = []
     for day, category, meal in picks:
-        portions = max(meal.get("portions") or 1, 1)
         cost_per_portion = _meal_cost_per_portion(meal)
         item_rows.append(
             {
