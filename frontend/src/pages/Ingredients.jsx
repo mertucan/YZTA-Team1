@@ -9,6 +9,8 @@ import {
   deleteBatch,
   getA101Prices,
   fetchA101Price,
+  getA101Health,
+  selfHealA101,
 } from "../api/ingredients";
 import { todayLocal } from "../utils/date";
 
@@ -110,13 +112,13 @@ function A101Cell({ rec, error, busy, onFetch }) {
       {rec ? (
         <>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            {rec.unit_matched && rec.unit_price != null ? (
+            {rec.unit_price != null ? (
               <span style={{ fontFamily: "var(--mono)", fontWeight: 700, color: "var(--text)" }}>
                 {Number(rec.unit_price).toFixed(2)} TL/{rec.pack_unit}
               </span>
             ) : (
-              <span style={{ color: "var(--amber)", fontSize: 11 }} title="Ürün birimi malzeme birimiyle eşleştirilemedi">
-                ⚠ birim eşleşmedi · {Number(rec.last_price || 0).toFixed(2)} TL
+              <span style={{ color: "var(--amber)", fontSize: 11 }} title="Ürünün satış birimi çözülemedi; yalnızca paket fiyatı gösteriliyor (uydurma birim fiyat üretilmedi)">
+                {Number(rec.last_price || 0).toFixed(2)} TL / paket · birim yok
               </span>
             )}
             <a
@@ -401,6 +403,9 @@ export default function Ingredients() {
   const [a101Busy, setA101Busy] = useState(null); // ingredient_id | "all" | null
   const [a101Progress, setA101Progress] = useState("");
   const [a101Errors, setA101Errors] = useState({});
+  const [a101Notice, setA101Notice] = useState(""); // birim değişimi/özet bildirimi
+  const [health, setHealth] = useState(null);
+  const [healing, setHealing] = useState(false);
 
   const refresh = () =>
     getIngredients()
@@ -417,11 +422,16 @@ export default function Ingredients() {
 
   const handleFetchA101 = async (id) => {
     setA101Busy(id);
+    setA101Notice("");
     setA101Errors((prev) => ({ ...prev, [id]: null }));
     try {
       const rec = await fetchA101Price(id);
       setA101((prev) => ({ ...prev, [id]: rec }));
-      refresh(); // market_price alanı güncellenmiş olabilir
+      if (rec.unit_changed) {
+        const ing = items.find((i) => i.id === id);
+        setA101Notice(`ℹ️ "${ing?.name ?? "Malzeme"}" birimi A101 ile eşitlendi → ${rec.new_unit}`);
+      }
+      refresh(); // birim ve/veya ortalama fiyat değişmiş olabilir
     } catch (err) {
       setA101Errors((prev) => ({ ...prev, [id]: err?.response?.data?.detail || "A101 verisi çekilemedi." }));
     } finally {
@@ -432,20 +442,53 @@ export default function Ingredients() {
   // Tüm malzemeler için sırayla çek (siteyi yormamak için paralel değil)
   const handleFetchAllA101 = async () => {
     setA101Busy("all");
+    setA101Notice("");
     const list = [...items];
+    const changed = [];
+    let ok = 0;
     for (let i = 0; i < list.length; i++) {
       setA101Progress(`${i + 1}/${list.length}`);
       try {
         const rec = await fetchA101Price(list[i].id);
         setA101((prev) => ({ ...prev, [list[i].id]: rec }));
         setA101Errors((prev) => ({ ...prev, [list[i].id]: null }));
+        ok += 1;
+        if (rec.unit_changed) changed.push(`${list[i].name} → ${rec.new_unit}`);
       } catch (err) {
         setA101Errors((prev) => ({ ...prev, [list[i].id]: err?.response?.data?.detail || "çekilemedi" }));
       }
     }
     setA101Progress("");
     setA101Busy(null);
+    let msg = `✓ ${ok}/${list.length} malzeme için A101 fiyatı çekildi.`;
+    if (changed.length) msg += ` Birimi eşitlenenler: ${changed.join(", ")}.`;
+    setA101Notice(msg);
     refresh();
+  };
+
+  const loadHealth = async () => {
+    try { setHealth(await getA101Health()); } catch { setHealth(null); }
+  };
+  useEffect(() => { loadHealth(); }, []);
+
+  const handleSelfHeal = async () => {
+    setHealing(true);
+    setA101Notice("");
+    try {
+      const rep = await selfHealA101();
+      setHealth(rep);
+      setA101Notice(
+        rep.extraction_ok
+          ? (rep.healed
+              ? `🔧 Scraper onarıldı — yeni strateji öğrenildi (${rep.strategy_used}). Örnek fiyat: ${rep.price_sample} TL.`
+              : `✓ Scraper zaten sağlıklı (${rep.strategy_used}).`)
+          : `⚠️ Scraper onarılamadı: ${rep.message}`
+      );
+    } catch {
+      setA101Notice("⚠️ Sağlık kontrolü yapılamadı.");
+    } finally {
+      setHealing(false);
+    }
   };
 
   /* Temel sayısal alanlar — fiyat artık burada değil: partiler (alımlar) üzerinden
@@ -744,15 +787,45 @@ export default function Ingredients() {
               tıklayın)
             </span>
           </span>
-          <button
-            onClick={handleFetchAllA101}
-            disabled={a101Busy !== null}
-            style={{ ...btnPrimary, opacity: a101Busy !== null ? 0.7 : 1 }}
-            title="Tüm malzemeler için A101'den güncel fiyat çeker (birim eşleştirmeli)"
-          >
-            {a101Busy === "all" ? `🛒 Çekiliyor... ${a101Progress}` : "🛒 A101 Veri Çek"}
-          </button>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            {health && (
+              <span
+                title={health.message}
+                style={{
+                  fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 999,
+                  border: "1px solid",
+                  color: health.extraction_ok ? "var(--green)" : "var(--red)",
+                  borderColor: health.extraction_ok ? "var(--green)" : "var(--red)",
+                  background: "var(--surface2)",
+                }}
+              >
+                {health.extraction_ok ? "🟢 Scraper sağlıklı" : "🔴 Scraper bozuk"}
+                {health.learned_count > 0 ? ` · ${health.learned_count} öğrenilmiş` : ""}
+              </span>
+            )}
+            <button
+              onClick={handleSelfHeal}
+              disabled={healing || a101Busy !== null}
+              style={{ ...btnSm, opacity: healing ? 0.7 : 1 }}
+              title="Scraper'ı sağlık kontrolünden geçirir; fiyat çıkaramıyorsa yeni strateji öğrenerek kendini onarır"
+            >
+              {healing ? "🔧 Onarılıyor..." : "🔧 Scraper'ı Onar"}
+            </button>
+            <button
+              onClick={handleFetchAllA101}
+              disabled={a101Busy !== null}
+              style={{ ...btnPrimary, opacity: a101Busy !== null ? 0.7 : 1 }}
+              title="Tüm malzemeler için A101'den güncel fiyat çeker (birim otomatik eşitlenir)"
+            >
+              {a101Busy === "all" ? `🛒 Çekiliyor... ${a101Progress}` : "🛒 A101 Veri Çek"}
+            </button>
+          </div>
         </div>
+        {a101Notice && (
+          <div style={{ padding: "8px 18px", fontSize: 12, color: "var(--text2)", borderBottom: "1px solid var(--border)", background: "var(--surface2)" }}>
+            {a101Notice}
+          </div>
+        )}
         <div style={{ padding: "12px 18px" }}>
           <input
             type="text"

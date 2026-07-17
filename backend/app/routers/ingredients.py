@@ -10,7 +10,7 @@ from app.models.ingredient import (
     IngredientBatchCreate,
     IngredientBatchUpdate,
 )
-from app.services.a101 import A101Error, fetch_ingredient_market_price
+from app.services.a101 import A101Error, fetch_ingredient_market_price, diagnose
 
 router = APIRouter(prefix="/ingredients", tags=["ingredients"])
 
@@ -51,12 +51,24 @@ def list_a101_prices():
     return res.data
 
 
+@router.get("/a101/health")
+def a101_health():
+    """Scraper sağlık kontrolü (kanarya ürünle). Bozuksa auto-healing dener."""
+    return diagnose(force_heal=False)
+
+
+@router.post("/a101/self-heal")
+def a101_self_heal():
+    """Scraper'ı zorla onarmayı dener: sayfadan yeni bir fiyat-çıkarma stratejisi öğrenir."""
+    return diagnose(force_heal=True)
+
+
 @router.post("/{ingredient_id}/a101/fetch")
 def fetch_a101_price(ingredient_id: int):
-    """A101 Veri Çek: malzemeyi A101 ürünüyle eşleştirir (ilk seferde katalogda arar),
-    ürün sayfasından güncel fiyatı çeker, birim uyumunu doğrular ve kaydeder.
-    Birim fiyat bulunursa malzemenin market_price alanına da yazılır (mevsimsel
-    fiyat-avantajı analizini besler)."""
+    """A101 Veri Çek: malzemeyi A101 ürünüyle eşleştirir, güncel fiyatı çeker ve A101'in
+    GERÇEK satış birimini tespit eder. Birim farklıysa MALZEMENİN birimini A101'e eşitler
+    (birim/birim-fiyat tutarlı olsun diye). Uydurma yok: fiyat sayfadan gerçekten okunamazsa
+    hata; birim çözülemezse birim fiyat boş kalır."""
     db = get_db()
     ing_res = db.table("ingredients").select("id, name, unit").eq("id", ingredient_id).execute()
     if not ing_res.data:
@@ -79,10 +91,27 @@ def fetch_a101_price(ingredient_id: int):
     except Exception as exc:  # ağ hatası vb.
         raise HTTPException(status_code=502, detail=f"A101'e ulaşılamadı: {exc}") from exc
 
+    detected_unit = info.get("detected_unit")
+    unit_changed = False
+    new_unit = None
+    final_unit = ingredient["unit"]
+    # A101'in gerçek satış birimi farklıysa malzemenin birimini eşitle
+    if detected_unit and detected_unit != ingredient["unit"]:
+        db.table("ingredients").update({"unit": detected_unit}).eq("id", ingredient_id).execute()
+        final_unit = detected_unit
+        unit_changed = True
+        new_unit = detected_unit
+
     row = {
         "ingredient_id": ingredient_id,
         "source": "a101",
-        **info,
+        "product_url": info["product_url"],
+        "product_name": info["product_name"],
+        "pack_quantity": info.get("pack_quantity"),
+        "pack_unit": final_unit,
+        "last_price": info["last_price"],
+        "unit_price": info.get("unit_price"),
+        "unit_matched": info.get("unit_price") is not None,
         "checked_at": datetime.now(timezone.utc).isoformat(),
     }
     saved = (
@@ -91,14 +120,17 @@ def fetch_a101_price(ingredient_id: int):
         .execute()
     )
 
-    # Birim fiyat mevsimsel analizin kullandığı market_price alanını da günceller
+    # Birim fiyat, mevsimsel analizin kullandığı market_price alanını da günceller
     if info.get("unit_price"):
         db.table("ingredients").update({
             "market_price": info["unit_price"],
             "last_price_checked_at": date.today().isoformat(),
         }).eq("id", ingredient_id).execute()
 
-    return saved.data[0] if saved.data else row
+    result = saved.data[0] if saved.data else row
+    result["unit_changed"] = unit_changed
+    result["new_unit"] = new_unit
+    return result
 
 
 @router.get("/{ingredient_id}", response_model=Ingredient)
