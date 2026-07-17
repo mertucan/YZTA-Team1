@@ -20,7 +20,7 @@ function WelcomePage() {
       <header style={welcomeStyles.nav}>
         <div style={welcomeStyles.brandMark}>Y</div>
         <strong style={welcomeStyles.brandText}>YemekhanAI</strong>
-        <Link to="/modules/catering-management" style={welcomeStyles.navButton}>Catering Girişi</Link>
+        <Link to="/modules/catering-management" style={welcomeStyles.navButton}>Giriş Yap</Link>
       </header>
 
       <main style={welcomeStyles.wrap}>
@@ -34,7 +34,7 @@ function WelcomePage() {
               öğrencileriniz daha dengeli menülere ulaşır.
             </p>
             <div style={welcomeStyles.actions}>
-              <Link to="/modules/catering-management" style={welcomeStyles.primary}>Catering Girişi</Link>
+              <Link to="/modules/catering-management" style={welcomeStyles.primary}>Giriş Yap / Kayıt Ol</Link>
               <Link to="/dashboard" style={welcomeStyles.secondary}>Ana Dashboard</Link>
             </div>
           </div>

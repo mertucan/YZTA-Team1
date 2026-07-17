@@ -14,6 +14,17 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 PUBLIC_REGISTER_ROLES = {
     Role.catering_admin.value,
+    Role.university_admin.value,
+    Role.dietitian.value,
+    Role.chef.value,
+    Role.finance_manager.value,
+    Role.operations_manager.value,
+    Role.student.value,
+    Role.system_support.value,
+    Role.warehouse_staff.value,
+    Role.purchasing_staff.value,
+    Role.researcher.value,
+    Role.partner_company.value,
 }
 
 
@@ -83,7 +94,7 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
         )
         db.add(lic)
 
-        requested_role = Role.catering_admin.value
+        requested_role = payload.role_name.strip().upper()
         if requested_role not in PUBLIC_REGISTER_ROLES:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
