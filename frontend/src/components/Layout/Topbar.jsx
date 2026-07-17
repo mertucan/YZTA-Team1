@@ -13,6 +13,7 @@ const labels = {
   "/modules/health-tracker": "Sağlık Takibi",
   "/modules/student-health-flags": "Sağlık Bayrakları",
   "/modules/ai-menu-planner": "AI Destekli Menü Planlayıcı",
+  "/modules/ai-menu-planner-oneri": "AI Destekli Menü Planlayıcı Öneri",
   "/modules/catering-management": "Catering Dashboard",
   "/modules/catering-management/universities": "Üniversiteler",
   "/modules/catering-management/users": "Kullanıcılar",

@@ -49,6 +49,7 @@ class IngredientBatchBase(BaseModel):
     quantity: float
     purchase_date: date
     expiry_date: Optional[date] = None
+    unit_price: Optional[float] = None  # alım anındaki birim fiyat (TL/birim)
 
 
 class IngredientBatchCreate(IngredientBatchBase):
@@ -59,6 +60,7 @@ class IngredientBatchUpdate(BaseModel):
     quantity: Optional[float] = None
     purchase_date: Optional[date] = None
     expiry_date: Optional[date] = None
+    unit_price: Optional[float] = None
 
 
 class IngredientBatch(IngredientBatchBase):

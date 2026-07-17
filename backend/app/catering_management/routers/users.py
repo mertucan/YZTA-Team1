@@ -49,7 +49,7 @@ def create_user(
     if principal.role == Role.university_admin:
         if payload.university_id != principal.university_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot create users outside university scope")
-        if payload.role_name in {Role.super_admin.value, Role.catering_admin.value}:
+        if payload.role_name in {Role.super_admin.value, Role.catering_admin.value, Role.partner_company.value}:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot create company-level users")
 
     return create_user_for_company(db, target_company_id, payload)
@@ -114,7 +114,7 @@ def update_user(
 
     if payload.role_name is not None:
         if principal.role == Role.university_admin:
-            if payload.role_name in {Role.super_admin.value, Role.catering_admin.value}:
+            if payload.role_name in {Role.super_admin.value, Role.catering_admin.value, Role.partner_company.value}:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot assign company-level roles")
         
         role_row = db.scalar(select(RoleModel).where(RoleModel.role_name == payload.role_name))

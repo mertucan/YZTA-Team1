@@ -50,7 +50,13 @@ const ROLE_LABELS = {
   SYSTEM_SUPPORT: "Sistem Destek",
   WAREHOUSE_STAFF: "Depo Görevlisi",
   PURCHASING_STAFF: "Satın Alma Sorumlusu",
+  RESEARCHER: "Araştırmacı",
+  PARTNER_COMPANY: "Partner Firma",
 };
+
+const REGISTER_ROLES = Object.entries(ROLE_LABELS).filter(
+  ([role]) => role !== "SUPER_ADMIN",
+);
 
 const ROLE_ACCESS = {
   dashboard: [
@@ -65,6 +71,8 @@ const ROLE_ACCESS = {
     "SYSTEM_SUPPORT",
     "WAREHOUSE_STAFF",
     "PURCHASING_STAFF",
+    "RESEARCHER",
+    "PARTNER_COMPANY",
   ],
   universities: ["SUPER_ADMIN", "CATERING_ADMIN", "UNIVERSITY_ADMIN"],
   users: [
@@ -753,6 +761,7 @@ function CateringManagementContent() {
   const [authMode, setAuthMode] = useState("login");
   const [fullName, setFullName] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [registerRole, setRegisterRole] = useState("CATERING_ADMIN");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
@@ -768,6 +777,7 @@ function CateringManagementContent() {
     setConfirmPassword("");
     setFullName("");
     setCompanyName("");
+    setRegisterRole("CATERING_ADMIN");
     setAcceptedTerms(false);
     setShowLoginPassword(false);
     setShowRegisterPassword(false);
@@ -1186,7 +1196,7 @@ function CateringManagementContent() {
           email: normalizedEmail,
           password,
           auth_user_id: crypto.randomUUID(),
-          role_name: "CATERING_ADMIN",
+          role_name: registerRole,
         }),
       });
       const data = await response.json();
@@ -1667,7 +1677,7 @@ function CateringManagementContent() {
     return (
       <main className="loading-container">
         <div className="spinner"></div>
-        <p>Catering SaaS Başlatılıyor...</p>
+        <p>YemekhanAI giriş sistemi başlatılıyor...</p>
       </main>
     );
   }
@@ -1692,8 +1702,8 @@ function CateringManagementContent() {
             <div className="logo-shield animate-pulse">
               <ShieldCheck size={40} />
             </div>
-            <h1>Catering Yönetim Paneli</h1>
-            <p>Çok kiracılı SaaS operasyonlarına güvenli erişim sağlayın.</p>
+            <h1>YemekhanAI Giriş Paneli</h1>
+            <p>Rolünüze özel çalışma alanına güvenli erişim sağlayın.</p>
           </header>
 
           <div className="auth-tabs">
@@ -1750,7 +1760,21 @@ function CateringManagementContent() {
               </button>
             </div>
           ) : (
+            
             <div className="login-form">
+
+              <div className="input-group">
+                <label>Kullanıcı Rolü</label>
+                <select
+                  value={registerRole}
+                  onChange={(e) => setRegisterRole(e.target.value)}
+                >
+                  {REGISTER_ROLES.map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+              
               <div className="input-group">
                 <label>Firma Adı</label>
                 <input
@@ -1760,7 +1784,6 @@ function CateringManagementContent() {
                   placeholder="Lale Catering A.Ş."
                 />
               </div>
-
               <div className="input-group">
                 <label>Ad Soyad</label>
                 <input
@@ -2672,6 +2695,7 @@ function CateringManagementContent() {
                           setUserForm({
                             ...userForm,
                             role_name: e.target.value,
+                            university_id: e.target.value === "PARTNER_COMPANY" ? "" : userForm.university_id,
                           })
                         }
                       >
@@ -2691,11 +2715,15 @@ function CateringManagementContent() {
                         <option value="PURCHASING_STAFF">
                           Satın Alma Sorumlusu
                         </option>
+                        {currentUser?.role_name !== "UNIVERSITY_ADMIN" && (
+                          <option value="PARTNER_COMPANY">Partner Firma</option>
+                        )}
                       </select>
                     </div>
                   </div>
                   {userForm.role_name !== "SUPER_ADMIN" &&
-                    userForm.role_name !== "CATERING_ADMIN" && (
+                    userForm.role_name !== "CATERING_ADMIN" &&
+                    userForm.role_name !== "PARTNER_COMPANY" && (
                       <div className="input-group">
                         <label>Görevli Olduğu Üniversite</label>
                         <select
