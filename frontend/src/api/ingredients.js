@@ -7,6 +7,8 @@ export const deleteIngredient = (id)      => client.delete(`/ingredients/${id}`)
 
 export const getA101Prices  = ()   => client.get("/ingredients/a101/prices").then((r) => r.data);
 export const fetchA101Price = (id) => client.post(`/ingredients/${id}/a101/fetch`).then((r) => r.data);
+export const getA101Health  = ()   => client.get("/ingredients/a101/health").then((r) => r.data);
+export const selfHealA101   = ()   => client.post("/ingredients/a101/self-heal").then((r) => r.data);
 
 export const getBatches   = (ingredientId)          => client.get(`/ingredients/${ingredientId}/batches`).then((r) => r.data);
 export const createBatch  = (ingredientId, data)    => client.post(`/ingredients/${ingredientId}/batches`, data).then((r) => r.data);
