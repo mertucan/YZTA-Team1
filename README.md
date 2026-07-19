@@ -515,6 +515,26 @@ Sprint 2 sonunda;
   <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/25.png" alt="Sprint 2 Ürün Görseli 25">
 </a>
 
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/26.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/26.png" alt="Sprint 2 Ürün Görseli 26">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/27.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/27.png" alt="Sprint 2 Ürün Görseli 27">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/28.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/28.png" alt="Sprint 2 Ürün Görseli 28">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/29.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/29.png" alt="Sprint 2 Ürün Görseli 29">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/30.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/30.png" alt="Sprint 2 Ürün Görseli 30">
+</a>
+
 </details>
 
 ---
