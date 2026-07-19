@@ -167,8 +167,8 @@ bulunmaktadır.
 - Üniversite yemekhane yöneticileri
 - Satın alma birimleri
 - Üniversite yönetimleri
-- Öğrenciler
 - Akademik ve idari personel
+- Öğrenciler
 
 ---
 
