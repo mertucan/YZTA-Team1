@@ -192,8 +192,8 @@ Toplam proje kapsamı **250 Story Point** olarak planlanmıştır. Sprint 1'de t
 
 🔗 **[Sprint 2 Trello Board](https://trello.com/invite/b/6a4d297105582150ec6b151f/ATTI531ec30d84b283d268e2386c35c0979a7105D64C/bootcamp-2st-sprint)**
 
-<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/1.png" target="_blank">
-  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/1.png" alt="Sprint 2 Trello Board">
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/8.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/BoardUpdate/8.png" alt="Sprint 2 Trello Board">
 </a>
 
 ---
