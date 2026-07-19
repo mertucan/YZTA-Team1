@@ -353,7 +353,7 @@ Sprint 2 kapsamında;
 - Yemekhane tüketim, obezite ve beslenme ilişkisini inceleyen analiz raporu hazırlanmıştır.
 - Ürün arayüzü için ekran görüntüleri ve modül çıktıları dokümantasyon sürecine eklenmiştir.
 - Sprint sürecinde takım toplantıları Meets üzerinden yürütülmüş ve ilerleme kayıt altına alınmıştır.
-- 2.Sprint kapsamında toplam 144 story point tamamlanmıştır. Ekibimiz, 1. Sprint'e kıyasla daha yoğun bir çalışma temposu sergileyerek önceki sprintten daha yüksek bir tamamlanma başarısı elde etmiştir.
+- 2.Sprint kapsamında toplam 144 Story Point tamamlanmıştır. Ekibimiz, 1. Sprint'e kıyasla daha yüksek bir çalışma temposu sergileyerek planlanan hedefin üzerinde bir tamamlanma performansı göstermiştir.
 - TabloDot projemizi destekleyecek mobil uygulamanın geliştirme süreci, kod yönetimi ve sürüm takibinin daha düzenli yürütülebilmesi amacıyla mobil uygulama için ayrı bir GitHub deposu oluşturulmuştur: [sudenazkalaycik/YZA-Team1-TabloDot](https://github.com/sudenazkalaycik/YZA-Team1-TabloDot)
 
 ---
