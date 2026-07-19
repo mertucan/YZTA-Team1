@@ -353,7 +353,7 @@ Sprint 2 kapsamında;
 - Yemekhane tüketim, obezite ve beslenme ilişkisini inceleyen analiz raporu hazırlanmıştır.
 - Ürün arayüzü için ekran görüntüleri ve modül çıktıları dokümantasyon sürecine eklenmiştir.
 - Sprint sürecinde takım toplantıları Meets üzerinden yürütülmüş ve ilerleme kayıt altına alınmıştır.
-- 2. Sprint kapsamında 144 puan tamamlandı. Ekibimiz 1. Sprint'ten bile daha yoğun çalışma sergileyerek  o dönemde elde ettiğimizden daha fazla puan kazandı.
+- 2.Sprint kapsamında 144 puan tamamlandı. Ekibimiz 1. Sprint'ten bile daha yoğun çalışma sergileyerek  o dönemde elde ettiğimizden daha fazla puan kazandı.
 - TabloDot projemizi destekleyecek mobil uygulamanın geliştirme süreci, kod yönetimi ve sürüm takibinin daha düzenli yürütülebilmesi amacıyla mobil uygulama için ayrı bir GitHub deposu oluşturulmuştur: [sudenazkalaycik/YZA-Team1-TabloDot](https://github.com/sudenazkalaycik/YZA-Team1-TabloDot)
 
 ---
