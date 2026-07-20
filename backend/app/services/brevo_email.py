@@ -7,8 +7,6 @@ from urllib.request import Request, urlopen
 from app.config import settings
 
 BREVO_TRANSACTIONAL_EMAIL_URL = "https://api.brevo.com/v3/smtp/email"
-
-# Excel gibi programların CSV içeriğini UTF-8 olarak tanıyabilmesi için BOM
 UTF8_BOM = b"\xef\xbb\xbf"
 
 
@@ -31,15 +29,37 @@ def send_export_email(
     csv_content: bytes,
     metadata: dict[str, Any],
 ) -> str:
+    return send_export_email_with_attachments(
+        recipient_email=recipient_email,
+        recipient_name=recipient_name,
+        attachments=[{"filename": filename, "content": csv_content}],
+        metadata=metadata,
+    )
+
+
+def send_export_email_with_attachments(
+    recipient_email: str,
+    recipient_name: str | None,
+    attachments: list[dict[str, Any]],
+    metadata: dict[str, Any],
+) -> str:
     if not is_brevo_configured():
         raise BrevoConfigurationError("Brevo API key or sender email is missing.")
 
-    # Excel (özellikle Windows/Türkçe yerel ayarlarda) BOM olmadan dosyayı
-    # UTF-8 yerine sistem kod sayfasıyla (ör. Windows-1254) açabiliyor ve
-    # bu da Türkçe karakterlerin bozulmasına yol açıyor. BOM ekleyerek
-    # dosyanın UTF-8 olarak tanınmasını garanti ediyoruz.
-    if not csv_content.startswith(UTF8_BOM):
-        csv_content = UTF8_BOM + csv_content
+    brevo_attachments = []
+    filenames = []
+    for attachment in attachments:
+        content = attachment["content"]
+        if not content.startswith(UTF8_BOM):
+            content = UTF8_BOM + content
+        filename = attachment["filename"]
+        filenames.append(filename)
+        brevo_attachments.append(
+            {
+                "name": filename,
+                "content": base64.b64encode(content).decode("ascii"),
+            }
+        )
 
     payload = {
         "sender": {
@@ -47,14 +67,9 @@ def send_export_email(
             "email": settings.brevo_sender_email,
         },
         "to": [{"email": recipient_email, "name": recipient_name or recipient_email}],
-        "subject": "YemekhanAI Anonim Beslenme Verisi Export",
-        "htmlContent": _build_html(metadata, filename),
-        "attachment": [
-            {
-                "name": filename,
-                "content": base64.b64encode(csv_content).decode("ascii"),
-            }
-        ],
+        "subject": "YemekhanAI Anonim Arastirma Verisi Export",
+        "htmlContent": _build_html(metadata, filenames),
+        "attachment": brevo_attachments,
     }
 
     request = Request(
@@ -80,19 +95,28 @@ def send_export_email(
     return data.get("messageId", "")
 
 
-def _build_html(metadata: dict[str, Any], filename: str) -> str:
+def _build_html(metadata: dict[str, Any], filenames: list[str]) -> str:
+    table_rows = "".join(
+        f"<li>{table.get('label')}: {table.get('record_count', 0)} kayit</li>"
+        for table in metadata.get("tables", [])
+    )
+    file_rows = "".join(f"<li>{filename}</li>" for filename in filenames)
     return f"""
     <html>
       <body>
         <p>Merhaba,</p>
-        <p>Talep ettiğiniz anonimleştirilmiş beslenme verisi CSV ekiyle paylaşılmıştır.</p>
+        <p>Talep ettiginiz anonimlestirilmis arastirma verisi CSV ekleriyle paylasilmistir.</p>
         <ul>
-          <li>Dosya: {filename}</li>
-          <li>Kayıt sayısı: {metadata.get("record_count", 0)}</li>
-          <li>Araştırma öznesi sayısı: {metadata.get("subject_count", 0)}</li>
-          <li>Tarih aralığı: {metadata.get("date_min") or "-"} / {metadata.get("date_max") or "-"}</li>
+          <li>Dosya sayisi: {len(filenames)}</li>
+          <li>Kayit sayisi: {metadata.get("record_count", 0)}</li>
+          <li>Arastirma oznesi sayisi: {metadata.get("subject_count", 0)}</li>
+          <li>Tarih araligi: {metadata.get("date_min") or "-"} / {metadata.get("date_max") or "-"}</li>
         </ul>
-        <p>Dosyada ad, soyad, TC kimlik numarası veya doğrudan tanımlayıcı alan bulunmaz.</p>
+        <p>Ekler:</p>
+        <ul>{file_rows}</ul>
+        <p>Tablo ozeti:</p>
+        <ul>{table_rows}</ul>
+        <p>Dosyalarda ad, soyad, TC kimlik numarasi, e-posta, telefon veya dogrudan kullanici tanimlayici alanlari bulunmaz.</p>
       </body>
     </html>
     """
