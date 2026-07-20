@@ -2,10 +2,10 @@ import ResearchExportPage from "./pages/ResearchExportPage";
 
 export const researchExportModule = {
   id: "research-export",
-  label: "Araştırma Export",
+  label: "Arastirma Export",
   icon: "📊",
   route: "/modules/research-export",
-  description: "Anonimleştirilmiş beslenme verilerini araştırma amaçlı dışa aktarır",
-  author: "Takım üyesi 1",
+  description: "Anonimlestirilmis beslenme verilerini arastirma amacli disa aktarir",
+  author: "Takim uyesi 1",
   component: ResearchExportPage,
 };
