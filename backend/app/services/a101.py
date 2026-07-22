@@ -232,6 +232,33 @@ def find_products_by_name(ingredient_name: str, limit: int = 8) -> list[str]:
     return [url for (score, _pack_dev), url in scored if score >= _MIN_SCORE][:limit]
 
 
+def _token_matched(token: str, words: list[str]) -> bool:
+    """find_products_by_name'deki kademeli eşleşmeyle aynı: birebir / çekim eki / kök."""
+    if token in words:
+        return True
+    if any(w.startswith(token) and len(w) - len(token) <= 1 for w in words):
+        return True
+    if len(token) >= 4 and any(w.startswith(token[:4]) for w in words):
+        return True
+    return False
+
+
+def match_confidence(ingredient_name: str, product_text: str) -> tuple[float, list[str]]:
+    """Malzeme adının anlamlı kelimelerinden kaçı bulunan ürün adında geçiyor? (0..1)
+    Örn. 'Tavuk Göğsü' vs 'Besler Tavuk Baget' → 'tavuk' geçer, 'gogus' geçmez → 0.5 (zayıf).
+    Amaç: sadece jenerik ilk kelime tutup (tavuk) asıl ayırt edici kelime (göğüs) tutmayan
+    yanlış eşleşmeleri 'güvenilmez' saymak. Dönüş: (kapsam_orani, eslesmeyen_kelimeler)."""
+    tokens = [w for w in re.split(r"[^a-z0-9]+", _fold(ingredient_name)) if len(w) >= 2]
+    if not tokens:
+        return 0.0, []
+    words = [
+        w for w in re.split(r"[^a-z0-9]+", _fold(product_text))
+        if w and w not in _SLUG_NOISE and not w.replace(",", "").replace(".", "").isdigit()
+    ]
+    missing = [t for t in tokens if not _token_matched(t, words)]
+    return round(1.0 - len(missing) / len(tokens), 3), missing
+
+
 # ─────────────── Fiyat çıkarma stratejileri (built-in) ───────────────
 def _extract_name(html: str) -> str:
     for m in re.finditer(r'<script type="application/ld\+json">(.*?)</script>', html, re.S):
@@ -382,10 +409,12 @@ def _extract_price(html: str, allow_heal: bool = True) -> dict | None:
     return None
 
 
-def fetch_price(product_url: str) -> dict:
-    """Ürün sayfasını çeker, fiyatı+adını çıkarır (gerekirse kendini onararak)."""
+def fetch_price(product_url: str, allow_heal: bool = False) -> dict:
+    """Ürün sayfasını çeker, fiyatı+adını çıkarır. Varsayılan olarak SADECE yerleşik/öğrenilmiş
+    stratejilerle (LLM'siz) çalışır; allow_heal=True yalnızca son çare çağrılarında verilir
+    (bkz. fetch_ingredient_market_price) — böylece normal çekimde Gemini boşuna harcanmaz."""
     html = _http_get(product_url, timeout=25)
-    res = _extract_price(html, allow_heal=True)
+    res = _extract_price(html, allow_heal=allow_heal)
     if not res:
         raise A101Error("Ürün sayfasından fiyat okunamadı (scraper onarılamadı).")
     return {"name": _extract_name(html), "price": res["price"],
@@ -570,14 +599,29 @@ def fetch_ingredient_market_price(ingredient_name: str, unit: str, product_url: 
         raise A101Error(f"A101'de '{ingredient_name}' için ürün bulunamadı.")
 
     chosen_url, info = None, None
+    # 1) Normal yol: adayları LLM'siz (allow_heal=False) dene. Yerleşik stratejiler
+    #    (jsonld/meta/...) A101 sayfalarının neredeyse tamamını çözer; Gemini harcanmaz.
     for url in candidate_urls:
         try:
-            data = fetch_price(url)
+            data = fetch_price(url, allow_heal=False)
         except Exception:
             continue
         if data["price"] > 0:
             chosen_url, info = url, data
             break
+
+    # 2) Son çare: HİÇBİR aday fiyat vermediyse (muhtemelen A101 sayfa yapısı değişti)
+    #    healing'i yalnızca burada aç. Başarılı olursa öğrenilen strateji kalıcı kaydedilir,
+    #    böylece sonraki çekimler tekrar LLM harcamadan çalışır.
+    if info is None:
+        for url in candidate_urls:
+            try:
+                data = fetch_price(url, allow_heal=True)
+            except Exception:
+                continue
+            if data["price"] > 0:
+                chosen_url, info = url, data
+                break
 
     if info is None:
         raise A101Error(
@@ -591,6 +635,24 @@ def fetch_ingredient_market_price(ingredient_name: str, unit: str, product_url: 
     qty = det["quantity"] if det else None
     unit_price = round(info["price"] / qty, 2) if (qty and qty > 0) else None
 
+    # ── Güvenilirlik değerlendirmesi ────────────────────────────────────────────
+    # A101 statik HTML fiyatları (JSON-LD) bazı ürünlerde bayat/yanlış olabiliyor ve
+    # canlı fiyat yalnızca (auth+bot-korumalı) özel API'de. Bu yüzden "kesin doğru"
+    # garantisi veremeyiz; ama zayıf eşleşme / çözülemeyen birim gibi sinyallerle
+    # şüpheli sonuçları işaretleyip menü planlayıcıya sızmalarını engelleyebiliriz.
+    conf_text = f"{info.get('name') or ''} {_slug_of(chosen_url)}"
+    confidence, unmatched = match_confidence(ingredient_name, conf_text)
+    warnings: list[str] = []
+    if unmatched:
+        warnings.append(
+            "Eşleşme zayıf: '" + ", ".join(unmatched) +
+            "' ürün adında yok — yanlış ürün eşleşmiş olabilir."
+        )
+    if unit_price is None:
+        warnings.append("Birim çözülemedi; birim fiyat hesaplanamadı.")
+    # Tüm malzeme kelimeleri eşleşmeli VE birim fiyat çıkmalı → güvenilir say.
+    reliable = confidence >= 0.999 and unit_price is not None
+
     return {
         "product_url": chosen_url,
         "product_name": info.get("name") or _slug_of(chosen_url).replace("-", " ").title(),
@@ -599,4 +661,7 @@ def fetch_ingredient_market_price(ingredient_name: str, unit: str, product_url: 
         "last_price": info["price"],
         "unit_price": unit_price,
         "strategy": info.get("strategy"),
+        "confidence": confidence,           # 0..1 malzeme adı ↔ ürün adı kelime kapsamı
+        "reliable": reliable,               # False → menü planlayıcı bu fiyatı kullanmamalı
+        "warning": " ".join(warnings) or None,
     }
