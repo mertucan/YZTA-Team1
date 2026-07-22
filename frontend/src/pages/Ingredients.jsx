@@ -558,12 +558,13 @@ export default function Ingredients() {
   );
 
   return (
-    <div>
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 20, fontWeight: 600 }}>📦 Malzeme Deposu</div>
-        <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 3 }}>
-          Güncel stok durumu
+    <div className="ingredients-page" style={page}>
+      <div style={pageHeader}>
+        <div>
+          <div style={eyebrow}>Operasyon Paneli</div>
+          <div style={pageTitle}>Malzeme Deposu</div>
         </div>
+        <div style={pageSubtitle}>Güncel stok durumu</div>
       </div>
 
       {/* ── Form ── */}
@@ -966,135 +967,175 @@ export default function Ingredients() {
 }
 
 /* ─── Stiller ───────────────────────────────────────────────────────────────── */
+const page = {
+  minHeight: "calc(100vh - 48px)",
+  margin: -24,
+  padding: 24,
+  background: "var(--ingredients-bg)",
+};
+const pageHeader = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "end",
+  gap: 16,
+  marginBottom: 20,
+};
+const eyebrow = {
+  color: "var(--ingredients-accent)",
+  fontSize: 11,
+  fontWeight: 900,
+  letterSpacing: ".08em",
+  textTransform: "uppercase",
+  marginBottom: 4,
+};
+const pageTitle = {
+  color: "var(--ingredients-text)",
+  fontFamily: "Georgia, 'Times New Roman', serif",
+  fontSize: 30,
+  lineHeight: 1.05,
+  fontWeight: 700,
+};
+const pageSubtitle = {
+  color: "var(--ingredients-muted)",
+  fontSize: 13,
+  fontWeight: 700,
+  paddingBottom: 3,
+};
 const card = {
-  background: "var(--surface)",
-  border: "1px solid var(--border)",
-  borderRadius: "var(--radius)",
-  boxShadow: "var(--shadow)",
+  background: "var(--ingredients-card)",
+  border: "1px solid var(--ingredients-border)",
+  borderRadius: 8,
+  boxShadow: "var(--ingredients-shadow)",
   marginBottom: 16,
+  backdropFilter: "blur(10px)",
+  overflow: "hidden",
 };
 const cardHd = {
-  padding: "14px 18px 12px",
-  borderBottom: "1px solid var(--border)",
+  padding: "15px 18px 13px",
+  borderBottom: "1px solid var(--ingredients-border)",
+  background: "var(--ingredients-card-head)",
+  color: "var(--ingredients-text)",
   fontSize: 13,
-  fontWeight: 600,
+  fontWeight: 800,
 };
 const fieldLabel = {
   fontSize: 11,
-  color: "var(--text2)",
+  color: "var(--ingredients-muted)",
   marginBottom: 5,
-  fontWeight: 500,
+  fontWeight: 700,
 };
 const fieldLabelSm = {
   fontSize: 10,
-  color: "var(--text2)",
+  color: "var(--ingredients-muted)",
   marginBottom: 4,
-  fontWeight: 500,
+  fontWeight: 700,
 };
 const input = {
   width: "100%",
-  background: "var(--surface2)",
-  border: "1px solid var(--border2)",
+  background: "var(--ingredients-input)",
+  border: "1px solid var(--ingredients-border-strong)",
   borderRadius: 7,
   padding: "7px 12px",
   fontSize: 13,
-  color: "var(--text)",
+  color: "var(--ingredients-text)",
   outline: "none",
   boxSizing: "border-box",
 };
 const inputSm = {
   width: "100%",
-  background: "var(--surface)",
-  border: "1px solid var(--border2)",
+  background: "var(--ingredients-input)",
+  border: "1px solid var(--ingredients-border-strong)",
   borderRadius: 6,
   padding: "6px 10px",
   fontSize: 12,
-  color: "var(--text)",
+  color: "var(--ingredients-text)",
   outline: "none",
 };
 const th = {
   textAlign: "left",
   fontSize: 10,
-  fontWeight: 700,
-  color: "var(--text3)",
+  fontWeight: 800,
+  color: "var(--ingredients-soft)",
   textTransform: "uppercase",
   letterSpacing: ".06em",
   padding: "10px 18px",
-  borderBottom: "1px solid var(--border)",
+  background: "var(--ingredients-table-head)",
+  borderBottom: "1px solid var(--ingredients-border)",
 };
 const thSm = {
   textAlign: "left",
   fontSize: 9,
-  fontWeight: 700,
-  color: "var(--text3)",
+  fontWeight: 800,
+  color: "var(--ingredients-soft)",
   textTransform: "uppercase",
   letterSpacing: ".06em",
   padding: "6px 8px",
-  borderBottom: "1px solid var(--border2)",
+  borderBottom: "1px solid var(--ingredients-border)",
 };
 const td = {
   padding: "10px 18px",
   fontSize: 12,
-  color: "var(--text2)",
-  borderBottom: "1px solid var(--border)",
+  color: "var(--ingredients-muted)",
+  borderBottom: "1px solid var(--ingredients-row-border)",
 };
 const tdSm = {
   padding: "6px 8px",
   fontSize: 12,
-  color: "var(--text2)",
-  borderBottom: "1px solid var(--border2)",
+  color: "var(--ingredients-muted)",
+  borderBottom: "1px solid var(--ingredients-row-border)",
 };
 const btnPrimary = {
-  background: "var(--accent)",
+  background: "var(--ingredients-button)",
   border: "none",
   color: "#fff",
   padding: "8px 20px",
   borderRadius: 8,
   fontSize: 12,
-  fontWeight: 500,
+  fontWeight: 800,
   cursor: "pointer",
+  boxShadow: "var(--ingredients-button-shadow)",
 };
 const btnPrimarySm = {
-  background: "var(--accent)",
+  background: "var(--ingredients-button)",
   border: "none",
   color: "#fff",
   padding: "6px 14px",
   borderRadius: 7,
   fontSize: 11,
-  fontWeight: 500,
+  fontWeight: 800,
   cursor: "pointer",
 };
 const btnSm = {
-  background: "var(--surface2)",
-  border: "1px solid var(--border2)",
-  color: "var(--text2)",
+  background: "var(--ingredients-button-soft)",
+  border: "1px solid var(--ingredients-border-strong)",
+  color: "var(--ingredients-muted-strong)",
   padding: "4px 10px",
   borderRadius: 6,
   fontSize: 11,
   cursor: "pointer",
 };
 const btnXs = {
-  background: "var(--surface)",
-  border: "1px solid var(--border2)",
-  color: "var(--text2)",
+  background: "var(--ingredients-button-soft)",
+  border: "1px solid var(--ingredients-border-strong)",
+  color: "var(--ingredients-muted-strong)",
   padding: "2px 8px",
   borderRadius: 5,
   fontSize: 10,
   cursor: "pointer",
 };
 const badgeLocal = {
-  background: "rgba(99,102,241,.12)",
-  color: "var(--accent)",
-  border: "1px solid rgba(99,102,241,.25)",
+  background: "var(--ingredients-badge-neutral-bg)",
+  color: "var(--ingredients-text)",
+  border: "1px solid var(--ingredients-border-strong)",
   borderRadius: 999,
   padding: "2px 7px",
   fontSize: 10,
   fontWeight: 600,
 };
 const badgeSeason = {
-  background: "rgba(34,197,94,.12)",
-  color: "#16a34a",
-  border: "1px solid rgba(34,197,94,.25)",
+  background: "var(--ingredients-badge-accent-bg)",
+  color: "var(--ingredients-accent)",
+  border: "1px solid var(--ingredients-accent-border)",
   borderRadius: 999,
   padding: "2px 7px",
   fontSize: 10,
