@@ -7,10 +7,10 @@ import {
   getBatches,
   createBatch,
   deleteBatch,
-  getA101Prices,
-  fetchA101Price,
-  getA101Health,
-  selfHealA101,
+  getMarketPrices,
+  fetchMarketPrice,
+  getMarketHealth,
+  selfHealMarket,
 } from "../api/ingredients";
 import { todayLocal } from "../utils/date";
 
@@ -100,8 +100,30 @@ function SeasonalBadge({ item }) {
   );
 }
 
+/* Malzeme adı ↔ A101 ürün adı kelime kapsaması. Backend ile aynı mantık: malzeme adının
+   anlamlı kelimelerinden biri ürün adında yoksa (ör. "Tavuk Göğsü" → "Tavuk Baget"'te
+   'göğsü' yok) eşleşme şüphelidir → 'doğrulama gerekli'. Sayfa yenilense de çalışır. */
+const A101_NOISE = new Set(["g", "gr", "kg", "ml", "l", "lt", "adet", "li", "lu", "x", "ve", "ile", "paket", "kutu"]);
+const trFold = (s) =>
+  (s || "").toLocaleLowerCase("tr-TR")
+    .replace(/ç/g, "c").replace(/ğ/g, "g").replace(/ı/g, "i")
+    .replace(/ö/g, "o").replace(/ş/g, "s").replace(/ü/g, "u");
+function a101NeedsVerification(ingredientName, productName) {
+  if (!productName) return false;
+  const tokens = trFold(ingredientName).split(/[^a-z0-9]+/).filter((w) => w.length >= 2);
+  if (!tokens.length) return false;
+  const words = trFold(productName).split(/[^a-z0-9]+/).filter((w) => w && !A101_NOISE.has(w) && !/^\d+$/.test(w));
+  const matched = (t) =>
+    words.includes(t) ||
+    words.some((w) => w.startsWith(t) && w.length - t.length <= 1) ||
+    (t.length >= 4 && words.some((w) => w.startsWith(t.slice(0, 4))));
+  return tokens.some((t) => !matched(t));
+}
+
 /* ─── A101 Fiyat Hücresi ────────────────────────────────────────────────────── */
-function A101Cell({ rec, error, busy, onFetch }) {
+function A101Cell({ rec, ingredientName, error, busy, onFetch }) {
+  // Taze çekimde backend needs_verification döndürür; kayıtlı kayıtta ada göre hesapla.
+  const flagged = rec && (rec.needs_verification ?? a101NeedsVerification(ingredientName, rec.product_name));
   const fmtDate = (iso) => {
     if (!iso) return "";
     const d = new Date(iso);
@@ -125,7 +147,7 @@ function A101Cell({ rec, error, busy, onFetch }) {
               href={rec.product_url}
               target="_blank"
               rel="noreferrer"
-              title={`${rec.product_name || "Ürün"} — A101 sayfasını aç`}
+              title={`${rec.product_name || "Ürün"} — Migros sayfasını aç`}
               style={{ textDecoration: "none", fontSize: 12 }}
             >
               ↗
@@ -137,6 +159,14 @@ function A101Cell({ rec, error, busy, onFetch }) {
           <div style={{ fontSize: 9, color: "var(--text3)" }} title={rec.product_name || ""}>
             {(rec.product_name || "").slice(0, 26)}{(rec.product_name || "").length > 26 ? "…" : ""}
           </div>
+          {flagged && (
+            <div
+              style={{ fontSize: 9, color: "var(--amber)", fontWeight: 700, maxWidth: 160 }}
+              title={rec.warning || "Malzeme adı ile eşleşen ürün bulunamadı; yanlış ürün olabilir. Fiyat menü planlayıcıda kullanılmaz — linke tıklayıp doğrulayın."}
+            >
+              ⚠ Doğrulama gerekli
+            </div>
+          )}
           <div style={{ fontSize: 9, color: "var(--text3)" }}>🕒 {fmtDate(rec.checked_at)}</div>
         </>
       ) : (
@@ -412,7 +442,7 @@ export default function Ingredients() {
       .then(setItems)
       .finally(() => setLoading(false));
   const refreshA101 = () =>
-    getA101Prices()
+    getMarketPrices()
       .then((list) => setA101(Object.fromEntries(list.map((r) => [r.ingredient_id, r]))))
       .catch(() => {});
   useEffect(() => {
@@ -425,15 +455,15 @@ export default function Ingredients() {
     setA101Notice("");
     setA101Errors((prev) => ({ ...prev, [id]: null }));
     try {
-      const rec = await fetchA101Price(id);
+      const rec = await fetchMarketPrice(id);
       setA101((prev) => ({ ...prev, [id]: rec }));
       if (rec.unit_changed) {
         const ing = items.find((i) => i.id === id);
-        setA101Notice(`ℹ️ "${ing?.name ?? "Malzeme"}" birimi A101 ile eşitlendi → ${rec.new_unit}`);
+        setA101Notice(`ℹ️ "${ing?.name ?? "Malzeme"}" birimi Migros ile eşitlendi → ${rec.new_unit}`);
       }
       refresh(); // birim ve/veya ortalama fiyat değişmiş olabilir
     } catch (err) {
-      setA101Errors((prev) => ({ ...prev, [id]: err?.response?.data?.detail || "A101 verisi çekilemedi." }));
+      setA101Errors((prev) => ({ ...prev, [id]: err?.response?.data?.detail || "Migros verisi çekilemedi." }));
     } finally {
       setA101Busy(null);
     }
@@ -449,7 +479,7 @@ export default function Ingredients() {
     for (let i = 0; i < list.length; i++) {
       setA101Progress(`${i + 1}/${list.length}`);
       try {
-        const rec = await fetchA101Price(list[i].id);
+        const rec = await fetchMarketPrice(list[i].id);
         setA101((prev) => ({ ...prev, [list[i].id]: rec }));
         setA101Errors((prev) => ({ ...prev, [list[i].id]: null }));
         ok += 1;
@@ -460,14 +490,14 @@ export default function Ingredients() {
     }
     setA101Progress("");
     setA101Busy(null);
-    let msg = `✓ ${ok}/${list.length} malzeme için A101 fiyatı çekildi.`;
+    let msg = `✓ ${ok}/${list.length} malzeme için Migros fiyatı çekildi.`;
     if (changed.length) msg += ` Birimi eşitlenenler: ${changed.join(", ")}.`;
     setA101Notice(msg);
     refresh();
   };
 
   const loadHealth = async () => {
-    try { setHealth(await getA101Health()); } catch { setHealth(null); }
+    try { setHealth(await getMarketHealth()); } catch { setHealth(null); }
   };
   useEffect(() => { loadHealth(); }, []);
 
@@ -475,14 +505,12 @@ export default function Ingredients() {
     setHealing(true);
     setA101Notice("");
     try {
-      const rep = await selfHealA101();
+      const rep = await selfHealMarket();
       setHealth(rep);
       setA101Notice(
-        rep.extraction_ok
-          ? (rep.healed
-              ? `🔧 Scraper onarıldı — yeni strateji öğrenildi (${rep.strategy_used}). Örnek fiyat: ${rep.price_sample} TL.`
-              : `✓ Scraper zaten sağlıklı (${rep.strategy_used}).`)
-          : `⚠️ Scraper onarılamadı: ${rep.message}`
+        rep.api_ok && rep.price_field
+          ? `✓ Migros fiyat servisi sağlıklı (alan: ${rep.price_field}). Örnek: ${rep.sample?.name ?? "-"} → ${rep.sample?.unit_price ?? "-"} TL/${rep.sample?.unit ?? "-"}.`
+          : `⚠️ Migros servisi sorunlu: ${rep.message}`
       );
     } catch {
       setA101Notice("⚠️ Sağlık kontrolü yapılamadı.");
@@ -794,13 +822,13 @@ export default function Ingredients() {
                 style={{
                   fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 999,
                   border: "1px solid",
-                  color: health.extraction_ok ? "var(--green)" : "var(--red)",
-                  borderColor: health.extraction_ok ? "var(--green)" : "var(--red)",
+                  color: health.api_ok && health.price_field ? "var(--green)" : "var(--red)",
+                  borderColor: health.api_ok && health.price_field ? "var(--green)" : "var(--red)",
                   background: "var(--surface2)",
                 }}
               >
-                {health.extraction_ok ? "🟢 Scraper sağlıklı" : "🔴 Scraper bozuk"}
-                {health.learned_count > 0 ? ` · ${health.learned_count} öğrenilmiş` : ""}
+                {health.api_ok && health.price_field ? "🟢 Migros servisi sağlıklı" : "🔴 Migros servisi sorunlu"}
+                {health.product_count ? ` · ${health.product_count} ürün` : ""}
               </span>
             )}
             <button
@@ -815,9 +843,9 @@ export default function Ingredients() {
               onClick={handleFetchAllA101}
               disabled={a101Busy !== null}
               style={{ ...btnPrimary, opacity: a101Busy !== null ? 0.7 : 1 }}
-              title="Tüm malzemeler için A101'den güncel fiyat çeker (birim otomatik eşitlenir)"
+              title="Tüm malzemeler için Migros'tan güncel fiyat çeker (birim otomatik eşitlenir)"
             >
-              {a101Busy === "all" ? `🛒 Çekiliyor... ${a101Progress}` : "🛒 A101 Veri Çek"}
+              {a101Busy === "all" ? `🛒 Çekiliyor... ${a101Progress}` : "🛒 Migros Fiyat Çek"}
             </button>
           </div>
         </div>
@@ -855,7 +883,7 @@ export default function Ingredients() {
                     "Malzeme",
                     "Birim",
                     "Stok",
-                    "A101 Fiyatı",
+                    "Migros Fiyatı",
                     "Kalori",
                     "Protein",
                     "Demir",
@@ -904,6 +932,7 @@ export default function Ingredients() {
                       <td style={td} onClick={(e) => e.stopPropagation()}>
                         <A101Cell
                           rec={a101[i.id]}
+                          ingredientName={i.name}
                           error={a101Errors[i.id]}
                           busy={a101Busy === i.id || a101Busy === "all"}
                           onFetch={() => handleFetchA101(i.id)}
