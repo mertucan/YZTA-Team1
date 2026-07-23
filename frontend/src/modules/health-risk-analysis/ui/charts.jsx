@@ -103,7 +103,7 @@ function ChartFrame({ data = [], children, type = "line" }) {
                 width={barWidth}
                 height={Math.max(2, barHeight)}
                 rx="4"
-                fill={item.fill || item.stroke || "#0d9488"}
+                fill={item.fill || item.stroke || "#e88000"}
                 opacity="0.9"
               />
             );
@@ -115,7 +115,7 @@ function ChartFrame({ data = [], children, type = "line" }) {
           const points = itemRows.map((row, index) => pointFor(row, index, itemRows, item, domain, width, height, padding));
           const path = points.map((p, index) => `${index === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
           const areaPath = `${path} L${points[points.length - 1].x},${height - padding.bottom} L${points[0].x},${height - padding.bottom} Z`;
-          const color = item.stroke || item.fill || ["#0d9488", "#ef4444", "#f59e0b"][itemIndex % 3];
+          const color = item.stroke || item.fill || ["#e88000", "#ef4444", "#d6b72c"][itemIndex % 3];
           return (
             <g key={item.dataKey}>
               {type === "area" && <path d={areaPath} fill={color} opacity="0.12" />}
@@ -136,7 +136,7 @@ function ChartFrame({ data = [], children, type = "line" }) {
           return itemRows.map((row, index) => {
             const x = padding.left + ((getValue(row, xKey) - xDomain.min) / xDomain.span) * (width - padding.left - padding.right);
             const y = height - padding.bottom - ((getValue(row, yKey) - yDomain.min) / yDomain.span) * (height - padding.top - padding.bottom);
-            return <circle key={index} cx={x} cy={y} r="4" fill={item.fill || "#14b8a6"} opacity={item.fillOpacity || 0.8} />;
+            return <circle key={index} cx={x} cy={y} r="4" fill={item.fill || "#e88000"} opacity={item.fillOpacity || 0.8} />;
           });
         })}
 
@@ -157,7 +157,7 @@ function ChartFrame({ data = [], children, type = "line" }) {
       <div className="hra-chart-legend">
         {series.map((item, index) => (
           <span key={`${item.dataKey}-${index}`}>
-            <i style={{ background: item.stroke || item.fill || "#0d9488" }} />
+            <i style={{ background: item.stroke || item.fill || "#e88000" }} />
             {item.name || item.dataKey}
           </span>
         ))}

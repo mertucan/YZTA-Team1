@@ -1,23 +1,23 @@
 .catering-management-scope {
-    --primary-color: var(--accent, #3b6ef7);
-    --primary-hover: var(--accent2, #2a55d4);
-    --primary-light: var(--accent-bg, #eef2ff);
+    --primary-color: var(--accent, #e88000);
+    --primary-hover: var(--accent2, #c96f00);
+    --primary-light: var(--accent-bg, rgba(232, 128, 0, 0.10));
 
-    --bg-dark-sidebar: #0f172a; /* Slate-900 */
-    --bg-dark-hover: #1e293b; /* Slate-800 */
+    --bg-dark-sidebar: #181818;
+    --bg-dark-hover: #222321;
 
-    --text-primary: #0f172a;
-    --text-secondary: #475569;
-    --text-muted: #94a3b8;
+    --text-primary: var(--text, #1d1f1d);
+    --text-secondary: var(--text2, #5d625c);
+    --text-muted: var(--text3, #858b82);
 
-    --border-color: #e2e8f0;
-    --bg-main: var(--bg, #f4f6fa);
-    --bg-card: var(--surface, #ffffff);
+    --border-color: var(--border, rgba(24, 24, 24, 0.10));
+    --bg-main: var(--bg, #f7f7f4);
+    --bg-card: var(--surface, rgba(255, 255, 255, 0.82));
 
     --success-color: #10b981;
-    --warning-color: #f59e0b;
+    --warning-color: var(--amber, #b79a12);
     --danger-color: #ef4444;
-    --info-color: #3b82f6;
+    --info-color: var(--accent, #e88000);
 
     font-family:
         "Inter",
@@ -61,6 +61,25 @@
     border-top-color: var(--primary-color);
     border-radius: 50%;
     animation: spin 1s linear infinite;
+}
+
+.catering-management-scope .dashboard-loading-container {
+    min-height: calc(100vh - 54px);
+    background: transparent;
+}
+
+.catering-management-scope .loading-overlay {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgba(247, 247, 244, 0.58);
+    backdrop-filter: blur(2px);
+    z-index: 80;
+}
+
+[data-theme="dark"] .catering-management-scope .loading-overlay {
+    background: rgba(24, 24, 24, 0.58);
 }
 
 @keyframes spin {
@@ -112,7 +131,9 @@
 
 .catering-management-scope .login-header h1 {
     margin: 0;
+    font-family: Georgia, "Times New Roman", serif;
     font-size: 24px;
+    line-height: 1.08;
     font-weight: 700;
     color: var(--text-primary);
 }
@@ -150,7 +171,7 @@
     border-radius: 8px;
     padding: 0 14px;
     font-size: 14px;
-    background: #ffffff;
+    background: var(--surface2, rgba(255, 255, 255, 0.72));
     color: var(--text-primary);
 }
 
@@ -159,7 +180,7 @@
 .catering-management-scope textarea:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+    box-shadow: 0 0 0 3px rgba(232, 128, 0, 0.14);
 }
 
 .catering-management-scope .password-field {
@@ -434,8 +455,12 @@
 
 .catering-management-scope .content-header h1 {
     margin: 0 0 6px 0;
-    font-size: 28px;
-    font-weight: 800;
+    color: var(--text-primary);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 30px;
+    line-height: 1.05;
+    font-weight: 700;
+    letter-spacing: 0;
 }
 
 .catering-management-scope .content-header p {
@@ -465,6 +490,18 @@
     background: #f0fdf4;
     color: var(--success-color);
     border: 1px solid #dcfce7;
+}
+
+[data-theme="dark"] .catering-management-scope .alert-danger {
+    background: rgba(239, 68, 68, 0.14);
+    color: #ff8a8a;
+    border-color: rgba(239, 68, 68, 0.32);
+}
+
+[data-theme="dark"] .catering-management-scope .alert-success {
+    background: rgba(16, 185, 129, 0.14);
+    color: #6ee7b7;
+    border-color: rgba(16, 185, 129, 0.32);
 }
 
 .catering-management-scope .close-btn {
@@ -528,7 +565,7 @@
 .catering-management-scope .pill-active,
 .catering-management-scope .pill-success {
     background: #dcfce7;
-    color: #166534;
+    color: var(--success-color);
 }
 
 .catering-management-scope .pill-inactive,
@@ -545,6 +582,28 @@
 .catering-management-scope .pill-archived {
     background: #f1f5f9;
     color: #475569;
+}
+
+[data-theme="dark"] .catering-management-scope .pill-active,
+[data-theme="dark"] .catering-management-scope .pill-success {
+    background: rgba(16, 185, 129, 0.16);
+    color: #6ee7b7;
+}
+
+[data-theme="dark"] .catering-management-scope .pill-inactive,
+[data-theme="dark"] .catering-management-scope .pill-danger {
+    background: rgba(239, 68, 68, 0.16);
+    color: #ff8a8a;
+}
+
+[data-theme="dark"] .catering-management-scope .pill-warning {
+    background: rgba(245, 158, 11, 0.16);
+    color: #fcd17d;
+}
+
+[data-theme="dark"] .catering-management-scope .pill-archived {
+    background: rgba(148, 163, 184, 0.16);
+    color: #cbd5e1;
 }
 
 /* Badge role */
@@ -598,6 +657,39 @@
     overflow: hidden;
 }
 
+.catering-management-scope .table-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-main);
+}
+
+.catering-management-scope .table-search {
+    width: min(420px, 100%);
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border-radius: 10px;
+    padding: 10px 13px;
+    font-size: 13px;
+    outline: none;
+}
+
+.catering-management-scope .table-search:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.catering-management-scope .table-count {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
 .catering-management-scope table {
     width: 100%;
     border-collapse: collapse;
@@ -617,12 +709,25 @@
     color: var(--text-secondary);
 }
 
+.catering-management-scope td {
+    color: var(--text-secondary);
+}
+
 .catering-management-scope tr:last-child td {
     border-bottom: none;
 }
 
 .catering-management-scope tr:hover td {
     background: #fafafa;
+}
+
+[data-theme="dark"] .catering-management-scope th {
+    background: rgba(255, 255, 255, 0.10);
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .catering-management-scope tr:hover td {
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .catering-management-scope .actions-col {
@@ -719,7 +824,10 @@
 
 .catering-management-scope .modal-header h2 {
     margin: 0;
-    font-size: 18px;
+    color: var(--text-primary);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 24px;
+    line-height: 1.08;
     font-weight: 700;
 }
 
@@ -810,7 +918,7 @@
 
     .catering-management-scope .sidebar {
         border-right: none;
-        border-bottom: 1px solid #1e293b;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.10);
     }
 
     .catering-management-scope .metrics {
@@ -848,6 +956,41 @@
     background: #ffffff;
     color: var(--primary-color);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.catering-management-scope .auth-link-btn {
+    border: none;
+    background: transparent;
+    color: var(--primary-color);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 4px 0;
+    text-align: center;
+}
+
+.catering-management-scope .auth-link-btn:hover {
+    text-decoration: underline;
+}
+
+.catering-management-scope .reset-code-input {
+    text-align: center;
+    font-family: "Inter", "Segoe UI", monospace;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 10px;
+    padding-left: 24px;
+}
+
+.catering-management-scope .reset-code-input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+[data-theme="dark"] .catering-management-scope .auth-tab-btn.active {
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffd18a;
+    box-shadow: none;
 }
 
 /* Sidebar Section Headers */
@@ -932,7 +1075,7 @@
 
 /* Metric Cards colors */
 .catering-management-scope .metric-card.m-blue {
-    border-top: 4px solid #3b82f6;
+    border-top: 4px solid var(--primary-color);
 }
 .catering-management-scope .metric-card.m-orange {
     border-top: 4px solid #f59e0b;
@@ -978,6 +1121,22 @@
     border-color: #10b981;
 }
 
+[data-theme="dark"] .catering-management-scope .ai-alert-card.a-red {
+    background: rgba(239, 68, 68, 0.14);
+}
+
+[data-theme="dark"] .catering-management-scope .ai-alert-card.a-orange {
+    background: rgba(245, 158, 11, 0.14);
+}
+
+[data-theme="dark"] .catering-management-scope .ai-alert-card.a-yellow {
+    background: rgba(234, 179, 8, 0.14);
+}
+
+[data-theme="dark"] .catering-management-scope .ai-alert-card.a-green {
+    background: rgba(16, 185, 129, 0.14);
+}
+
 .catering-management-scope .ai-alert-header {
     display: flex;
     align-items: center;
@@ -996,7 +1155,7 @@
     color: #854d0e;
 }
 .catering-management-scope .ai-alert-header.a-green {
-    color: #166534;
+    color: var(--success-color);
 }
 
 .catering-management-scope .ai-alert-body {
@@ -1132,6 +1291,16 @@
     background: #dcfce7;
 }
 
+[data-theme="dark"] .catering-management-scope .btn-ai-sparkle {
+    background: rgba(16, 185, 129, 0.14);
+    color: #6ee7b7;
+    border-color: rgba(16, 185, 129, 0.32);
+}
+
+[data-theme="dark"] .catering-management-scope .btn-ai-sparkle:hover {
+    background: rgba(16, 185, 129, 0.22);
+}
+
 /* Custom view sub-tabs layout for catering */
 .catering-management-scope .catering-tabs-container {
     display: flex;
@@ -1192,7 +1361,10 @@
 
 .catering-management-scope .placeholder-view h2 {
     margin: 0;
-    font-size: 22px;
+    color: var(--text-primary);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 28px;
+    line-height: 1.08;
     font-weight: 700;
 }
 
@@ -1241,20 +1413,25 @@
 /* Catering overview dashboard */
 .catering-management-scope .catering-dash-header {
     align-items: flex-start;
-    margin-bottom: 12px;
-}
-
-.catering-management-scope .catering-dash-header span {
-    display: block;
-    color: var(--accent);
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    margin-bottom: 6px;
+    margin-bottom: 18px;
+    padding: 2px 0 4px;
 }
 
 .catering-management-scope .catering-dash-header h1 {
     color: var(--text);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 30px;
+    line-height: 1.05;
+    margin: 0;
+    letter-spacing: 0;
+    font-weight: 700;
+}
+
+.catering-management-scope .catering-dash-header p {
+    color: var(--text2);
+    margin: 8px 0 0;
+    font-size: 13px;
+    font-weight: 600;
 }
 
 .catering-management-scope .catering-dash-filters {
@@ -1272,16 +1449,17 @@
     border: 1px solid var(--border);
     color: var(--text2);
     background: var(--surface);
-    border-radius: 8px;
+    border-radius: 10px;
     padding: 9px 12px;
     font-size: 12px;
     font-weight: 600;
 }
 
 .catering-management-scope .catering-dash-filters button.active {
-    background: var(--accent);
+    background: linear-gradient(135deg, #e88000, #f59e0b);
     color: #fff;
-    border-color: var(--accent);
+    border-color: rgba(232, 128, 0, 0.30);
+    box-shadow: 0 10px 24px rgba(232, 128, 0, 0.18);
 }
 
 .catering-management-scope
@@ -1338,28 +1516,32 @@
 .catering-management-scope .catering-dash-metric {
     position: relative;
     overflow: hidden;
-    min-height: 116px;
+    min-height: 118px;
     border: 1px solid var(--border);
-    border-radius: var(--radius, 10px);
+    border-radius: 12px;
     padding: 16px 18px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     background: var(--surface);
-    box-shadow: var(--shadow);
+    box-shadow: 0 14px 34px rgba(24, 24, 24, 0.08);
 }
 
 .catering-management-scope .catering-dash-metric.student {
-    border-top: 3px solid var(--accent);
+    border-top: 3px solid #2563eb;
 }
 
 .catering-management-scope .catering-dash-metric.menu {
-    border-top: 3px solid var(--blue, #2563eb);
+    border-top: 3px solid #f97316;
 }
 
 .catering-management-scope .catering-dash-metric.compact {
     background: var(--surface);
-    border-top: 3px solid var(--green, #059669);
+    border-top: 3px solid #16a34a;
+}
+
+.catering-management-scope .catering-dash-metric.compact:nth-child(4) {
+    border-top-color: #7c3aed;
 }
 
 .catering-management-scope .catering-dash-metric::after {
@@ -1369,8 +1551,20 @@
     top: 20px;
     width: 142px;
     height: 142px;
-    border: 28px solid var(--accent-bg);
+    border: 28px solid rgba(37, 99, 235, 0.08);
     border-radius: 50%;
+}
+
+.catering-management-scope .catering-dash-metric.menu::after {
+    border-color: rgba(249, 115, 22, 0.10);
+}
+
+.catering-management-scope .catering-dash-metric.compact::after {
+    border-color: rgba(22, 163, 74, 0.10);
+}
+
+.catering-management-scope .catering-dash-metric.compact:nth-child(4)::after {
+    border-color: rgba(124, 58, 237, 0.10);
 }
 
 .catering-management-scope .catering-dash-metric span,
@@ -1400,8 +1594,8 @@
     border-radius: 50%;
     display: grid;
     place-items: center;
-    background: var(--accent-bg);
-    color: var(--accent);
+    background: rgba(249, 115, 22, 0.10);
+    color: #f97316;
     z-index: 1;
 }
 
@@ -1424,6 +1618,16 @@
     min-height: 355px;
 }
 
+.catering-management-scope .catering-dash-panel.full {
+    grid-column: 1 / -1;
+    min-height: 285px;
+}
+
+.catering-management-scope .catering-dash-panel.full .menu-bars {
+    height: 235px;
+    padding-inline: 28px;
+}
+
 .catering-management-scope .catering-dash-panel-head {
     display: flex;
     justify-content: space-between;
@@ -1435,8 +1639,10 @@
 .catering-management-scope .catering-dash-panel h3 {
     margin: 0;
     color: var(--text);
+    font-family: Georgia, "Times New Roman", serif;
     font-size: 15px;
-    font-weight: 800;
+    line-height: 1.15;
+    font-weight: 700;
 }
 
 .catering-management-scope .catering-dash-panel-head span {
@@ -1464,7 +1670,7 @@
 }
 
 .catering-management-scope .chart-area {
-    fill: var(--accent-bg);
+    fill: rgba(37, 99, 235, 0.10);
 }
 
 .catering-management-scope .chart-line {
@@ -1473,11 +1679,11 @@
 }
 
 .catering-management-scope .chart-line.student {
-    stroke: var(--accent);
+    stroke: #2563eb;
 }
 
 .catering-management-scope .chart-line.user {
-    stroke: var(--pink, #db2777);
+    stroke: #db2777;
     stroke-dasharray: 4 5;
 }
 
@@ -1487,25 +1693,25 @@
 }
 
 .catering-management-scope .role-wave-fill {
-    fill: var(--accent-bg);
+    fill: rgba(124, 58, 237, 0.10);
 }
 
 .catering-management-scope .role-wave-line {
     fill: none;
-    stroke: var(--accent);
+    stroke: #7c3aed;
     stroke-width: 5;
 }
 
 .catering-management-scope .role-wave circle {
-    fill: var(--accent);
+    fill: #7c3aed;
     filter: drop-shadow(
         0 0 8px color-mix(in srgb, var(--accent) 45%, transparent)
     );
 }
 
 .catering-management-scope .role-wave-footer {
-    background: var(--accent-bg);
-    color: var(--accent);
+    background: rgba(124, 58, 237, 0.10);
+    color: #7c3aed;
     border-radius: 6px;
     padding: 11px 14px;
     font-size: 12px;
@@ -1584,7 +1790,7 @@
 }
 
 .catering-management-scope .donut circle:first-child {
-    stroke: var(--surface3);
+    stroke: rgba(148, 163, 184, 0.22);
 }
 
 .catering-management-scope .donut text {
@@ -1692,7 +1898,7 @@
     margin: 0 auto;
     display: block;
     border-radius: 2px 2px 0 0;
-    background: linear-gradient(180deg, var(--accent), var(--accent2));
+    background: linear-gradient(180deg, #2563eb, #22c55e);
 }
 
 .catering-management-scope .menu-bar-col small {

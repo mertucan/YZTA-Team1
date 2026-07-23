@@ -9,15 +9,15 @@ import {
 } from "../api/partnerProducts";
 
 const CATERING_SESSION_KEY = "catering_mock_session";
-const menuCategories = ["Corba", "Ana Yemek", "Ara Sicak", "Tahıl (Pilav/Makarna)", "Yogurt/Salata", "Tatli/Meyve"];
+const menuCategories = ["Çorba", "Ana Yemek", "Ara Sıcak", "Tahıl (Pilav/Makarna)", "Yoğurt/Salata", "Tatlı/Meyve"];
 const reviewRoles = new Set(["DIETITIAN", "CHEF", "CATERING_ADMIN", "SUPER_ADMIN"]);
 
 const statusLabels = {
-  PENDING_REVIEW: "Incelemede",
-  APPROVED: "Onaylandi",
+  PENDING_REVIEW: "İncelemede",
+  APPROVED: "Onaylandı",
   NEEDS_REVISION: "Revizyon",
   REJECTED: "Reddedildi",
-  INTEGRATED: "Menuye alindi",
+  INTEGRATED: "Menüye alındı",
 };
 
 const initialForm = {
@@ -55,6 +55,7 @@ export default function PartnerProductsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [reviewNotes, setReviewNotes] = useState({});
+  const [confirmAction, setConfirmAction] = useState(null);
 
   const canReview = reviewRoles.has(role);
   const canSubmit = role === "PARTNER_COMPANY";
@@ -103,7 +104,7 @@ export default function PartnerProductsPage() {
         setUsage(usageData);
       })
       .catch((error) => {
-        setMessage({ type: "error", text: error.response?.data?.detail || "Partner paneli verileri alinamadi." });
+        setMessage({ type: "error", text: error.response?.data?.detail || "Partner paneli verileri alınamadı." });
       })
       .finally(() => setLoading(false));
   }
@@ -132,7 +133,7 @@ export default function PartnerProductsPage() {
       }
       setForm(initialForm);
       setEditingId(null);
-      setMessage({ type: "success", text: editingId ? "Revizyon tekrar incelemeye gonderildi." : "Urun entegrasyon talebi incelemeye alindi." });
+      setMessage({ type: "success", text: editingId ? "Revizyon tekrar incelemeye gönderildi." : "Ürün entegrasyon talebi incelemeye alındı." });
       refreshAll();
     } catch (error) {
       setMessage({ type: "error", text: error.response?.data?.detail || "Talep kaydedilemedi." });
@@ -174,10 +175,43 @@ export default function PartnerProductsPage() {
         review_note: reviewNotes[id] || null,
       });
       setRequests((current) => current.map((item) => (item.id === id ? updated : item)));
-      setMessage({ type: "success", text: "Inceleme durumu guncellendi." });
+      setMessage({ type: "success", text: "İnceleme durumu güncellendi." });
     } catch (error) {
-      setMessage({ type: "error", text: error.response?.data?.detail || "Durum guncellenemedi." });
+      setMessage({ type: "error", text: error.response?.data?.detail || "Durum güncellenemedi." });
     }
+  }
+
+  function getReviewActions(item) {
+    if (item.status === "PENDING_REVIEW") {
+      return [
+        { status: "APPROVED", label: "Onayla", style: s.reviewButtonOk },
+        { status: "NEEDS_REVISION", label: "Revizyon", style: s.reviewButtonWarn },
+        { status: "REJECTED", label: "Reddet", style: { color: "var(--red)" } },
+      ];
+    }
+    if (item.status === "APPROVED") {
+      return [
+        { status: "INTEGRATED", label: "Menüye al", style: s.reviewButtonPrimary },
+        { status: "NEEDS_REVISION", label: "Revizyon", style: s.reviewButtonWarn },
+        { status: "REJECTED", label: "Reddet", style: { color: "var(--red)" } },
+      ];
+    }
+    return [];
+  }
+
+  function openStatusConfirm(item, action) {
+    setConfirmAction({
+      id: item.id,
+      product: `${item.brand_name} / ${item.product_name}`,
+      status: action.status,
+      label: action.label,
+    });
+  }
+
+  async function confirmStatusChange() {
+    if (!confirmAction) return;
+    await handleStatus(confirmAction.id, confirmAction.status);
+    setConfirmAction(null);
   }
 
   return (
@@ -185,11 +219,11 @@ export default function PartnerProductsPage() {
       <div style={s.header}>
         <div>
           <div style={s.title}>Partner Firma Paneli</div>
-          <div style={s.subtitle}>Urun onerileri, menu entegrasyonu icin incelenir.</div>
+          <div style={s.subtitle}>Ürün önerileri, menü entegrasyonu için incelenir.</div>
         </div>
         <div style={s.stats}>
           <Metric label="Toplam" value={loading ? "..." : stats.total} />
-          <Metric label="Incelemede" value={loading ? "..." : stats.pending} />
+          <Metric label="İncelemede" value={loading ? "..." : stats.pending} />
           <Metric label="Uygun" value={loading ? "..." : stats.approved} />
         </div>
       </div>
@@ -200,26 +234,26 @@ export default function PartnerProductsPage() {
         {canSubmit && (
           <form style={s.panel} onSubmit={handleSubmit}>
             <div style={s.formHeader}>
-              <div style={s.panelTitleTight}>{editingId ? "Revizyonu Guncelle" : "Urun Entegrasyon Talebi"}</div>
+              <div style={s.panelTitleTight}>{editingId ? "Revizyonu Güncelle" : "Ürün Entegrasyon Talebi"}</div>
               {editingId && (
-                <button type="button" style={s.lightButton} onClick={cancelRevision}>Vazgec</button>
+                <button type="button" style={s.lightButton} onClick={cancelRevision}>Vazgeç</button>
               )}
             </div>
             <div style={s.formGrid}>
               <label style={s.label}>
                 Marka
-                <input required style={s.input} value={form.brand_name} onChange={(e) => handleChange("brand_name", e.target.value)} placeholder="Ulker, Pinar..." />
+                <input required style={s.input} value={form.brand_name} onChange={(e) => handleChange("brand_name", e.target.value)} placeholder="Ülker, Pınar..." />
               </label>
               <label style={s.label}>
-                Urun adi
-                <input required style={s.input} value={form.product_name} onChange={(e) => handleChange("product_name", e.target.value)} placeholder="Yuksek proteinli yogurt" />
+                Ürün adı
+                <input required style={s.input} value={form.product_name} onChange={(e) => handleChange("product_name", e.target.value)} placeholder="Yüksek proteinli yoğurt" />
               </label>
               <label style={s.label}>
-                Urun tipi
-                <input required style={s.input} value={form.product_category} onChange={(e) => handleChange("product_category", e.target.value)} placeholder="Sut urunu, atistirmalik..." />
+                Ürün tipi
+                <input required style={s.input} value={form.product_category} onChange={(e) => handleChange("product_category", e.target.value)} placeholder="Süt ürünü, atıştırmalık..." />
               </label>
               <label style={s.label}>
-                Menu kategorisi
+                Menü kategorisi
                 <select style={s.input} value={form.suggested_menu_category} onChange={(e) => handleChange("suggested_menu_category", e.target.value)}>
                   {menuCategories.map((category) => <option key={category} value={category}>{category}</option>)}
                 </select>
@@ -230,27 +264,27 @@ export default function PartnerProductsPage() {
               </label>
               <label style={s.label}>
                 Hedef kitle
-                <input style={s.input} value={form.target_segments} onChange={(e) => handleChange("target_segments", e.target.value)} placeholder="Spor yapan ogrenciler, vejetaryen..." />
+                <input style={s.input} value={form.target_segments} onChange={(e) => handleChange("target_segments", e.target.value)} placeholder="Spor yapan öğrenciler, vejetaryen..." />
               </label>
             </div>
 
             <div style={s.nutritionGrid}>
               <NumberField label="Kalori" value={form.calories} onChange={(value) => handleChange("calories", value)} />
               <NumberField label="Protein g" value={form.protein} onChange={(value) => handleChange("protein", value)} />
-              <NumberField label="Seker g" value={form.sugar} onChange={(value) => handleChange("sugar", value)} />
+              <NumberField label="Şeker g" value={form.sugar} onChange={(value) => handleChange("sugar", value)} />
               <NumberField label="Sodyum mg" value={form.sodium} onChange={(value) => handleChange("sodium", value)} />
             </div>
 
             <label style={s.label}>
               Alerjenler
-              <input style={s.input} value={form.allergens} onChange={(e) => handleChange("allergens", e.target.value)} placeholder="Sut, gluten, findik..." />
+              <input style={s.input} value={form.allergens} onChange={(e) => handleChange("allergens", e.target.value)} placeholder="Süt, gluten, fındık..." />
             </label>
             <label style={s.label}>
-              Menuye entegrasyon notu
-              <textarea style={{ ...s.input, minHeight: 82, resize: "vertical" }} value={form.integration_note} onChange={(e) => handleChange("integration_note", e.target.value)} placeholder="Hangi ogunlerde, hangi beslenme hedefiyle onerilmeli?" />
+              Menüye entegrasyon notu
+              <textarea style={{ ...s.input, minHeight: 82, resize: "vertical" }} value={form.integration_note} onChange={(e) => handleChange("integration_note", e.target.value)} placeholder="Hangi öğünlerde, hangi beslenme hedefiyle önerilmeli?" />
             </label>
             <button style={{ ...s.primaryButton, opacity: saving ? 0.72 : 1 }} disabled={saving}>
-              {saving ? "Kaydediliyor..." : editingId ? "Tekrar Incelemeye Gonder" : "Incelemeye Gonder"}
+              {saving ? "Kaydediliyor..." : editingId ? "Tekrar İncelemeye Gönder" : "İncelemeye Gönder"}
             </button>
           </form>
         )}
@@ -258,7 +292,7 @@ export default function PartnerProductsPage() {
         <section style={{ ...s.panel, ...(canSubmit && opportunitiesOpen ? s.opportunityPanelTall : null) }}>
           <button type="button" style={s.opportunityToggle} onClick={() => setOpportunitiesOpen((open) => !open)}>
             <div>
-              <div style={s.panelTitleTight}>Menu Firsatlari</div>
+              <div style={s.panelTitleTight}>Menü Fırsatları</div>
             </div>
             <div style={s.opportunityToggleRight}>
               <span style={s.opportunityBadge}>{opportunitySummary.totalItems} kalem</span>
@@ -297,16 +331,16 @@ export default function PartnerProductsPage() {
                   </div>
                 </>
               ) : (
-                <div style={s.emptyBox}>Menu verisi yok.</div>
+                <div style={s.emptyBox}>Menü verisi yok.</div>
               )}
 
               <div style={s.menuSectionHead}>
-                <div style={s.smallTitle}>Son menuler</div>
+                <div style={s.smallTitle}>Son menüler</div>
                 <span>{(opportunities.recent_menus || []).length} hafta</span>
               </div>
               <div style={s.menuList}>
                 {(opportunities.recent_menus || []).slice(0, 5).length === 0 ? (
-                  <div style={s.empty}>Henuz menu kaydi yok.</div>
+                  <div style={s.empty}>Henüz menü kaydı yok.</div>
                 ) : (opportunities.recent_menus || []).slice(0, 5).map((menu) => (
                   <div key={menu.id} style={s.menuItem}>
                     <div style={s.menuTop}>
@@ -315,7 +349,7 @@ export default function PartnerProductsPage() {
                         <span>{menu.item_count} kalem</span>
                       </div>
                       <span style={{ ...s.menuStatus, ...(menu.status === "approved" ? s.menuStatusOk : null) }}>
-                        {menu.status === "approved" ? "Onayli" : "Taslak"}
+                        {menu.status === "approved" ? "Onaylı" : "Taslak"}
                       </span>
                     </div>
                     <div style={s.samples}>
@@ -337,7 +371,7 @@ export default function PartnerProductsPage() {
         <section style={s.panel}>
           <div style={s.panelTitle}>Kullanim Raporu</div>
           {usage.length === 0 ? (
-            <div style={s.empty}>Henuz urun raporu yok.</div>
+            <div style={s.empty}>Henüz ürün raporu yok.</div>
           ) : (
             <div style={s.usageGrid}>
               {usage.map((item) => (
@@ -350,7 +384,7 @@ export default function PartnerProductsPage() {
                     <strong style={s.usageCount}>{item.usage_count}</strong>
                   </div>
                   <div style={s.usageStats}>
-                    <span>{item.menu_count} menu</span>
+                    <span>{item.menu_count} menü</span>
                     <span>{item.latest_week_start_date ? formatDateOnly(item.latest_week_start_date) : "Kullanim yok"}</span>
                   </div>
                   <div style={s.samples}>
@@ -368,12 +402,14 @@ export default function PartnerProductsPage() {
       )}
 
       <section style={s.panel}>
-        <div style={s.panelTitle}>{canReview ? "Inceleme Kuyrugu" : "Taleplerim"}</div>
+        <div style={s.panelTitle}>{canReview ? "İnceleme Kuyruğu" : "Taleplerim"}</div>
         {requests.length === 0 ? (
-          <div style={s.empty}>Kayit bulunamadi.</div>
+          <div style={s.empty}>Kayıt bulunamadı.</div>
         ) : (
           <div style={s.requestList}>
-            {requests.map((item) => (
+            {requests.map((item) => {
+              const reviewActions = getReviewActions(item);
+              return (
               <article key={item.id} style={s.requestCard}>
                 <div style={s.requestTop}>
                   <div>
@@ -390,7 +426,7 @@ export default function PartnerProductsPage() {
                   <span>{Number(item.sodium).toFixed(0)} mg sodyum</span>
                 </div>
                 {item.integration_note && <p style={s.note}>{item.integration_note}</p>}
-                {item.review_note && <div style={s.reviewNote}>Inceleme notu: {item.review_note}</div>}
+                {item.review_note && <div style={s.reviewNote}>İnceleme notu: {item.review_note}</div>}
                 {canSubmit && item.status === "NEEDS_REVISION" && (
                   <div style={s.partnerActions}>
                     <button type="button" style={{ ...s.reviewButton, ...s.reviewButtonPrimary }} onClick={() => startRevision(item)}>
@@ -398,25 +434,49 @@ export default function PartnerProductsPage() {
                     </button>
                   </div>
                 )}
-                {canReview && (
+                {canReview && reviewActions.length > 0 && (
                   <div style={s.reviewBar}>
                     <input
                       style={s.input}
                       value={reviewNotes[item.id] || ""}
                       onChange={(e) => setReviewNotes((current) => ({ ...current, [item.id]: e.target.value }))}
-                      placeholder="Inceleme notu"
+                      placeholder="İnceleme notu"
                     />
-                    <button type="button" style={{ ...s.reviewButton, ...s.reviewButtonOk }} onClick={() => handleStatus(item.id, "APPROVED")}>Onayla</button>
-                    <button type="button" style={{ ...s.reviewButton, ...s.reviewButtonWarn }} onClick={() => handleStatus(item.id, "NEEDS_REVISION")}>Revizyon</button>
-                    <button type="button" style={{ ...s.reviewButton, ...s.reviewButtonPrimary }} onClick={() => handleStatus(item.id, "INTEGRATED")}>Menuye al</button>
-                    <button type="button" style={{ ...s.reviewButton, color: "var(--red)" }} onClick={() => handleStatus(item.id, "REJECTED")}>Reddet</button>
+                    {reviewActions.map((action) => (
+                      <button
+                        key={action.status}
+                        type="button"
+                        style={{ ...s.reviewButton, ...action.style }}
+                        onClick={() => openStatusConfirm(item, action)}
+                      >
+                        {action.label}
+                      </button>
+                    ))}
                   </div>
                 )}
+                {canReview && reviewActions.length === 0 && (
+                  <div style={s.lockedReview}>Bu talep için uygulanabilir ek işlem yok.</div>
+                )}
               </article>
-            ))}
+            );
+            })}
           </div>
         )}
       </section>
+      {confirmAction && (
+        <div style={s.modalOverlay}>
+          <div style={s.confirmModal}>
+            <div style={s.confirmTitle}>İşlemi onaylıyor musunuz?</div>
+            <div style={s.confirmText}>
+              {confirmAction.product} talebi için "{confirmAction.label}" işlemi uygulanacak.
+            </div>
+            <div style={s.confirmActions}>
+              <button type="button" style={s.lightButton} onClick={() => setConfirmAction(null)}>Vazgeç</button>
+              <button type="button" style={s.primaryButton} onClick={confirmStatusChange}>Onayla</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -466,15 +526,15 @@ function formatDateOnly(value) {
 const s = {
   page: { display: "grid", gap: 16 },
   header: { display: "flex", justifyContent: "space-between", alignItems: "start", gap: 16 },
-  title: { fontSize: 20, fontWeight: 800, color: "var(--text)" },
+  title: { color: "var(--text)", fontFamily: "Georgia, 'Times New Roman', serif", fontSize: 30, lineHeight: 1.05, fontWeight: 700 },
   subtitle: { fontSize: 13, color: "var(--text2)", marginTop: 4 },
   stats: { display: "grid", gridTemplateColumns: "repeat(3, minmax(86px, 1fr))", gap: 8 },
   metric: { border: "1px solid var(--border)", borderRadius: 8, background: "var(--surface)", padding: "10px 12px", display: "grid", gap: 4, boxShadow: "var(--shadow)" },
   grid: { display: "grid", gridTemplateColumns: "minmax(0, 1.25fr) minmax(320px, .75fr)", gap: 16 },
   singleGrid: { display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 16 },
   panel: { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 18, boxShadow: "var(--shadow)" },
-  panelTitle: { fontSize: 15, fontWeight: 800, color: "var(--text)", marginBottom: 14 },
-  panelTitleTight: { fontSize: 15, fontWeight: 800, color: "var(--text)" },
+  panelTitle: { color: "var(--text)", fontFamily: "Georgia, 'Times New Roman', serif", fontSize: 17, lineHeight: 1.15, fontWeight: 700, marginBottom: 14 },
+  panelTitleTight: { color: "var(--text)", fontFamily: "Georgia, 'Times New Roman', serif", fontSize: 17, lineHeight: 1.15, fontWeight: 700 },
   formHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14 },
   formGrid: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 },
   nutritionGrid: { display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10, margin: "12px 0" },
@@ -490,14 +550,14 @@ const s = {
   opportunityScroll: { marginTop: 14, paddingRight: 4, overflowY: "auto", flex: 1, minHeight: 0 },
   opportunityHero: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, border: "1px solid var(--green-border)", borderRadius: 8, background: "var(--green-bg)", padding: 14, margin: "14px 0" },
   heroLabel: { display: "block", color: "var(--green)", fontSize: 10, fontWeight: 900, textTransform: "uppercase", marginBottom: 4 },
-  heroTitle: { display: "block", color: "var(--text)", fontSize: 18, fontWeight: 900 },
+  heroTitle: { display: "block", color: "var(--text)", fontFamily: "Georgia, 'Times New Roman', serif", fontSize: 20, lineHeight: 1.12, fontWeight: 700 },
   heroCount: { width: 58, height: 58, borderRadius: "50%", display: "grid", placeItems: "center", flexShrink: 0, background: "var(--surface)", border: "1px solid var(--green-border)", color: "var(--green)", fontSize: 18, fontWeight: 900, fontFamily: "var(--mono)" },
   categoryList: { display: "grid", gap: 8, marginBottom: 16 },
   categoryItem: { display: "grid", gap: 7, border: "1px solid var(--border)", borderRadius: 8, background: "var(--surface2)", padding: "9px 10px", color: "var(--text2)", fontSize: 12 },
   categoryLine: { display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" },
   progressTrack: { height: 7, borderRadius: 999, background: "var(--surface)", border: "1px solid var(--border)", overflow: "hidden" },
   progressFill: { display: "block", height: "100%", borderRadius: 999, background: "var(--accent)" },
-  smallTitle: { color: "var(--text)", fontSize: 12, fontWeight: 900, marginBottom: 8 },
+  smallTitle: { color: "var(--text)", fontFamily: "Georgia, 'Times New Roman', serif", fontSize: 15, lineHeight: 1.12, fontWeight: 700, marginBottom: 8 },
   menuSectionHead: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, color: "var(--text3)", fontSize: 11, marginTop: 2 },
   menuList: { display: "grid", gap: 8 },
   menuItem: { border: "1px solid var(--border)", borderRadius: 8, background: "var(--surface2)", padding: 10, display: "grid", gap: 8, fontSize: 12, color: "var(--text2)" },
@@ -536,4 +596,10 @@ const s = {
   success: { color: "var(--green)", background: "var(--green-bg)", borderColor: "var(--green-border)" },
   error: { color: "var(--red)", background: "var(--red-bg)", borderColor: "var(--red-border)" },
   empty: { color: "var(--text3)", fontSize: 13 },
+  lockedReview: { marginTop: 12, border: "1px solid var(--border)", borderRadius: 8, background: "var(--surface)", color: "var(--text3)", padding: 10, fontSize: 12, textAlign: "right" },
+  modalOverlay: { position: "fixed", inset: 0, zIndex: 80, background: "rgba(15, 23, 42, 0.38)", display: "grid", placeItems: "center", padding: 20 },
+  confirmModal: { width: "min(420px, 92vw)", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, boxShadow: "0 24px 80px rgba(15, 23, 42, 0.26)", padding: 18 },
+  confirmTitle: { color: "var(--text)", fontFamily: "Georgia, 'Times New Roman', serif", fontSize: 20, lineHeight: 1.15, fontWeight: 700, marginBottom: 8 },
+  confirmText: { color: "var(--text2)", fontSize: 13, lineHeight: 1.55, marginBottom: 16 },
+  confirmActions: { display: "flex", justifyContent: "flex-end", gap: 8 },
 };

@@ -269,12 +269,14 @@ function PasswordField({
 }
 
 const DASH_COLORS = [
-  "#22d3ee",
-  "#38bdf8",
   "#2563eb",
-  "#c026d3",
-  "#f472b6",
-  "#10b981",
+  "#16a34a",
+  "#f97316",
+  "#dc2626",
+  "#7c3aed",
+  "#0891b2",
+  "#db2777",
+  "#65a30d",
 ];
 const WEEK_DAYS = ["Pzt", "Sal", "Çar", "Per", "Cum"];
 
@@ -637,8 +639,8 @@ function CateringDashboard({
     <>
       <header className="content-header catering-dash-header">
         <div>
-          <span>CATERING CRM</span>
           <h1>Genel Bakış</h1>
+          <p>Firma, lisans, kullanıcı ve menü operasyonları tek ekranda.</p>
         </div>
         <div className="catering-dash-filters">
           <button
@@ -743,7 +745,7 @@ function CateringDashboard({
               emptyText="Kullanıcı verisi yok."
             />
           </DashboardPanel>
-          <DashboardPanel title="Menü Atamaları / Gün">
+          <DashboardPanel title="Menü Atamaları / Gün" className="full">
             <MenuBars menuAssignments={menuAssignments} />
           </DashboardPanel>
         </div>
@@ -767,6 +769,11 @@ function CateringManagementContent() {
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetCodeSent, setResetCodeSent] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -782,6 +789,11 @@ function CateringManagementContent() {
     setShowLoginPassword(false);
     setShowRegisterPassword(false);
     setShowConfirmPassword(false);
+    setResetEmail("");
+    setResetCode("");
+    setResetPassword("");
+    setResetCodeSent(false);
+    setShowResetPassword(false);
     setAuthMode("login");
   };
 
@@ -797,6 +809,10 @@ function CateringManagementContent() {
 
   const [dateFilter, setDateFilter] = useState("30d");
   const [companyFilter, setCompanyFilter] = useState("all");
+  const [universitySearch, setUniversitySearch] = useState("");
+  const [userSearch, setUserSearch] = useState("");
+  const [menuAssignmentSearch, setMenuAssignmentSearch] = useState("");
+  const [companySearch, setCompanySearch] = useState("");
 
   // Modals state
   const [modalType, setModalType] = useState(null);
@@ -1093,7 +1109,30 @@ function CateringManagementContent() {
     return { universities, users, menuAssignments: filteredMenus };
   }, [universities, users, menuAssignments, dateFilter, companyFilter]);
 
-  async function signIn() {
+  const normalizeSearch = (value) => String(value || "").toLocaleLowerCase("tr-TR");
+  const visibleUniversities = universities.filter((univ) => {
+    const q = normalizeSearch(universitySearch);
+    return !q || normalizeSearch(`${univ.university_name} ${univ.city} ${univ.student_count}`).includes(q);
+  });
+  const visibleUsers = users.filter((user) => {
+    const q = normalizeSearch(userSearch);
+    const uName = universities.find((u) => u.id === user.university_id)?.university_name || "";
+    return !q || normalizeSearch(`${user.full_name} ${user.email} ${ROLE_LABELS[user.role_name] || user.role_name} ${uName} ${user.phone}`).includes(q);
+  });
+  const visibleMenuAssignments = menuAssignments.filter((menu) => {
+    const q = normalizeSearch(menuAssignmentSearch);
+    const uName = universities.find((u) => u.id === menu.university_id)?.university_name || "";
+    const assignerName = users.find((u) => u.id === menu.assigned_by)?.full_name || "";
+    return !q || normalizeSearch(`${menu.menu_id} ${uName} ${assignerName} ${menu.status} ${menu.start_date} ${menu.end_date}`).includes(q);
+  });
+  const visibleCompanies = companies.filter((comp) => {
+    const q = normalizeSearch(companySearch);
+    return !q || normalizeSearch(`${comp.company_name} ${comp.tax_number} ${comp.email} ${comp.phone} ${comp.license?.plan_name}`).includes(q);
+  });
+
+  async function signIn(event) {
+    event?.preventDefault();
+    if (loading) return;
     setError(null);
     setInfo(null);
     setLoading(true);
@@ -1170,7 +1209,9 @@ function CateringManagementContent() {
     }
   }
 
-  async function handleRegister() {
+  async function handleRegister(event) {
+    event?.preventDefault();
+    if (loading) return;
     setError(null);
     setInfo(null);
     setLoading(true);
@@ -1204,20 +1245,13 @@ function CateringManagementContent() {
         throw new Error(data.detail ?? "Firma kaydı oluşturulamadı.");
       }
 
-      const mockSession = {
-        access_token: data.access_token,
-        user: {
-          email: data.user.email,
-          id: data.user.auth_user_id,
-          full_name: data.user.full_name,
-          role_name: data.user.role_name,
-        },
-      };
-      localStorage.setItem(CATERING_SESSION_KEY, JSON.stringify(mockSession));
-      window.dispatchEvent(new Event("catering-session-changed"));
-      setIsAuthed(true);
-      setCurrentUser(data.user);
-      setInfo("Firma kaydı oluşturuldu ve başarıyla giriş yapıldı.");
+      setAuthMode("login");
+      setPassword("");
+      setConfirmPassword("");
+      setAcceptedTerms(false);
+      setCompanyName("");
+      setFullName("");
+      setInfo("Firma kaydı oluşturuldu. Giriş yaparak devam edebilirsiniz.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Bir hata oluştu.");
     } finally {
@@ -1677,7 +1711,7 @@ function CateringManagementContent() {
     return (
       <main className="loading-container">
         <div className="spinner"></div>
-        <p>YemekhanAI giriş sistemi başlatılıyor...</p>
+        <p>TabloDot giriş sistemi başlatılıyor...</p>
       </main>
     );
   }
@@ -1702,7 +1736,7 @@ function CateringManagementContent() {
             <div className="logo-shield animate-pulse">
               <ShieldCheck size={40} />
             </div>
-            <h1>YemekhanAI Giriş Paneli</h1>
+            <h1>TabloDot Giriş Paneli</h1>
             <p>Rolünüze özel çalışma alanına güvenli erişim sağlayın.</p>
           </header>
 
@@ -1730,7 +1764,7 @@ function CateringManagementContent() {
           </div>
 
           {authMode === "login" ? (
-            <div className="login-form">
+            <form className="login-form" onSubmit={signIn}>
               <div className="input-group">
                 <label>E-posta</label>
                 <input
@@ -1752,16 +1786,90 @@ function CateringManagementContent() {
               />
 
               <button
+                type="submit"
                 disabled={loginDisabled}
                 className="btn btn-primary"
-                onClick={signIn}
               >
                 {loading ? "Giriş Yapılıyor..." : "Giriş Yap"}
               </button>
-            </div>
+              <button
+                type="button"
+                className="auth-link-btn"
+                onClick={() => {
+                  setAuthMode("forgot");
+                  setResetEmail(email.trim().toLowerCase());
+                  setResetCode("");
+                  setResetPassword("");
+                  setResetCodeSent(false);
+                  setError(null);
+                  setInfo(null);
+                }}
+              >
+                Şifremi unuttum
+              </button>
+            </form>
+          ) : authMode === "forgot" ? (
+            <form className="login-form" onSubmit={resetCodeSent ? handlePasswordResetConfirm : handlePasswordResetRequest}>
+              <div className="input-group">
+                <label>E-posta</label>
+                <input
+                  type="email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  placeholder="ornek@catering.com"
+                  disabled={resetCodeSent}
+                />
+              </div>
+
+              {resetCodeSent && (
+                <>
+                  <div className="input-group">
+                    <label>6 Haneli Kod</label>
+                    <input
+                      className="reset-code-input"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={resetCode}
+                      onChange={(e) => setResetCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="_ _ _ _ _ _"
+                    />
+                  </div>
+
+                  <PasswordField
+                    label="Yeni Şifre"
+                    value={resetPassword}
+                    onChange={setResetPassword}
+                    visible={showResetPassword}
+                    onToggle={() => setShowResetPassword((value) => !value)}
+                    placeholder="Yeni şifrenizi girin"
+                    autoComplete="new-password"
+                  />
+                </>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading || !isValidEmail(resetEmail.trim().toLowerCase()) || (resetCodeSent && (!/^\d{6}$/.test(resetCode) || resetPassword.length < 6))}
+                className="btn btn-primary"
+              >
+                {loading ? "İşleniyor..." : resetCodeSent ? "Şifreyi Değiştir" : "Kod Gönder"}
+              </button>
+              <button
+                type="button"
+                className="auth-link-btn"
+                onClick={() => {
+                  setAuthMode("login");
+                  setError(null);
+                  setInfo(null);
+                }}
+              >
+                Giriş ekranına dön
+              </button>
+            </form>
           ) : (
             
-            <div className="login-form">
+            <form className="login-form" onSubmit={handleRegister}>
 
               <div className="input-group">
                 <label>Kullanıcı Rolü</label>
@@ -1849,13 +1957,13 @@ function CateringManagementContent() {
               </label>
 
               <button
+                type="submit"
                 disabled={registerDisabled}
                 className="btn btn-primary"
-                onClick={handleRegister}
               >
-                {loading ? "Kayıt Yapılıyor..." : "Kayıt Ol ve Giriş Yap"}
+                {loading ? "Kayıt Yapılıyor..." : "Kayıt Ol"}
               </button>
-            </div>
+            </form>
           )}
 
           {error && (
@@ -1871,6 +1979,96 @@ function CateringManagementContent() {
         </section>
       </main>
     );
+  }
+
+  const initialDashboardLoading =
+    isAuthed &&
+    loading &&
+    !dashboard &&
+    universities.length === 0 &&
+    users.length === 0 &&
+    menuAssignments.length === 0;
+
+  if (initialDashboardLoading) {
+    return (
+      <main className="loading-container dashboard-loading-container" aria-label="Panel yükleniyor">
+        <div className="spinner"></div>
+      </main>
+    );
+  }
+
+  async function handlePasswordResetRequest(event) {
+    event?.preventDefault();
+    if (loading) return;
+    setError(null);
+    setInfo(null);
+    setLoading(true);
+    try {
+      const normalizedEmail = resetEmail.trim().toLowerCase();
+      if (!isValidEmail(normalizedEmail)) {
+        throw new Error("Geçerli bir e-posta girin.");
+      }
+      const response = await fetch(`${API_BASE_URL}/auth/password-reset/request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalizedEmail }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail ?? "Şifre sıfırlama kodu gönderilemedi.");
+      }
+      setResetEmail(normalizedEmail);
+      setResetCodeSent(true);
+      setInfo(data.detail || "Şifre sıfırlama kodu e-posta adresinize gönderildi.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bir hata oluştu.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handlePasswordResetConfirm(event) {
+    event?.preventDefault();
+    if (loading) return;
+    setError(null);
+    setInfo(null);
+    setLoading(true);
+    try {
+      const normalizedEmail = resetEmail.trim().toLowerCase();
+      if (!isValidEmail(normalizedEmail)) {
+        throw new Error("Geçerli bir e-posta girin.");
+      }
+      if (!/^\d{6}$/.test(resetCode)) {
+        throw new Error("6 haneli doğrulama kodunu girin.");
+      }
+      if (resetPassword.length < 6) {
+        throw new Error("Yeni şifre en az 6 karakter olmalı.");
+      }
+      const response = await fetch(`${API_BASE_URL}/auth/password-reset/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: normalizedEmail,
+          code: resetCode,
+          new_password: resetPassword,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail ?? "Şifre güncellenemedi.");
+      }
+      setAuthMode("login");
+      setEmail(normalizedEmail);
+      setPassword("");
+      setResetCode("");
+      setResetPassword("");
+      setResetCodeSent(false);
+      setInfo(data.detail || "Şifreniz güncellendi. Yeni şifrenizle giriş yapabilirsiniz.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bir hata oluştu.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -1925,10 +2123,10 @@ function CateringManagementContent() {
           path="inventory"
           element={
             <div className="placeholder-view">
-              <div className="placeholder-icon">📦</div>
+              <div className="placeholder-icon">MD</div>
               <h2>Malzeme Deposu</h2>
               <p>
-                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer
+                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
                 ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
                 sonrasında aktif hale gelecektir.
               </p>
@@ -1940,10 +2138,10 @@ function CateringManagementContent() {
           path="meals"
           element={
             <div className="placeholder-view">
-              <div className="placeholder-icon">🍳</div>
+              <div className="placeholder-icon">YY</div>
               <h2>Yapılacak Yemekler</h2>
               <p>
-                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer
+                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
                 ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
                 sonrasında aktif hale gelecektir.
               </p>
@@ -1955,10 +2153,10 @@ function CateringManagementContent() {
           path="ai-menu"
           element={
             <div className="placeholder-view">
-              <div className="placeholder-icon">🪄</div>
+              <div className="placeholder-icon">AI</div>
               <h2>AI Menü Planı</h2>
               <p>
-                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer
+                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
                 ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
                 sonrasında aktif hale gelecektir.
               </p>
@@ -1970,10 +2168,10 @@ function CateringManagementContent() {
           path="allergies"
           element={
             <div className="placeholder-view">
-              <div className="placeholder-icon">🚨</div>
+              <div className="placeholder-icon">AP</div>
               <h2>Alerji Profilleri</h2>
               <p>
-                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer
+                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
                 ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
                 sonrasında aktif hale gelecektir.
               </p>
@@ -1985,10 +2183,10 @@ function CateringManagementContent() {
           path="holidays"
           element={
             <div className="placeholder-view">
-              <div className="placeholder-icon">🏖️</div>
+              <div className="placeholder-icon">TD</div>
               <h2>Tatil & Devamsızlık</h2>
               <p>
-                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer
+                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
                 ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
                 sonrasında aktif hale gelecektir.
               </p>
@@ -2000,10 +2198,10 @@ function CateringManagementContent() {
           path="dorms"
           element={
             <div className="placeholder-view">
-              <div className="placeholder-icon">🏢</div>
+              <div className="placeholder-icon">YR</div>
               <h2>Yurtlar</h2>
               <p>
-                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer
+                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
                 ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
                 sonrasında aktif hale gelecektir.
               </p>
@@ -2015,10 +2213,10 @@ function CateringManagementContent() {
           path="reports"
           element={
             <div className="placeholder-view">
-              <div className="placeholder-icon">📈</div>
+              <div className="placeholder-icon">RP</div>
               <h2>Raporlar</h2>
               <p>
-                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer
+                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
                 ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
                 sonrasında aktif hale gelecektir.
               </p>
@@ -2030,10 +2228,10 @@ function CateringManagementContent() {
           path="yok-univ"
           element={
             <div className="placeholder-view">
-              <div className="placeholder-icon">🎓</div>
+              <div className="placeholder-icon">YK</div>
               <h2>YÖK / Üniversite</h2>
               <p>
-                YemekhanAI Üniversite Beslenme Sistemi kapsamında bu modül diğer
+                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
                 ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
                 sonrasında aktif hale gelecektir.
               </p>
@@ -2067,6 +2265,15 @@ function CateringManagementContent() {
                 </header>
 
                 <div className="table-card">
+                  <div className="table-toolbar">
+                    <input
+                      className="table-search"
+                      value={universitySearch}
+                      onChange={(event) => setUniversitySearch(event.target.value)}
+                      placeholder="Üniversite veya şehir ara..."
+                    />
+                    <span className="table-count">{visibleUniversities.length} kayıt</span>
+                  </div>
                   <table>
                     <thead>
                       <tr>
@@ -2079,14 +2286,14 @@ function CateringManagementContent() {
                       </tr>
                     </thead>
                     <tbody>
-                      {universities.length === 0 ? (
+                      {visibleUniversities.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="text-center">
                             Kayıtlı üniversite bulunamadı.
                           </td>
                         </tr>
                       ) : (
-                        universities.map((univ) => (
+                        visibleUniversities.map((univ) => (
                           <tr key={univ.id}>
                             <td>
                               <strong>{univ.university_name}</strong>
@@ -2165,6 +2372,15 @@ function CateringManagementContent() {
                 </header>
 
                 <div className="table-card">
+                  <div className="table-toolbar">
+                    <input
+                      className="table-search"
+                      value={userSearch}
+                      onChange={(event) => setUserSearch(event.target.value)}
+                      placeholder="Kullanıcı, e-posta, rol veya üniversite ara..."
+                    />
+                    <span className="table-count">{visibleUsers.length} kayıt</span>
+                  </div>
                   <table>
                     <thead>
                       <tr>
@@ -2178,14 +2394,14 @@ function CateringManagementContent() {
                       </tr>
                     </thead>
                     <tbody>
-                      {users.length === 0 ? (
+                      {visibleUsers.length === 0 ? (
                         <tr>
                           <td colSpan={7} className="text-center">
                             Kayıtlı kullanıcı bulunamadı.
                           </td>
                         </tr>
                       ) : (
-                        users.map((user) => {
+                        visibleUsers.map((user) => {
                           const uName =
                             universities.find(
                               (u) => u.id === user.university_id,
@@ -2278,6 +2494,15 @@ function CateringManagementContent() {
                 </header>
 
                 <div className="table-card">
+                  <div className="table-toolbar">
+                    <input
+                      className="table-search"
+                      value={menuAssignmentSearch}
+                      onChange={(event) => setMenuAssignmentSearch(event.target.value)}
+                      placeholder="Menü, üniversite, yetkili veya tarih ara..."
+                    />
+                    <span className="table-count">{visibleMenuAssignments.length} kayıt</span>
+                  </div>
                   <table>
                     <thead>
                       <tr>
@@ -2292,14 +2517,14 @@ function CateringManagementContent() {
                       </tr>
                     </thead>
                     <tbody>
-                      {menuAssignments.length === 0 ? (
+                      {visibleMenuAssignments.length === 0 ? (
                         <tr>
                           <td colSpan={8} className="text-center">
                             Kayıtlı menü ataması bulunamadı.
                           </td>
                         </tr>
                       ) : (
-                        menuAssignments.map((menu) => {
+                        visibleMenuAssignments.map((menu) => {
                           const uName =
                             universities.find(
                               (u) => u.id === menu.university_id,
@@ -2409,6 +2634,15 @@ function CateringManagementContent() {
                   </header>
 
                   <div className="table-card">
+                    <div className="table-toolbar">
+                      <input
+                        className="table-search"
+                        value={companySearch}
+                        onChange={(event) => setCompanySearch(event.target.value)}
+                        placeholder="Firma, vergi no, e-posta veya lisans ara..."
+                      />
+                      <span className="table-count">{visibleCompanies.length} kayıt</span>
+                    </div>
                     <table>
                       <thead>
                         <tr>
@@ -2423,14 +2657,14 @@ function CateringManagementContent() {
                         </tr>
                       </thead>
                       <tbody>
-                        {companies.length === 0 ? (
+                        {visibleCompanies.length === 0 ? (
                           <tr>
                             <td colSpan={8} className="text-center">
                               Kayıtlı firma bulunamadı.
                             </td>
                           </tr>
                         ) : (
-                          companies.map((comp) => (
+                          visibleCompanies.map((comp) => (
                             <tr key={comp.id}>
                               <td>
                                 <strong>{comp.company_name}</strong>

@@ -10,7 +10,7 @@ from app.models.ingredient import (
     IngredientBatchCreate,
     IngredientBatchUpdate,
 )
-from app.services.a101 import A101Error, fetch_ingredient_market_price, diagnose
+from app.services.migros import MigrosError, fetch_ingredient_market_price, diagnose
 
 router = APIRouter(prefix="/ingredients", tags=["ingredients"])
 
@@ -38,37 +38,36 @@ def _recompute_stock(ingredient_id: int) -> None:
 
 @router.get("/", response_model=list[Ingredient])
 def list_ingredients():
-    # Sabit sıralama: satır güncellenince (ör. A101 fiyat çekimi market_price yazar)
+    # Sabit sıralama: satır güncellenince (ör. Migros fiyat çekimi market_price yazar)
     # Postgres satırı fiziksel olarak sona taşır; id sırası listeyi oynatmaz.
     res = get_db().table("ingredients").select("*").order("id").execute()
     return res.data
 
 
-@router.get("/a101/prices")
-def list_a101_prices():
-    """Tüm malzemelerin A101 eşleştirme/fiyat kayıtları (frontend satır yanında gösterir)."""
-    res = get_db().table("ingredient_market_prices").select("*").eq("source", "a101").execute()
+@router.get("/market/prices")
+def list_market_prices():
+    """Tüm malzemelerin Migros eşleştirme/fiyat kayıtları (frontend satır yanında gösterir)."""
+    res = get_db().table("ingredient_market_prices").select("*").eq("source", "migros").execute()
     return res.data
 
 
-@router.get("/a101/health")
-def a101_health():
-    """Scraper sağlık kontrolü (kanarya ürünle). Bozuksa auto-healing dener."""
+@router.get("/market/health")
+def market_health():
+    """Migros fiyat servisi sağlık kontrolü (kanarya sorgu 'domates')."""
     return diagnose(force_heal=False)
 
 
-@router.post("/a101/self-heal")
-def a101_self_heal():
-    """Scraper'ı zorla onarmayı dener: sayfadan yeni bir fiyat-çıkarma stratejisi öğrenir."""
+@router.post("/market/self-heal")
+def market_self_heal():
+    """Servisi zorla kontrol eder: JSON alan adları değişmişse tespit eder."""
     return diagnose(force_heal=True)
 
 
-@router.post("/{ingredient_id}/a101/fetch")
-def fetch_a101_price(ingredient_id: int):
-    """A101 Veri Çek: malzemeyi A101 ürünüyle eşleştirir, güncel fiyatı çeker ve A101'in
-    GERÇEK satış birimini tespit eder. Birim farklıysa MALZEMENİN birimini A101'e eşitler
-    (birim/birim-fiyat tutarlı olsun diye). Uydurma yok: fiyat sayfadan gerçekten okunamazsa
-    hata; birim çözülemezse birim fiyat boş kalır."""
+@router.post("/{ingredient_id}/market/fetch")
+def fetch_market_price(ingredient_id: int):
+    """Migros Fiyat Çek: malzemeyi Migros ürünüyle eşleştirir, güncel fiyatı ve GERÇEK
+    birim (kg/lt/adet) fiyatını çıkarır. Zayıf/işlenmiş eşleşme 'güvenilmez' işaretlenir;
+    o durumda malzeme fiyatı güncellenmez (menü planlayıcıya sızmaz)."""
     db = get_db()
     ing_res = db.table("ingredients").select("id, name, unit").eq("id", ingredient_id).execute()
     if not ing_res.data:
@@ -79,24 +78,29 @@ def fetch_a101_price(ingredient_id: int):
         db.table("ingredient_market_prices")
         .select("product_url")
         .eq("ingredient_id", ingredient_id)
-        .eq("source", "a101")
+        .eq("source", "migros")
         .execute()
     )
     known_url = existing.data[0]["product_url"] if existing.data else None
 
     try:
         info = fetch_ingredient_market_price(ingredient["name"], ingredient["unit"], known_url)
-    except A101Error as exc:
+    except MigrosError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception as exc:  # ağ hatası vb.
-        raise HTTPException(status_code=502, detail=f"A101'e ulaşılamadı: {exc}") from exc
+        raise HTTPException(status_code=502, detail=f"Migros'a ulaşılamadı: {exc}") from exc
+
+    # Güvenilmez eşleşme (ör. "Tavuk Göğsü" → "Tavuk Baget") malzemenin kendi
+    # verisini (birim/fiyat) BOZMAMALI: kayıt tutulur ama malzeme güncellenmez,
+    # menü planlayıcı bu şüpheli fiyatı kullanmaz. UI 'doğrulama gerekli' gösterir.
+    reliable = bool(info.get("reliable"))
 
     detected_unit = info.get("detected_unit")
     unit_changed = False
     new_unit = None
     final_unit = ingredient["unit"]
-    # A101'in gerçek satış birimi farklıysa malzemenin birimini eşitle
-    if detected_unit and detected_unit != ingredient["unit"]:
+    # Migros'un gerçek satış birimi farklıysa malzemenin birimini eşitle (yalnızca güvenilirse)
+    if reliable and detected_unit and detected_unit != ingredient["unit"]:
         db.table("ingredients").update({"unit": detected_unit}).eq("id", ingredient_id).execute()
         final_unit = detected_unit
         unit_changed = True
@@ -104,7 +108,7 @@ def fetch_a101_price(ingredient_id: int):
 
     row = {
         "ingredient_id": ingredient_id,
-        "source": "a101",
+        "source": "migros",
         "product_url": info["product_url"],
         "product_name": info["product_name"],
         "pack_quantity": info.get("pack_quantity"),
@@ -120,8 +124,9 @@ def fetch_a101_price(ingredient_id: int):
         .execute()
     )
 
-    # Birim fiyat, mevsimsel analizin kullandığı market_price alanını da günceller
-    if info.get("unit_price"):
+    # market_price'ı (mevsimsel analiz + planlayıcı kullanır) YALNIZCA güvenilir
+    # sonuçta güncelle. Güvenilmezse eski/elle girilmiş değer korunur.
+    if reliable and info.get("unit_price"):
         db.table("ingredients").update({
             "market_price": info["unit_price"],
             "last_price_checked_at": date.today().isoformat(),
@@ -130,6 +135,10 @@ def fetch_a101_price(ingredient_id: int):
     result = saved.data[0] if saved.data else row
     result["unit_changed"] = unit_changed
     result["new_unit"] = new_unit
+    result["reliable"] = reliable
+    result["needs_verification"] = not reliable
+    result["confidence"] = info.get("confidence")
+    result["warning"] = info.get("warning")
     return result
 
 

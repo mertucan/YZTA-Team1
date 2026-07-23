@@ -1,13 +1,13 @@
 import client from "../../../api/client";
 
 const fallbackNotifications = [
-  { id: 1, type: "critical", title: "Anemi riski izleme", desc: "Demir odakli menulerin etkisini bu donem takip edin.", date: "Bugun" },
-  { id: 2, type: "success", title: "Rapor hazir", desc: "Populasyon saglik raporu indirilebilir.", date: "Dun" },
+  { id: 1, type: "critical", title: "Anemi riski izleme", desc: "Demir odaklı menülerin etkisini bu dönem takip edin.", date: "Bugün" },
+  { id: 2, type: "success", title: "Rapor hazır", desc: "Popülasyon sağlık raporu indirilebilir.", date: "Dün" },
 ];
 
 const normalizeTrend = (rows = []) =>
   rows.map((row, index) => ({
-    name: row.name || row.period || `Donem ${index + 1}`,
+    name: row.name || row.period || `Dönem ${index + 1}`,
     period: row.period || row.name || `2026-${String(index + 1).padStart(2, "0")}`,
     avg_calorie: Number(row.avg_calorie || 0),
     protein_adequacy_ratio: Number(row.protein_adequacy_ratio || 0),
@@ -44,8 +44,8 @@ export async function compareAnalysisPeriods(payload) {
   const metrics = [
     { metric: "Anemi Riski", period1: "39.0%", period2: "31.0%", diff: "-8.0%" },
     { metric: "Obezite Riski", period1: "36.0%", period2: "34.0%", diff: "-2.0%" },
-    { metric: "Protein Yeterliligi", period1: "82.0%", period2: "88.0%", diff: "+6.0%" },
-    { metric: "Sebze Orani", period1: "42.0%", period2: "49.0%", diff: "+7.0%" },
+    { metric: "Protein Yeterliliği", period1: "82.0%", period2: "88.0%", diff: "+6.0%" },
+    { metric: "Sebze Oranı", period1: "42.0%", period2: "49.0%", diff: "+7.0%" },
   ];
   return metrics.map((row) => ({
     ...row,
@@ -59,7 +59,7 @@ export async function getMenus() {
     const { data } = await client.get("/menus");
     return (data || []).map((menu) => ({
       id: menu.id,
-      name: menu.name || `Menu #${menu.id}`,
+      name: menu.name || `Menü #${menu.id}`,
       week_start_date: menu.week_start_date,
       budget: menu.budget,
       total_cost: menu.total_cost,
@@ -76,8 +76,8 @@ export async function getMenus() {
 
 export async function compareMenus(menu1Id, menu2Id) {
   return {
-    menu1: { id: menu1Id, name: `Menu ${menu1Id}`, week_start_date: "2026-01-01", status: "ACTIVE" },
-    menu2: { id: menu2Id, name: `Menu ${menu2Id}`, week_start_date: "2026-02-01", status: "ACTIVE" },
+    menu1: { id: menu1Id, name: `Menü ${menu1Id}`, week_start_date: "2026-01-01", status: "ACTIVE" },
+    menu2: { id: menu2Id, name: `Menü ${menu2Id}`, week_start_date: "2026-02-01", status: "ACTIVE" },
     metrics: [
       { metric: "Kalori", menu1_value: "720 kcal", menu2_value: "680 kcal", diff: "-40 kcal" },
       { metric: "Protein", menu1_value: "24 g", menu2_value: "29 g", diff: "+5 g" },

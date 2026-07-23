@@ -187,7 +187,7 @@ function MenuDetailPanel({
             borderBottom: "1px solid var(--border)",
           }}
         >
-          💬 Yönetici talimatı: <em>{menu.notes}</em>
+          Yönetici talimatı: <em>{menu.notes}</em>
         </div>
       )}
 
@@ -372,12 +372,12 @@ function MenuDetailPanel({
                       <div style={{ fontWeight: 600 }}>{item.meal_name}</div>
                       <div style={{ color: "var(--text3)", fontSize: 10 }}>
                         {item.source === "PARTNER_PRODUCT" || item.partner_product_integration_id
-                          ? "Partner urun"
+                          ? "Partner ürün"
                           : item.category} · {item.calories} kcal
                       </div>
                     </div>
                     <button onClick={() => onRemoveItem(item.id)} style={btnX}>
-                      ✕
+                      Kaldır
                     </button>
                   </div>
                 ))}
@@ -454,11 +454,11 @@ function MenuDetailPanel({
         >
           {revisionsLoading
             ? "Analiz ediliyor..."
-            : "🌿 Mevsimsel Revizyon Öner"}
+            : "Mevsimsel Revizyon Öner"}
         </button>
         {menu.status === "draft" && (
           <button onClick={onDelete} style={{ ...btnSm, color: "var(--red)" }}>
-            🗑 Menüyü Sil
+            Menüyü Sil
           </button>
         )}
       </div>
@@ -476,7 +476,7 @@ function MenuDetailPanel({
                 gap: 6,
               }}
             >
-              <span>🌿 Mevsimsel Revizyon Önerileri</span>
+              <span>Mevsimsel Revizyon Önerileri</span>
               <span
                 style={{ fontWeight: 400, fontSize: 11, color: "var(--text2)" }}
               >
@@ -534,7 +534,7 @@ function MenuDetailPanel({
                         {rev.current_meal_name}
                       </span>
                       <span style={{ color: "var(--text3)", margin: "0 6px" }}>
-                        →
+                        yerine
                       </span>
                       <span style={{ color: "var(--green)", fontWeight: 600 }}>
                         {rev.suggested_meal_name}
@@ -556,7 +556,7 @@ function MenuDetailPanel({
                             color: "var(--green)",
                           }}
                         >
-                          💰 {rev.estimated_savings.toFixed(2)} TL
+                          {rev.estimated_savings.toFixed(2)} TL
                           tasarruf/porsiyon
                         </span>
                       )}
@@ -568,7 +568,7 @@ function MenuDetailPanel({
                             color: "var(--accent)",
                           }}
                         >
-                          🌍 %{(rev.local_ingredient_ratio * 100).toFixed(0)}{" "}
+                          %{(rev.local_ingredient_ratio * 100).toFixed(0)}{" "}
                           yerel
                         </span>
                       )}
@@ -580,7 +580,7 @@ function MenuDetailPanel({
                             color: "#16a34a",
                           }}
                         >
-                          🌿 %{(rev.seasonal_score * 100).toFixed(0)} mevsimsel
+                          %{(rev.seasonal_score * 100).toFixed(0)} mevsimsel
                         </span>
                       )}
                       {rev.price_advantage_score > 0 && (
@@ -591,7 +591,7 @@ function MenuDetailPanel({
                             color: "var(--amber)",
                           }}
                         >
-                          📉 %{(rev.price_advantage_score * 100).toFixed(0)}{" "}
+                          %{(rev.price_advantage_score * 100).toFixed(0)}{" "}
                           fiyat avantajı
                         </span>
                       )}
@@ -844,7 +844,7 @@ export default function AiMenuPlannerPage() {
                       {remaining.toFixed(2)} TL
                     </td>
                     <td style={td}>
-                      {m.status === "approved" ? "✓ Onaylandı" : "Taslak"}
+                      {m.status === "approved" ? "Onaylandı" : "Taslak"}
                     </td>
                     <td style={td}>
                       <button onClick={() => openMenu(m.id)} style={btnSm}>
@@ -898,11 +898,12 @@ export default function AiMenuPlannerPage() {
 
   return (
     <div>
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 20, fontWeight: 600 }}>
-          🤖 AI Destekli Menü Planlayıcı
+      <div style={pageHeader}>
+        <div>
+          <div style={eyebrow}>Operasyon Paneli</div>
+          <div style={pageTitle}>AI Destekli Menü Planlayıcı</div>
         </div>
-        <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 3 }}>
+        <div style={pageSubtitle}>
           Depodaki mevcut malzemelerle, Pazartesi'den Pazar'a her gün her
           kategoriden bir yemek önerir — ya da Yemek Kategorisi kataloğundan gün
           ve kategori bazında elle seçim yapın
@@ -910,7 +911,7 @@ export default function AiMenuPlannerPage() {
       </div>
 
       <div style={card}>
-        <div style={cardHd}>📅 Yeni Haftalık Menü Oluştur</div>
+        <div style={cardHd}>Yeni Haftalık Menü Oluştur</div>
         <div style={formGrid}>
           <div>
             <div style={fieldLabel}>Hafta Başlangıcı (Pazartesi)</div>
@@ -943,10 +944,10 @@ export default function AiMenuPlannerPage() {
             disabled={generating}
             style={btnPrimary}
           >
-            {generating ? "Oluşturuluyor..." : "✨ AI ile Oluştur"}
+            {generating ? "Oluşturuluyor..." : "AI ile Oluştur"}
           </button>
           <button onClick={handleCreateManual} style={btnSecondary}>
-            📋 Boş Menü Oluştur (Katalogdan Seç)
+            Boş Menü Oluştur (Katalogdan Seç)
           </button>
         </div>
         <div style={{ padding: "0 18px 18px" }}>
@@ -1025,7 +1026,7 @@ export default function AiMenuPlannerPage() {
 
       <div style={card}>
         <div style={cardHd}>
-          📆 Güncel Menüler{" "}
+          Güncel Menüler{" "}
           <span style={{ fontWeight: 400, color: "var(--text3)" }}>
             (bugün ve sonraki günler, sırayla)
           </span>
@@ -1045,7 +1046,7 @@ export default function AiMenuPlannerPage() {
           onClick={() => setShowPast(!showPast)}
         >
           <span>
-            🗄️ Geçmiş Menüler{" "}
+            Geçmiş Menüler{" "}
             <span style={{ fontWeight: 400, color: "var(--text3)" }}>
               ({pastMenus.length})
             </span>
@@ -1066,6 +1067,36 @@ const card = {
   borderRadius: "var(--radius)",
   boxShadow: "var(--shadow)",
   marginBottom: 16,
+};
+const pageHeader = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "end",
+  gap: 16,
+  marginBottom: 20,
+};
+const eyebrow = {
+  color: "var(--ingredients-accent)",
+  fontSize: 11,
+  fontWeight: 900,
+  letterSpacing: ".08em",
+  textTransform: "uppercase",
+  marginBottom: 4,
+};
+const pageTitle = {
+  color: "var(--ingredients-text)",
+  fontFamily: "Georgia, 'Times New Roman', serif",
+  fontSize: 30,
+  lineHeight: 1.05,
+  fontWeight: 700,
+};
+const pageSubtitle = {
+  color: "var(--ingredients-muted)",
+  fontSize: 13,
+  fontWeight: 700,
+  paddingBottom: 3,
+  textAlign: "right",
+  maxWidth: 640,
 };
 const cardHd = {
   padding: "14px 18px 12px",
