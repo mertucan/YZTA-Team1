@@ -59,6 +59,7 @@ export default function PartnerProductsPage() {
 
   const canReview = reviewRoles.has(role);
   const canSubmit = role === "PARTNER_COMPANY";
+  const isChefReviewOnly = role === "CHEF";
   const [opportunitiesOpen, setOpportunitiesOpen] = useState(canSubmit);
 
   useEffect(() => {
@@ -289,6 +290,7 @@ export default function PartnerProductsPage() {
           </form>
         )}
 
+        {!isChefReviewOnly && (
         <section style={{ ...s.panel, ...(canSubmit && opportunitiesOpen ? s.opportunityPanelTall : null) }}>
           <button type="button" style={s.opportunityToggle} onClick={() => setOpportunitiesOpen((open) => !open)}>
             <div>
@@ -365,6 +367,7 @@ export default function PartnerProductsPage() {
             </div>
           )}
         </section>
+        )}
       </div>
 
       {canSubmit && (

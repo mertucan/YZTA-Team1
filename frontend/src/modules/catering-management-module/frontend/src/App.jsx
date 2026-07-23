@@ -37,6 +37,7 @@ import {
 import { isSupabaseConfigured, supabase } from "./supabase";
 import { useRealtimeData } from "./hooks/useRealtimeData";
 import { RealtimeIndicator } from "./components/RealtimeIndicator";
+import tabloDotLogo from "../../../../assets/tablo-dot-logo.png";
 
 const ROLE_LABELS = {
   SUPER_ADMIN: "Süper Admin",
@@ -47,7 +48,6 @@ const ROLE_LABELS = {
   FINANCE_MANAGER: "Finans Yöneticisi",
   OPERATIONS_MANAGER: "Operasyon Yöneticisi",
   STUDENT: "Öğrenci",
-  SYSTEM_SUPPORT: "Sistem Destek",
   WAREHOUSE_STAFF: "Depo Görevlisi",
   PURCHASING_STAFF: "Satın Alma Sorumlusu",
   RESEARCHER: "Araştırmacı",
@@ -68,7 +68,6 @@ const ROLE_ACCESS = {
     "FINANCE_MANAGER",
     "OPERATIONS_MANAGER",
     "STUDENT",
-    "SYSTEM_SUPPORT",
     "WAREHOUSE_STAFF",
     "PURCHASING_STAFF",
     "RESEARCHER",
@@ -79,7 +78,6 @@ const ROLE_ACCESS = {
     "SUPER_ADMIN",
     "CATERING_ADMIN",
     "UNIVERSITY_ADMIN",
-    "SYSTEM_SUPPORT",
   ],
   menuAssignments: [
     "SUPER_ADMIN",
@@ -89,32 +87,6 @@ const ROLE_ACCESS = {
     "CHEF",
   ],
   companies: ["SUPER_ADMIN", "CATERING_ADMIN", "FINANCE_MANAGER"],
-  inventory: [
-    "SUPER_ADMIN",
-    "CATERING_ADMIN",
-    "CHEF",
-    "WAREHOUSE_STAFF",
-    "OPERATIONS_MANAGER",
-    "PURCHASING_STAFF",
-  ],
-  meals: ["SUPER_ADMIN", "CATERING_ADMIN", "DIETITIAN", "CHEF"],
-  aiMenu: ["SUPER_ADMIN", "CATERING_ADMIN", "DIETITIAN", "CHEF"],
-  allergies: ["SUPER_ADMIN", "DIETITIAN", "UNIVERSITY_ADMIN", "STUDENT"],
-  holidays: ["SUPER_ADMIN", "CATERING_ADMIN", "UNIVERSITY_ADMIN", "STUDENT"],
-  dorms: ["SUPER_ADMIN", "UNIVERSITY_ADMIN", "STUDENT"],
-  reports: [
-    "SUPER_ADMIN",
-    "CATERING_ADMIN",
-    "FINANCE_MANAGER",
-    "OPERATIONS_MANAGER",
-    "SYSTEM_SUPPORT",
-  ],
-  yokUniv: [
-    "SUPER_ADMIN",
-    "CATERING_ADMIN",
-    "UNIVERSITY_ADMIN",
-    "SYSTEM_SUPPORT",
-  ],
 };
 
 function roleCan(role, key) {
@@ -128,14 +100,6 @@ function getCateringRouteKey(pathname) {
   if (pathname.endsWith("/users")) return "users";
   if (pathname.endsWith("/menu-assignments")) return "menuAssignments";
   if (pathname.endsWith("/companies")) return "companies";
-  if (pathname.endsWith("/inventory")) return "inventory";
-  if (pathname.endsWith("/meals")) return "meals";
-  if (pathname.endsWith("/ai-menu")) return "aiMenu";
-  if (pathname.endsWith("/allergies")) return "allergies";
-  if (pathname.endsWith("/holidays")) return "holidays";
-  if (pathname.endsWith("/dorms")) return "dorms";
-  if (pathname.endsWith("/reports")) return "reports";
-  if (pathname.endsWith("/yok-univ")) return "yokUniv";
   return "dashboard";
 }
 
@@ -1727,17 +1691,40 @@ function CateringManagementContent() {
   });
   const loginDisabled = loading || !isValidEmail(normalizedAuthEmail) || !password;
   const registerDisabled = loading || registerErrors.length > 0;
+  const authHeaderCopy = {
+    login: {
+      title: "TabloDot Giriş Paneli",
+      description: "Rolünüze özel çalışma alanına güvenli erişim sağlayın.",
+    },
+    register: {
+      title: "TabloDot Kayıt Paneli",
+      description: "Firma ve kullanıcı bilgilerinizi girerek çalışma alanınızı oluşturun.",
+    },
+    forgot: {
+      title: "Şifre Sıfırlama",
+      description: "E-posta adresinize gelen kod ile yeni şifrenizi belirleyin.",
+    },
+  }[authMode];
 
   if (!isAuthed) {
     return (
       <main className="login-shell">
-        <section className="login-panel">
+        <div className="login-page">
+          <header className="login-topbar">
+            <a href="/" className="login-brand" aria-label="TabloDot ana sayfa">
+              <img src={tabloDotLogo} alt="TabloDot" />
+            </a>
+            <a href="/" className="login-home-link">Ana sayfaya dön</a>
+          </header>
+
+          <div className="login-layout">
+            <section className="login-panel">
           <header className="login-header">
             <div className="logo-shield animate-pulse">
               <ShieldCheck size={40} />
             </div>
-            <h1>TabloDot Giriş Paneli</h1>
-            <p>Rolünüze özel çalışma alanına güvenli erişim sağlayın.</p>
+            <h1>{authHeaderCopy.title}</h1>
+            <p>{authHeaderCopy.description}</p>
           </header>
 
           <div className="auth-tabs">
@@ -1976,7 +1963,9 @@ function CateringManagementContent() {
               {info}
             </div>
           )}
-        </section>
+            </section>
+          </div>
+        </div>
       </main>
     );
   }
@@ -2116,126 +2105,6 @@ function CateringManagementContent() {
               companies={companies}
               currentUser={currentUser}
             />
-          }
-        />
-
-        <Route
-          path="inventory"
-          element={
-            <div className="placeholder-view">
-              <div className="placeholder-icon">MD</div>
-              <h2>Malzeme Deposu</h2>
-              <p>
-                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
-                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
-                sonrasında aktif hale gelecektir.
-              </p>
-            </div>
-          }
-        />
-
-        <Route
-          path="meals"
-          element={
-            <div className="placeholder-view">
-              <div className="placeholder-icon">YY</div>
-              <h2>Yapılacak Yemekler</h2>
-              <p>
-                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
-                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
-                sonrasında aktif hale gelecektir.
-              </p>
-            </div>
-          }
-        />
-
-        <Route
-          path="ai-menu"
-          element={
-            <div className="placeholder-view">
-              <div className="placeholder-icon">AI</div>
-              <h2>AI Menü Planı</h2>
-              <p>
-                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
-                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
-                sonrasında aktif hale gelecektir.
-              </p>
-            </div>
-          }
-        />
-
-        <Route
-          path="allergies"
-          element={
-            <div className="placeholder-view">
-              <div className="placeholder-icon">AP</div>
-              <h2>Alerji Profilleri</h2>
-              <p>
-                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
-                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
-                sonrasında aktif hale gelecektir.
-              </p>
-            </div>
-          }
-        />
-
-        <Route
-          path="holidays"
-          element={
-            <div className="placeholder-view">
-              <div className="placeholder-icon">TD</div>
-              <h2>Tatil & Devamsızlık</h2>
-              <p>
-                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
-                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
-                sonrasında aktif hale gelecektir.
-              </p>
-            </div>
-          }
-        />
-
-        <Route
-          path="dorms"
-          element={
-            <div className="placeholder-view">
-              <div className="placeholder-icon">YR</div>
-              <h2>Yurtlar</h2>
-              <p>
-                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
-                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
-                sonrasında aktif hale gelecektir.
-              </p>
-            </div>
-          }
-        />
-
-        <Route
-          path="reports"
-          element={
-            <div className="placeholder-view">
-              <div className="placeholder-icon">RP</div>
-              <h2>Raporlar</h2>
-              <p>
-                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
-                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
-                sonrasında aktif hale gelecektir.
-              </p>
-            </div>
-          }
-        />
-
-        <Route
-          path="yok-univ"
-          element={
-            <div className="placeholder-view">
-              <div className="placeholder-icon">YK</div>
-              <h2>YÖK / Üniversite</h2>
-              <p>
-                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
-                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
-                sonrasında aktif hale gelecektir.
-              </p>
-            </div>
           }
         />
 

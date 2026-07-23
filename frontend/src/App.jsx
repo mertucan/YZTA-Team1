@@ -9,18 +9,28 @@ import Absences from "./pages/Absences";
 import { modules } from "./modules";
 import tabloDotLogo from "./assets/tablo-dot-logo.png";
 
+const CATERING_SESSION_KEY = "catering_mock_session";
+
+function hasCateringSession() {
+  try {
+    return Boolean(JSON.parse(localStorage.getItem(CATERING_SESSION_KEY) || "null")?.user);
+  } catch {
+    return false;
+  }
+}
+
 function WelcomePage() {
   const features = [
-    ["AI menü planlama", "Stok, bütçe ve besin değerleriyle haftalık menü üretimi."],
-    ["Catering yönetimi", "Firma, lisans, üniversite ve kullanıcı operasyonları tek ekranda."],
-    ["Öğrenci takibi", "Devamsızlık, sağlık uyarıları ve yemek tüketim verileriyle görünürlük."],
+    ["Güvenli giriş", "Rol bazlı panellerle her kullanıcı yalnızca kendi alanını görür."],
+    ["Catering yönetimi", "Firma, lisans, üniversite ve menü operasyonları kontrollü ilerler."],
+    ["Beslenme zekası", "Menü, sağlık ve kalite kararları yetkili ekiplerle yönetilir."],
   ];
 
   const metrics = [
-    ["Aktif Menü", "12"],
-    ["Üniversite", "13"],
-    ["Öğrenci", "579K"],
-    ["Lisans", "Aktif"],
+    ["Rol", "12"],
+    ["Modül", "7"],
+    ["Erişim", "Kontrollü"],
+    ["Durum", "Hazır"],
   ];
 
   return (
@@ -34,12 +44,11 @@ function WelcomePage() {
         <section className="welcome-hero">
           <h1>Kampüs yemek operasyonlarını daha akıllı yönetin.</h1>
           <p>
-            TabloDot; malzeme stoğu, AI menü planlama, öğrenci verileri ve catering
-            yönetimini sade bir panelde birleştirir. Ekipleriniz daha hızlı karar alır.
+            TabloDot; catering, menü, sağlık ve kalite süreçlerini rol bazlı
+            panellerle yönetir. Giriş yaptıktan sonra yalnızca yetkili olduğunuz alanları görürsünüz.
           </p>
           <div className="welcome-actions">
             <Link to="/modules/catering-management" className="welcome-primary">Giriş Yap</Link>
-            <Link to="/dashboard" className="welcome-secondary">Ana Panel</Link>
           </div>
         </section>
 
@@ -289,6 +298,11 @@ function AppShell() {
         <Route path="/" element={<WelcomePage />} />
       </Routes>
     );
+  }
+
+  if (pathname.startsWith("/modules/catering-management") && !hasCateringSession()) {
+    const CateringManagementComponent = modules.find((mod) => mod.id === "catering-management")?.component;
+    return CateringManagementComponent ? <CateringManagementComponent /> : <Navigate to="/" replace />;
   }
 
   return (

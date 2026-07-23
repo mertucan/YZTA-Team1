@@ -82,6 +82,22 @@
     background: rgba(24, 24, 24, 0.58);
 }
 
+[data-theme="dark"] .catering-management-scope .login-shell {
+    background:
+        radial-gradient(circle at 12% 10%, rgba(232, 128, 0, 0.16), transparent 28%),
+        radial-gradient(circle at 86% 16%, rgba(214, 183, 44, 0.10), transparent 30%),
+        linear-gradient(135deg, #181818 0%, #222321 52%, #141414 100%);
+}
+
+[data-theme="dark"] .catering-management-scope .login-topbar {
+    background: rgba(255, 255, 255, 0.10);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="dark"] .catering-management-scope .login-brand img {
+    filter: none;
+}
+
 @keyframes spin {
     to {
         transform: rotate(360deg);
@@ -90,16 +106,78 @@
 
 /* Auth Login */
 .catering-management-scope .login-shell {
-    min-height: calc(100vh - 140px);
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at 12% 10%, rgba(232, 128, 0, 0.08), transparent 28%),
+        radial-gradient(circle at 86% 16%, rgba(183, 154, 18, 0.08), transparent 30%),
+        linear-gradient(135deg, #fafafa 0%, #f6f7f4 52%, #ffffff 100%);
+    padding: 0;
+}
+
+.catering-management-scope .login-page {
+    width: 100%;
+    min-height: 100vh;
+    margin: 0 auto;
     display: grid;
-    place-items: center;
-    background: transparent;
-    padding: 16px;
+    grid-template-rows: auto 1fr;
+    gap: 34px;
+}
+
+.catering-management-scope .login-topbar {
+    min-height: 62px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 12px clamp(18px, 5vw, 72px);
+    border: 0;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 0;
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: var(--shadow, 0 14px 36px rgba(24, 24, 24, 0.08));
+    backdrop-filter: blur(14px);
+}
+
+.catering-management-scope .login-brand {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.catering-management-scope .login-brand img {
+    width: 172px;
+    height: auto;
+    display: block;
+    filter: invert(1) saturate(0.8);
+}
+
+.catering-management-scope .login-home-link {
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 14px;
+    border-radius: 8px;
+    color: var(--primary-color);
+    background: var(--primary-light);
+    border: 1px solid rgba(232, 128, 0, 0.20);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.catering-management-scope .login-layout {
+    width: min(760px, calc(100% - 32px));
+    margin: 0 auto 38px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .catering-management-scope .login-panel {
     width: 100%;
-    max-width: 520px;
+    max-width: 560px;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius, 10px);
@@ -912,6 +990,34 @@
 
 /* Responsive adjustments */
 @media (max-width: 860px) {
+    .catering-management-scope .login-shell {
+        padding: 0;
+    }
+
+    .catering-management-scope .login-page {
+        min-height: 100vh;
+        gap: 18px;
+    }
+
+    .catering-management-scope .login-topbar {
+        flex-wrap: wrap;
+        padding: 12px 16px;
+    }
+
+    .catering-management-scope .login-brand img {
+        width: 142px;
+    }
+
+    .catering-management-scope .login-layout {
+        align-items: start;
+    }
+
+    .catering-management-scope .login-panel {
+        max-width: none;
+        justify-self: stretch;
+        padding: 24px;
+    }
+
     .catering-management-scope .app-shell {
         grid-template-columns: 1fr;
     }
@@ -1333,63 +1439,6 @@
     border-bottom-color: var(--primary-color);
 }
 
-/* Placeholder Screens */
-.catering-management-scope .placeholder-view {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 60px 40px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.catering-management-scope .placeholder-icon {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: var(--primary-light);
-    color: var(--primary-color);
-    display: grid;
-    place-items: center;
-    font-size: 32px;
-    animation: pulse 2s infinite;
-}
-
-.catering-management-scope .placeholder-view h2 {
-    margin: 0;
-    color: var(--text-primary);
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: 28px;
-    line-height: 1.08;
-    font-weight: 700;
-}
-
-.catering-management-scope .placeholder-view p {
-    margin: 0;
-    font-size: 15px;
-    color: var(--text-secondary);
-    max-width: 480px;
-    line-height: 1.6;
-}
-
-@keyframes pulse {
-    0% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
-    }
-    70% {
-        transform: scale(1.05);
-        box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
-    }
-    100% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-    }
-}
 
 @media (max-width: 1100px) {
     .catering-management-scope .dashboard-grid-content {

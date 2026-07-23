@@ -27,7 +27,6 @@ const roleLabels = {
   FINANCE_MANAGER: "Finans Yöneticisi",
   OPERATIONS_MANAGER: "Operasyon Yöneticisi",
   STUDENT: "Öğrenci",
-  SYSTEM_SUPPORT: "Sistem Destek",
   WAREHOUSE_STAFF: "Depo Görevlisi",
   PURCHASING_STAFF: "Satın Alma Sorumlusu",
   RESEARCHER: "Araştırmacı",
@@ -223,6 +222,22 @@ function NavIcon({ name }) {
         <circle cx="17" cy="19" r="1.5" />
       </svg>
     ),
+    "file-text": (
+      <svg {...common}>
+        <path d="M14 3H6v18h12V7l-4-4Z" />
+        <path d="M14 3v4h4" />
+        <path d="M8 12h8" />
+        <path d="M8 16h6" />
+      </svg>
+    ),
+    key: (
+      <svg {...common}>
+        <circle cx="8" cy="15" r="4" />
+        <path d="M11 12 21 2" />
+        <path d="m16 7 3 3" />
+        <path d="m18 5 2 2" />
+      </svg>
+    ),
   };
 
   return icons[name] || icons.home;
@@ -262,7 +277,8 @@ export default function Sidebar() {
   }, [isCateringUser, role]);
 
   const visibleRecordItems = useMemo(() => {
-    if (!isCateringUser || ["CATERING_ADMIN", "SUPER_ADMIN"].includes(role)) return recordItems;
+    if (!isCateringUser || role === "SUPER_ADMIN") return recordItems;
+    if (role === "CATERING_ADMIN") return recordItems.filter((item) => item.to !== "/students");
     return recordItems.filter((item) => recordRoles[item.to]?.includes(role));
   }, [isCateringUser, role]);
 
