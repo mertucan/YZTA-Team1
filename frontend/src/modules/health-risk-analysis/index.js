@@ -2,10 +2,10 @@ import HealthRiskAnalysisPage from "./pages/HealthRiskAnalysisPage";
 
 export const healthRiskAnalysisModule = {
   id: "health-risk-analysis",
-  label: "Saglik Risk Analizi",
-  icon: "+",
+  label: "Sağlık Risk Analizi",
+  icon: "risk",
   route: "/modules/health-risk-analysis",
-  description: "Toplu tuketim ve saglik bayraklarindan populasyon duzeyi risk egilimleri",
+  description: "Toplu tüketim ve sağlık bayraklarından popülasyon düzeyi risk eğilimleri",
   author: "Team",
   component: HealthRiskAnalysisPage,
 };

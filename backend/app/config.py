@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     research_export_link_ttl_hours: int = 24
     brevo_api_key: Optional[str] = None
     brevo_sender_email: Optional[str] = None
-    brevo_sender_name: str = "YemekhanAI"
+    brevo_sender_name: str = "TabloDot"
 
     @field_validator(
         "gemini_api_key",
@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     def _blank_string_to_default(cls, value: object, info: ValidationInfo) -> object:
         defaults = {
             "gemini_model": "gemini-2.5-flash",
-            "brevo_sender_name": "YemekhanAI",
+            "brevo_sender_name": "TabloDot",
         }
         if isinstance(value, str) and not value.strip():
             return defaults[info.field_name]

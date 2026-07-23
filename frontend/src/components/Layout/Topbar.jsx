@@ -1,25 +1,8 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useTheme } from "../../context/AppProviders";
 
 const CATERING_SESSION_KEY = "catering_mock_session";
-
-const labels = {
-  "/dashboard": "Dashboard",
-  "/ingredients": "Malzeme Deposu",
-  "/meals": "Yemek Kategorisi",
-  "/students": "Öğrenciler",
-  "/absences": "Devamsızlık",
-  "/modules/health-tracker": "Sağlık Takibi",
-  "/modules/student-health-flags": "Sağlık Bayrakları",
-  "/modules/ai-menu-planner": "AI Destekli Menü Planlayıcı",
-  "/modules/ai-menu-planner-oneri": "AI Destekli Menü Planlayıcı Öneri",
-  "/modules/catering-management": "Catering Dashboard",
-  "/modules/catering-management/universities": "Üniversiteler",
-  "/modules/catering-management/users": "Kullanıcılar",
-  "/modules/catering-management/menu-assignments": "Menü Atamaları",
-  "/modules/catering-management/companies": "Firmalar & Lisanslar",
-};
 
 function readCateringSession() {
   try {
@@ -31,7 +14,6 @@ function readCateringSession() {
 }
 
 export default function Topbar() {
-  const { pathname } = useLocation();
   const navigate = useNavigate();
   const { isDark, toggleTheme } = useTheme();
   const [cateringSession, setCateringSession] = useState(() => readCateringSession());
@@ -46,26 +28,18 @@ export default function Topbar() {
     };
   }, []);
 
-  const activeLabel =
-    labels[pathname] ??
-    Object.entries(labels).find(([route]) => pathname.startsWith(`${route}/`))?.[1] ??
-    "Sayfa";
-
   const handleCateringLogout = () => {
     localStorage.removeItem(CATERING_SESSION_KEY);
     window.dispatchEvent(new Event("catering-session-changed"));
     navigate("/modules/catering-management", { replace: true });
   };
 
+  const handleCateringLogin = () => {
+    navigate("/modules/catering-management");
+  };
+
   return (
     <header style={s.header}>
-      <div style={s.left}>
-        <span style={s.breadcrumb}>
-          YemekhanAI / <b style={s.breadcrumbStrong}>{activeLabel}</b>
-        </span>
-        <span style={s.schoolBadge}>🏛️ A Üniversitesi</span>
-      </div>
-
       <div style={s.actions}>
         <button
           type="button"
@@ -74,26 +48,44 @@ export default function Topbar() {
           title={isDark ? "Aydınlık moda geç" : "Karanlık moda geç"}
           style={{
             ...s.themeSwitch,
-            background: isDark ? "linear-gradient(135deg, #1e293b, #0f172a)" : "linear-gradient(135deg, #eef6ff, #ffffff)",
+            background: isDark ? "linear-gradient(135deg, #222321, #141414)" : "linear-gradient(135deg, #fff7ec, #ffffff)",
           }}
         >
-          <span style={{ ...s.switchIcon, left: 10 }}>☀️</span>
-          <span style={{ ...s.switchIcon, right: 10 }}>🌙</span>
+          <span style={{ ...s.switchTrackIcon, left: 10 }}><SunIcon /></span>
+          <span style={{ ...s.switchTrackIcon, right: 10 }}><MoonIcon /></span>
           <span style={{ ...s.switchKnob, transform: isDark ? "translateX(28px)" : "translateX(0)" }}>
-            {isDark ? "🌙" : "☀️"}
+            {isDark ? <MoonIcon /> : <SunIcon />}
           </span>
         </button>
 
-        <button onClick={() => navigate("/absences")} style={s.button}>✈️ Devamsızlık Ekle</button>
-        <button onClick={() => navigate("/ingredients")} style={{ ...s.button, ...s.primaryButton }}>+ Malzeme Ekle</button>
-
-        {cateringSession && (
+        {cateringSession ? (
           <button type="button" onClick={handleCateringLogout} style={s.logoutButton}>
-            ↩ Çıkış Yap
+            Çıkış Yap
+          </button>
+        ) : (
+          <button type="button" onClick={handleCateringLogin} style={s.loginButton}>
+            Giriş Yap
           </button>
         )}
       </div>
     </header>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2" />
+      <path d="M12 2v2.5M12 19.5V22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M2 12h2.5M19.5 12H22M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M20 14.4A7.8 7.8 0 0 1 9.6 4 8.8 8.8 0 1 0 20 14.4Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
@@ -105,22 +97,11 @@ const s = {
     height: 54,
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     position: "sticky",
     top: 0,
     zIndex: 5,
     boxShadow: "var(--shadow)",
-  },
-  left: { display: "flex", alignItems: "center", gap: 12 },
-  breadcrumb: { fontSize: 13, color: "var(--text2)" },
-  breadcrumbStrong: { color: "var(--text)", fontWeight: 500 },
-  schoolBadge: {
-    fontSize: 11,
-    color: "var(--text2)",
-    padding: "3px 10px",
-    background: "var(--surface2)",
-    border: "1px solid var(--border)",
-    borderRadius: 20,
   },
   actions: { display: "flex", alignItems: "center", gap: 8 },
   button: {
@@ -154,6 +135,19 @@ const s = {
     color: "var(--red)",
     cursor: "pointer",
   },
+  loginButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "7px 12px",
+    borderRadius: 8,
+    fontSize: 12,
+    fontWeight: 800,
+    border: "1px solid var(--accent)",
+    background: "var(--accent)",
+    color: "#fff",
+    cursor: "pointer",
+  },
   themeSwitch: {
     width: 66,
     height: 34,
@@ -164,23 +158,27 @@ const s = {
     alignItems: "center",
     padding: 3,
     cursor: "pointer",
-    boxShadow: "inset 0 1px 4px rgba(15, 23, 42, 0.12)",
+    color: "var(--text2)",
+    overflow: "hidden",
+    boxShadow: "inset 0 1px 4px rgba(15, 23, 42, 0.10), 0 8px 22px rgba(24, 24, 24, 0.06)",
   },
-  switchIcon: {
+  switchTrackIcon: {
     position: "absolute",
-    fontSize: 14,
-    lineHeight: 1,
-    opacity: 0.55,
-  },
-  switchKnob: {
-    width: 26,
-    height: 26,
-    borderRadius: "50%",
-    background: "var(--surface)",
     display: "grid",
     placeItems: "center",
-    fontSize: 13,
+    opacity: 0.38,
+    pointerEvents: "none",
+  },
+  switchKnob: {
+    width: 30,
+    height: 26,
+    borderRadius: 999,
+    background: "var(--surface)",
+    color: "var(--accent)",
+    display: "grid",
+    placeItems: "center",
     boxShadow: "0 4px 12px rgba(15, 23, 42, 0.22)",
-    transition: "transform .2s ease",
+    transition: "transform .22s ease, color .22s ease, background .22s ease",
+    zIndex: 1,
   },
 };
