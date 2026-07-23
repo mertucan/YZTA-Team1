@@ -144,8 +144,22 @@
 .topbar h1 {
   margin: 8px 0 8px;
   color: var(--text);
+  font-family: Georgia, "Times New Roman", serif;
   font-size: 34px;
   line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.panel-head h2,
+.chart-header h2,
+.form-title,
+.results-table-container h2 {
+  color: var(--text);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 19px;
+  line-height: 1.15;
+  font-weight: 700;
   letter-spacing: 0;
 }
 
@@ -411,8 +425,16 @@
 
 .gauge-card h2 {
   margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
   font-size: 19px;
+  line-height: 1.15;
+  font-weight: 700;
   color: var(--text);
+}
+
+.flag-name {
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.15;
 }
 
 .gauge-badge {

@@ -1,4 +1,4 @@
-# YemekhanAI – Üniversite Beslenme ve Sürdürülebilirlik Yönetim Sistemi
+# TabloDot – Üniversite Beslenme ve Sürdürülebilirlik Yönetim Sistemi
 
 > Yapay zeka destekli karar destek sistemi ile üniversite yemekhanelerinde menü planlama, stok yönetimi, öğrenci katılımı ve sürdürülebilirlik analizlerini destekleyen entegre bir platform.
 
@@ -20,13 +20,13 @@
 
 # 💡 Ürün Adı
 
-**YemekhanAI**
+**TabloDot**
 
 ---
 
 # 📝 Proje Tanımı
 
-YemekhanAI, üniversite yemekhanelerinin operasyonel süreçlerini veri odaklı yöntemlerle desteklemek amacıyla geliştirilen yapay zeka tabanlı bir karar destek sistemidir.
+TabloDot, üniversite yemekhanelerinin operasyonel süreçlerini veri odaklı yöntemlerle desteklemek amacıyla geliştirilen yapay zeka tabanlı bir karar destek sistemidir.
 
 Proje kapsamında farklı problem alanları değerlendirilmiş; veri erişilebilirliği, uygulanabilirlik ve teknik gerçekleştirilebilirlik kriterleri doğrultusunda kampüs beslenme yönetimi problemi Minimum Viable Product (MVP) olarak belirlenmiştir.
 
@@ -191,7 +191,7 @@ Sprint 1 kapsamında;
 - Farklı proje fikirleri değerlendirilmiştir.
 - Veri erişilebilirliği ve uygulanabilirlik analizleri yapılmıştır.
 - Kampüs beslenme yönetimi problemi MVP olarak seçilmiştir.
-- Ürün ismi **YemekhanAI** olarak belirlenmiştir.
+- Ürün ismi **TabloDot** olarak belirlenmiştir.
 - Sistem mimarisi planlanmıştır.
 - Kullanılacak teknolojiler belirlenmiştir.
 

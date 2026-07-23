@@ -17,7 +17,7 @@ from app.routers import (
 )
 from app.catering_management.integration import register_catering_routes
 
-app = FastAPI(title="YemekhanAI API", version="1.0.0")
+app = FastAPI(title="TabloDot API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -44,4 +44,4 @@ register_catering_routes(app)
 
 @app.get("/")
 def root():
-    return {"status": "ok", "project": "YemekhanAI"}
+    return {"status": "ok", "project": "TabloDot"}

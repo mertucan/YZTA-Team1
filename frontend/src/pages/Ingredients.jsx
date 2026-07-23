@@ -13,6 +13,7 @@ import {
   selfHealMarket,
 } from "../api/ingredients";
 import { todayLocal } from "../utils/date";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 const MONTHS = [
   { value: "", label: "—" },
@@ -94,15 +95,15 @@ function SeasonalBadge({ item }) {
   if (!local && !seasonal) return null;
   return (
     <span style={{ display: "inline-flex", gap: 4, flexWrap: "wrap" }}>
-      {local && <span style={badgeLocal}>🌍 Yerel</span>}
-      {seasonal && <span style={badgeSeason}>🌿 Mevsimde</span>}
+      {local && <span style={badgeLocal}>Yerel</span>}
+      {seasonal && <span style={badgeSeason}>Mevsimde</span>}
     </span>
   );
 }
 
 /* Malzeme adı ↔ A101 ürün adı kelime kapsaması. Backend ile aynı mantık: malzeme adının
-   anlamlı kelimelerinden biri ürün adında yoksa (ör. "Tavuk Göğsü" → "Tavuk Baget"'te
-   'göğsü' yok) eşleşme şüphelidir → 'doğrulama gerekli'. Sayfa yenilense de çalışır. */
+   anlamlı kelimelerinden biri ürün adında yoksa (ör. "Tavuk Göğsü" ile "Tavuk Baget"
+   eşleşmesinde 'göğsü' yok) eşleşme şüphelidir ve doğrulama gerekli sayılır. Sayfa yenilense de çalışır. */
 const A101_NOISE = new Set(["g", "gr", "kg", "ml", "l", "lt", "adet", "li", "lu", "x", "ve", "ile", "paket", "kutu"]);
 const trFold = (s) =>
   (s || "").toLocaleLowerCase("tr-TR")
@@ -130,31 +131,42 @@ function A101Cell({ rec, ingredientName, error, busy, onFetch }) {
     return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   };
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 120 }}>
+    <div style={marketCell}>
       {rec ? (
         <>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={marketCellRow}>
             {rec.unit_price != null ? (
-              <span style={{ fontFamily: "var(--mono)", fontWeight: 700, color: "var(--text)" }}>
+              <span style={marketPriceText}>
                 {Number(rec.unit_price).toFixed(2)} TL/{rec.pack_unit}
+                <a
+                  href={rec.product_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={`${rec.product_name || "Ürün"} — Migros sayfasını aç`}
+                  style={externalLinkBtn}
+                >
+                  ↗
+                </a>
               </span>
             ) : (
-              <span style={{ color: "var(--amber)", fontSize: 11 }} title="Ürünün satış birimi çözülemedi; yalnızca paket fiyatı gösteriliyor (uydurma birim fiyat üretilmedi)">
+              <span style={marketWarnText} title="Ürünün satış birimi çözülemedi; yalnızca paket fiyatı gösteriliyor (uydurma birim fiyat üretilmedi)">
                 {Number(rec.last_price || 0).toFixed(2)} TL / paket · birim yok
+                <a
+                  href={rec.product_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={`${rec.product_name || "Ürün"} — Migros sayfasını aç`}
+                  style={externalLinkBtn}
+                >
+                  ↗
+                </a>
               </span>
             )}
-            <a
-              href={rec.product_url}
-              target="_blank"
-              rel="noreferrer"
-              title={`${rec.product_name || "Ürün"} — Migros sayfasını aç`}
-              style={{ textDecoration: "none", fontSize: 12 }}
-            >
-              ↗
-            </a>
-            <button onClick={onFetch} disabled={busy} style={btnXs} title="Fiyatı yeniden çek">
-              {busy ? "…" : "⟳"}
-            </button>
+            <span style={marketActions}>
+              <button onClick={onFetch} disabled={busy} style={btnIconSm} title="Fiyatı yeniden çek">
+                {busy ? "..." : "Yenile"}
+              </button>
+            </span>
           </div>
           <div style={{ fontSize: 9, color: "var(--text3)" }} title={rec.product_name || ""}>
             {(rec.product_name || "").slice(0, 26)}{(rec.product_name || "").length > 26 ? "…" : ""}
@@ -164,14 +176,14 @@ function A101Cell({ rec, ingredientName, error, busy, onFetch }) {
               style={{ fontSize: 9, color: "var(--amber)", fontWeight: 700, maxWidth: 160 }}
               title={rec.warning || "Malzeme adı ile eşleşen ürün bulunamadı; yanlış ürün olabilir. Fiyat menü planlayıcıda kullanılmaz — linke tıklayıp doğrulayın."}
             >
-              ⚠ Doğrulama gerekli
+              Doğrulama gerekli
             </div>
           )}
-          <div style={{ fontSize: 9, color: "var(--text3)" }}>🕒 {fmtDate(rec.checked_at)}</div>
+          <div style={{ fontSize: 9, color: "var(--text3)" }}>Kontrol: {fmtDate(rec.checked_at)}</div>
         </>
       ) : (
-        <button onClick={onFetch} disabled={busy} style={btnXs}>
-          {busy ? "Çekiliyor…" : "🛒 Çek"}
+        <button onClick={onFetch} disabled={busy} style={btnIconSm}>
+          {busy ? "Çekiliyor..." : "Çek"}
         </button>
       )}
       {error && (
@@ -233,12 +245,12 @@ function BatchPanel({ ingredient, onStockChanged }) {
         >
           {ingredient.origin_region && (
             <span>
-              📍 <strong>Kaynak:</strong> {ingredient.origin_region}
+              <strong>Kaynak:</strong> {ingredient.origin_region}
             </span>
           )}
           {ingredient.season_start_month && ingredient.season_end_month && (
             <span>
-              📅 <strong>Sezon:</strong>{" "}
+              <strong>Sezon:</strong>{" "}
               {
                 MONTHS.find((m) => m.value === ingredient.season_start_month)
                   ?.label
@@ -256,7 +268,7 @@ function BatchPanel({ ingredient, onStockChanged }) {
                     fontWeight: 600,
                   }}
                 >
-                  ✓ Şu an mevsimde
+                  Şu an mevsimde
                 </span>
               ) : (
                 <span style={{ color: "var(--text3)", marginLeft: 4 }}>
@@ -267,7 +279,7 @@ function BatchPanel({ ingredient, onStockChanged }) {
           )}
           {ingredient.market_price > 0 && (
             <span>
-              💹 <strong>Piyasa fiyatı:</strong>{" "}
+              <strong>Piyasa fiyatı:</strong>{" "}
               {Number(ingredient.market_price).toFixed(2)} TL
               {ingredient.price > 0 &&
                 ingredient.market_price > ingredient.price && (
@@ -297,7 +309,7 @@ function BatchPanel({ ingredient, onStockChanged }) {
         {ingredient.name} — Alınan Partiler
       </div>
       {loading ? (
-        <div style={{ fontSize: 12, color: "var(--text3)" }}>Yükleniyor...</div>
+        <LoadingSpinner label="Parti bilgileri yükleniyor" minHeight={120} size={32} />
       ) : (
         <table
           style={{
@@ -426,6 +438,8 @@ export default function Ingredients() {
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [formOpen, setFormOpen] = useState(true);
+  const [stockListOpen, setStockListOpen] = useState(false);
   const [search, setSearch] = useState("");
 
   // A101 fiyat eşleştirmeleri: {ingredient_id: kayit}
@@ -459,7 +473,7 @@ export default function Ingredients() {
       setA101((prev) => ({ ...prev, [id]: rec }));
       if (rec.unit_changed) {
         const ing = items.find((i) => i.id === id);
-        setA101Notice(`ℹ️ "${ing?.name ?? "Malzeme"}" birimi Migros ile eşitlendi → ${rec.new_unit}`);
+        setA101Notice(`Bilgi: "${ing?.name ?? "Malzeme"}" birimi Migros ile eşitlendi: ${rec.new_unit}`);
       }
       refresh(); // birim ve/veya ortalama fiyat değişmiş olabilir
     } catch (err) {
@@ -483,14 +497,14 @@ export default function Ingredients() {
         setA101((prev) => ({ ...prev, [list[i].id]: rec }));
         setA101Errors((prev) => ({ ...prev, [list[i].id]: null }));
         ok += 1;
-        if (rec.unit_changed) changed.push(`${list[i].name} → ${rec.new_unit}`);
+        if (rec.unit_changed) changed.push(`${list[i].name}: ${rec.new_unit}`);
       } catch (err) {
         setA101Errors((prev) => ({ ...prev, [list[i].id]: err?.response?.data?.detail || "çekilemedi" }));
       }
     }
     setA101Progress("");
     setA101Busy(null);
-    let msg = `✓ ${ok}/${list.length} malzeme için Migros fiyatı çekildi.`;
+    let msg = `${ok}/${list.length} malzeme için Migros fiyatı çekildi.`;
     if (changed.length) msg += ` Birimi eşitlenenler: ${changed.join(", ")}.`;
     setA101Notice(msg);
     refresh();
@@ -509,11 +523,11 @@ export default function Ingredients() {
       setHealth(rep);
       setA101Notice(
         rep.api_ok && rep.price_field
-          ? `✓ Migros fiyat servisi sağlıklı (alan: ${rep.price_field}). Örnek: ${rep.sample?.name ?? "-"} → ${rep.sample?.unit_price ?? "-"} TL/${rep.sample?.unit ?? "-"}.`
-          : `⚠️ Migros servisi sorunlu: ${rep.message}`
+          ? `Migros fiyat servisi sağlıklı (alan: ${rep.price_field}). Örnek: ${rep.sample?.name ?? "-"}: ${rep.sample?.unit_price ?? "-"} TL/${rep.sample?.unit ?? "-"}.`
+          : `Migros servisi sorunlu: ${rep.message}`
       );
     } catch {
-      setA101Notice("⚠️ Sağlık kontrolü yapılamadı.");
+      setA101Notice("Sağlık kontrolü yapılamadı.");
     } finally {
       setHealing(false);
     }
@@ -559,6 +573,7 @@ export default function Ingredients() {
 
   const startEdit = (item) => {
     setEditingId(item.id);
+    setFormOpen(true);
     setForm({
       name: item.name,
       unit: item.unit,
@@ -584,30 +599,61 @@ export default function Ingredients() {
   const filtered = items.filter((i) =>
     i.name.toLowerCase().includes(search.toLowerCase()),
   );
+  const lowStockCount = items.filter((i) => Number(i.stock || 0) < 20).length;
+  const localCount = items.filter((i) => i.is_local).length;
+  const seasonalCount = items.filter(isInSeason).length;
+  const pricedCount = items.filter((i) => a101[i.id]).length;
+  const stockSummary = [
+    { label: "Toplam malzeme", value: items.length },
+    { label: "Kritik stok", value: lowStockCount, tone: lowStockCount ? "var(--red)" : "var(--ingredients-muted-strong)" },
+    { label: "Yerel ürün", value: localCount },
+    { label: "Migros fiyatlı", value: pricedCount },
+    { label: "Mevsimde", value: seasonalCount },
+  ];
 
   return (
     <div className="ingredients-page" style={page}>
       <div style={pageHeader}>
-        <div>
-          <div style={eyebrow}>Operasyon Paneli</div>
-          <div style={pageTitle}>Malzeme Deposu</div>
-        </div>
-        <div style={pageSubtitle}>Güncel stok durumu</div>
+        <div style={pageTitle}>Malzeme Deposu</div>
+      </div>
+
+      <div style={summaryGrid}>
+        {stockSummary.map((item) => (
+          <div key={item.label} style={summaryCard}>
+            <div style={summaryLabel}>{item.label}</div>
+            <div style={{ ...summaryValue, color: item.tone || "var(--ingredients-text)" }}>
+              {item.value}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* ── Form ── */}
       <div style={card}>
-        <div style={cardHd}>
-          {editingId ? "✏️ Malzemeyi Düzenle" : "➕ Yeni Malzeme Ekle"}
-        </div>
+        <button
+          type="button"
+          style={accordionHeader}
+          onClick={() => setFormOpen((value) => !value)}
+          aria-expanded={formOpen}
+        >
+          <div>
+            <div style={cardTitle}>
+              {editingId ? "Malzemeyi Düzenle" : "Yeni Malzeme Ekle"}
+            </div>
+            <div style={cardHint}>Besin değeri, birim, sezon ve tedarik bilgilerini tek kayıtta tutun.</div>
+          </div>
+          <span style={accordionToggle}>{formOpen ? "Kapat" : "Aç"}</span>
+        </button>
 
+        {formOpen && (
+          <>
         {/* Temel bilgiler */}
         <div
           style={{
-            padding: "16px 18px 8px",
+            padding: "16px 18px 10px",
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-            gap: 10,
+            gap: 12,
             alignItems: "end",
           }}
         >
@@ -656,27 +702,18 @@ export default function Ingredients() {
         <div
           style={{
             margin: "0 18px 8px",
-            borderTop: "1px solid var(--border2)",
-            paddingTop: 12,
+            borderTop: "1px solid var(--ingredients-row-border)",
+            paddingTop: 14,
           }}
         >
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-              color: "var(--text3)",
-              textTransform: "uppercase",
-              letterSpacing: ".06em",
-              marginBottom: 10,
-            }}
-          >
-            🌿 Mevsimsel & Yerellik Bilgileri
+          <div style={sectionTitle}>
+            Mevsimsel & Yerellik Bilgileri
           </div>
           <div
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-              gap: 10,
+              gap: 12,
               alignItems: "end",
             }}
           >
@@ -794,7 +831,7 @@ export default function Ingredients() {
         </div>
 
         {/* Kaydet butonu */}
-        <div style={{ padding: "8px 18px 18px", display: "flex", gap: 8 }}>
+        <div style={formActions}>
           <button onClick={handleSubmit} style={btnPrimary}>
             {editingId ? "Güncelle" : "Ekle"}
           </button>
@@ -804,19 +841,27 @@ export default function Ingredients() {
             </button>
           )}
         </div>
+          </>
+        )}
       </div>
 
       {/* ── Tablo ── */}
       <div style={card}>
-        <div style={{ ...cardHd, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <span>
-            🗃️ Stok Listesi{" "}
-            <span style={{ fontWeight: 400, color: "var(--text3)" }}>
-              (her malzeme kendi partilerinin toplamıdır — detay için satıra
-              tıklayın)
-            </span>
-          </span>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <button
+          type="button"
+          style={accordionHeader}
+          onClick={() => setStockListOpen((value) => !value)}
+          aria-expanded={stockListOpen}
+        >
+          <div>
+            <div style={cardTitle}>Stok Listesi</div>
+            <div style={cardHint}>Satıra tıklayarak parti detaylarını ve alım kayıtlarını açabilirsiniz.</div>
+          </div>
+          <span style={accordionToggle}>{stockListOpen ? "Kapat" : "Aç"}</span>
+        </button>
+        {stockListOpen && (
+          <>
+          <div style={stockToolbar}>
             {health && (
               <span
                 title={health.message}
@@ -828,7 +873,7 @@ export default function Ingredients() {
                   background: "var(--surface2)",
                 }}
               >
-                {health.api_ok && health.price_field ? "🟢 Migros servisi sağlıklı" : "🔴 Migros servisi sorunlu"}
+                {health.api_ok && health.price_field ? "Migros servisi sağlıklı" : "Migros servisi sorunlu"}
                 {health.product_count ? ` · ${health.product_count} ürün` : ""}
               </span>
             )}
@@ -838,7 +883,7 @@ export default function Ingredients() {
               style={{ ...btnSm, opacity: healing ? 0.7 : 1 }}
               title="Scraper'ı sağlık kontrolünden geçirir; fiyat çıkaramıyorsa yeni strateji öğrenerek kendini onarır"
             >
-              {healing ? "🔧 Onarılıyor..." : "🔧 Scraper'ı Onar"}
+              {healing ? "Onarılıyor..." : "Scraper'ı Onar"}
             </button>
             <button
               onClick={handleFetchAllA101}
@@ -846,28 +891,25 @@ export default function Ingredients() {
               style={{ ...btnPrimary, opacity: a101Busy !== null ? 0.7 : 1 }}
               title="Tüm malzemeler için Migros'tan güncel fiyat çeker (birim otomatik eşitlenir)"
             >
-              {a101Busy === "all" ? `🛒 Çekiliyor... ${a101Progress}` : "🛒 Migros Fiyat Çek"}
+              {a101Busy === "all" ? `Çekiliyor... ${a101Progress}` : "Migros Fiyat Çek"}
             </button>
           </div>
-        </div>
         {a101Notice && (
-          <div style={{ padding: "8px 18px", fontSize: 12, color: "var(--text2)", borderBottom: "1px solid var(--border)", background: "var(--surface2)" }}>
+          <div style={noticeBar}>
             {a101Notice}
           </div>
         )}
-        <div style={{ padding: "12px 18px" }}>
+        <div style={searchBar}>
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="🔍 Malzeme ara..."
+            placeholder="Malzeme ara..."
             style={input}
           />
         </div>
         {loading ? (
-          <div style={{ padding: 24, color: "var(--text3)" }}>
-            Yükleniyor...
-          </div>
+          <LoadingSpinner label="Stok listesi yükleniyor" minHeight={180} size={38} />
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table
@@ -990,6 +1032,8 @@ export default function Ingredients() {
             </table>
           </div>
         )}
+          </>
+        )}
       </div>
     </div>
   );
@@ -1007,34 +1051,49 @@ const pageHeader = {
   justifyContent: "space-between",
   alignItems: "end",
   gap: 16,
-  marginBottom: 20,
-};
-const eyebrow = {
-  color: "var(--ingredients-accent)",
-  fontSize: 11,
-  fontWeight: 900,
-  letterSpacing: ".08em",
-  textTransform: "uppercase",
-  marginBottom: 4,
+  marginBottom: 14,
 };
 const pageTitle = {
   color: "var(--ingredients-text)",
   fontFamily: "Georgia, 'Times New Roman', serif",
-  fontSize: 30,
+  fontSize: 34,
   lineHeight: 1.05,
   fontWeight: 700,
 };
-const pageSubtitle = {
-  color: "var(--ingredients-muted)",
-  fontSize: 13,
-  fontWeight: 700,
-  paddingBottom: 3,
+const summaryGrid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+  gap: 12,
+  marginBottom: 16,
+};
+const summaryCard = {
+  background: "var(--ingredients-card)",
+  border: "1px solid var(--ingredients-border)",
+  borderRadius: 8,
+  padding: "13px 15px",
+  boxShadow: "0 10px 26px rgba(24, 24, 24, 0.06)",
+  backdropFilter: "blur(10px)",
+};
+const summaryLabel = {
+  color: "var(--ingredients-soft)",
+  fontSize: 10,
+  fontWeight: 800,
+  textTransform: "uppercase",
+  letterSpacing: ".06em",
+  marginBottom: 5,
+};
+const summaryValue = {
+  color: "var(--ingredients-text)",
+  fontSize: 24,
+  lineHeight: 1,
+  fontWeight: 800,
+  fontFamily: "var(--mono)",
 };
 const card = {
   background: "var(--ingredients-card)",
   border: "1px solid var(--ingredients-border)",
-  borderRadius: 8,
-  boxShadow: "var(--ingredients-shadow)",
+  borderRadius: 10,
+  boxShadow: "0 14px 36px rgba(24, 24, 24, 0.07)",
   marginBottom: 16,
   backdropFilter: "blur(10px)",
   overflow: "hidden",
@@ -1046,6 +1105,134 @@ const cardHd = {
   color: "var(--ingredients-text)",
   fontSize: 13,
   fontWeight: 800,
+};
+const cardHdSplit = {
+  padding: "15px 18px 13px",
+  borderBottom: "1px solid var(--ingredients-border)",
+  background: "var(--ingredients-card-head)",
+  color: "var(--ingredients-text)",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 12,
+  flexWrap: "wrap",
+};
+const accordionHeader = {
+  width: "100%",
+  padding: "15px 18px 13px",
+  border: "none",
+  borderBottom: "1px solid var(--ingredients-border)",
+  background: "var(--ingredients-card-head)",
+  color: "var(--ingredients-text)",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 12,
+  textAlign: "left",
+  cursor: "pointer",
+};
+const accordionToggle = {
+  flexShrink: 0,
+  minWidth: 64,
+  textAlign: "center",
+  background: "var(--ingredients-button-soft)",
+  border: "1px solid var(--ingredients-border-strong)",
+  color: "var(--ingredients-muted-strong)",
+  borderRadius: 999,
+  padding: "5px 12px",
+  fontSize: 11,
+  fontWeight: 800,
+};
+const cardTitle = {
+  color: "var(--ingredients-text)",
+  fontFamily: "Georgia, 'Times New Roman', serif",
+  fontSize: 18,
+  lineHeight: 1.15,
+  fontWeight: 700,
+};
+const cardHint = {
+  color: "var(--ingredients-soft)",
+  fontSize: 12,
+  marginTop: 4,
+  fontWeight: 600,
+};
+const sectionTitle = {
+  color: "var(--ingredients-soft)",
+  fontSize: 10,
+  fontWeight: 900,
+  textTransform: "uppercase",
+  letterSpacing: ".07em",
+  marginBottom: 10,
+};
+const formActions = {
+  padding: "10px 18px 18px",
+  display: "flex",
+  gap: 8,
+  borderTop: "1px solid var(--ingredients-row-border)",
+};
+const searchBar = {
+  padding: "12px 18px",
+  background: "var(--ingredients-card-head)",
+  borderBottom: "1px solid var(--ingredients-border)",
+};
+const noticeBar = {
+  padding: "9px 18px",
+  fontSize: 12,
+  color: "var(--ingredients-muted)",
+  borderBottom: "1px solid var(--ingredients-border)",
+  background: "var(--ingredients-badge-accent-bg)",
+};
+const stockToolbar = {
+  padding: "12px 18px",
+  display: "flex",
+  gap: 8,
+  alignItems: "center",
+  justifyContent: "flex-end",
+  flexWrap: "wrap",
+  background: "var(--ingredients-card-head)",
+  borderBottom: "1px solid var(--ingredients-border)",
+};
+const marketCell = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 3,
+  minWidth: 190,
+};
+const marketCellRow = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 8,
+};
+const marketPriceText = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+  fontFamily: "var(--mono)",
+  fontWeight: 800,
+  color: "var(--ingredients-text)",
+  whiteSpace: "nowrap",
+};
+const marketWarnText = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+  color: "var(--amber)",
+  fontSize: 11,
+  minWidth: 0,
+};
+const marketActions = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 5,
+  flexShrink: 0,
+};
+const externalLinkBtn = {
+  textDecoration: "none",
+  color: "var(--ingredients-accent)",
+  fontSize: 12,
+  fontWeight: 800,
+  lineHeight: 1,
 };
 const fieldLabel = {
   fontSize: 11,
@@ -1087,7 +1274,7 @@ const th = {
   color: "var(--ingredients-soft)",
   textTransform: "uppercase",
   letterSpacing: ".06em",
-  padding: "10px 18px",
+  padding: "11px 16px",
   background: "var(--ingredients-table-head)",
   borderBottom: "1px solid var(--ingredients-border)",
 };
@@ -1102,7 +1289,7 @@ const thSm = {
   borderBottom: "1px solid var(--ingredients-border)",
 };
 const td = {
-  padding: "10px 18px",
+  padding: "11px 16px",
   fontSize: 12,
   color: "var(--ingredients-muted)",
   borderBottom: "1px solid var(--ingredients-row-border)",
@@ -1151,6 +1338,18 @@ const btnXs = {
   borderRadius: 5,
   fontSize: 10,
   cursor: "pointer",
+};
+const btnIconSm = {
+  background: "var(--ingredients-button-soft)",
+  border: "1px solid var(--ingredients-border-strong)",
+  color: "var(--ingredients-muted-strong)",
+  minHeight: 24,
+  padding: "3px 9px",
+  borderRadius: 999,
+  fontSize: 10,
+  fontWeight: 800,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
 };
 const badgeLocal = {
   background: "var(--ingredients-badge-neutral-bg)",

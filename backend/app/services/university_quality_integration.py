@@ -245,7 +245,7 @@ def _build_insight_prompt(payload: dict[str, Any]) -> str:
     )
     return f"""
 Sen bir üniversite sürdürülebilirlik ve kurumsal sıralama başvuru danışmanısın.
-YemekhanAI aşağıdaki kurum içi beslenme kalite metriklerini üretti.
+TabloDot aşağıdaki kurum içi beslenme kalite metriklerini üretti.
 
 Kuruluş: {dataset.get("organization_name")}
 Metodoloji dayanağı: {dataset.get("methodology_basis")}

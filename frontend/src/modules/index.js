@@ -1,7 +1,7 @@
 ﻿import { healthTrackerModule } from "./health-tracker";
 import { healthRiskAnalysisModule } from "./health-risk-analysis";
 import { studentHealthFlagsModule } from "./student-health-flags";
-import { aiMenuPlannerModule, aiMenuPlannerSuggestionModule } from "./ai-menu-planner";
+import { aiMenuPlannerModule } from "./ai-menu-planner";
 import { cateringManagementModule } from "./catering-management-module";
 import { researchExportModule } from "./research-export";
 import { universityQualityIntegrationModule } from "./university-quality-integration";
@@ -16,7 +16,6 @@ export const modules = [
   healthRiskAnalysisModule,
   studentHealthFlagsModule,
   aiMenuPlannerModule,
-  aiMenuPlannerSuggestionModule,
   researchExportModule,
   universityQualityIntegrationModule,
   partnerProductsModule,

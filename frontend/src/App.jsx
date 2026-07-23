@@ -39,7 +39,7 @@ function WelcomePage() {
           </p>
           <div className="welcome-actions">
             <Link to="/modules/catering-management" className="welcome-primary">Giriş Yap</Link>
-            <Link to="/dashboard" className="welcome-secondary">Ana Dashboard</Link>
+            <Link to="/dashboard" className="welcome-secondary">Ana Panel</Link>
           </div>
         </section>
 
@@ -80,15 +80,15 @@ function WelcomePage() {
 
 function DualWelcomePage() {
   const features = [
-    ["AI menu planlama", "Stok, butce ve besin degerleriyle haftalik menu uretimi."],
-    ["Catering yonetimi", "Firma, lisans, universite ve kullanici operasyonlari tek ekranda."],
-    ["Ogrenci takibi", "Devamsizlik, saglik uyarilari ve yemek tuketim verileriyle gorunurluk."],
+    ["AI menü planlama", "Stok, bütçe ve besin değerleriyle haftalık menü üretimi."],
+    ["Catering yönetimi", "Firma, lisans, üniversite ve kullanıcı operasyonları tek ekranda."],
+    ["Öğrenci takibi", "Devamsızlık, sağlık uyarıları ve yemek tüketim verileriyle görünürlük."],
   ];
 
   const metrics = [
-    ["Aktif Menu", "12"],
-    ["Universite", "13"],
-    ["Ogrenci", "579K"],
+    ["Aktif Menü", "12"],
+    ["Üniversite", "13"],
+    ["Öğrenci", "579K"],
     ["Lisans", "Aktif"],
   ];
 
@@ -98,25 +98,25 @@ function DualWelcomePage() {
         <section style={homeStyles.darkPanel}>
           <header style={homeStyles.darkNav}>
             <img src={tabloDotLogo} alt="TabloDot" style={homeStyles.darkLogo} />
-            <Link to="/modules/catering-management" style={homeStyles.darkLogin}>Giris Yap</Link>
+            <Link to="/modules/catering-management" style={homeStyles.darkLogin}>Giriş Yap</Link>
           </header>
 
           <div style={homeStyles.darkGrid}>
             <div>
-              <h1 style={homeStyles.darkTitle}>Kampus yemek operasyonlarini daha akilli yonetin.</h1>
+              <h1 style={homeStyles.darkTitle}>Kampüs yemek operasyonlarını daha akıllı yönetin.</h1>
               <p style={homeStyles.darkText}>
-                TabloDot; malzeme stogu, AI menu planlama, ogrenci verileri ve catering
-                yonetimini sade bir panelde birlestirir. Ekipleriniz daha hizli karar alir,
-                ogrencileriniz daha dengeli menulere ulasir.
+                TabloDot; malzeme stoğu, AI menü planlama, öğrenci verileri ve catering
+                yönetimini sade bir panelde birleştirir. Ekipleriniz daha hızlı karar alır,
+                öğrencileriniz daha dengeli menülere ulaşır.
               </p>
               <div style={homeStyles.darkActions}>
-                <Link to="/modules/catering-management" style={homeStyles.darkPrimary}>Giris Yap / Kayit Ol</Link>
-                <Link to="/dashboard" style={homeStyles.darkSecondary}>Ana Dashboard</Link>
+                <Link to="/modules/catering-management" style={homeStyles.darkPrimary}>Giriş Yap / Kayıt Ol</Link>
+                <Link to="/dashboard" style={homeStyles.darkSecondary}>Ana Panel</Link>
               </div>
             </div>
 
             <div style={homeStyles.darkSummary}>
-              <strong style={homeStyles.summaryTitle}>Canli Operasyon Ozeti</strong>
+              <strong style={homeStyles.summaryTitle}>Canlı Operasyon Özeti</strong>
               <div style={homeStyles.darkMetricGrid}>
                 {metrics.map(([label, value], index) => (
                   <div key={label} style={homeStyles.darkMetric}>
@@ -155,23 +155,23 @@ function DualWelcomePage() {
         <aside style={homeStyles.lightPanel}>
           <header style={homeStyles.lightNav}>
             <img src={tabloDotLogo} alt="TabloDot" style={homeStyles.lightLogo} />
-            <Link to="/modules/catering-management" style={homeStyles.lightLogin}>Giris Yap</Link>
+            <Link to="/modules/catering-management" style={homeStyles.lightLogin}>Giriş Yap</Link>
           </header>
 
           <section style={homeStyles.lightHero}>
-            <h2 style={homeStyles.lightTitle}>Kampus yemek operasyonlarini daha akilli yonetin.</h2>
+            <h2 style={homeStyles.lightTitle}>Kampüs yemek operasyonlarını daha akıllı yönetin.</h2>
             <p style={homeStyles.lightText}>
-              TabloDot; malzeme stogu, AI menu planlama, ogrenci verileri ve catering
-              yonetimini sade bir panelde birlestirir. Ekipleriniz daha hizli karar alir.
+              TabloDot; malzeme stoğu, AI menü planlama, öğrenci verileri ve catering
+              yönetimini sade bir panelde birleştirir. Ekipleriniz daha hızlı karar alır.
             </p>
             <div style={homeStyles.lightActions}>
-              <Link to="/modules/catering-management" style={homeStyles.lightPrimary}>Giris Yap</Link>
-              <Link to="/dashboard" style={homeStyles.lightSecondary}>Ana Dashboard</Link>
+              <Link to="/modules/catering-management" style={homeStyles.lightPrimary}>Giriş Yap</Link>
+              <Link to="/dashboard" style={homeStyles.lightSecondary}>Ana Panel</Link>
             </div>
           </section>
 
           <section style={homeStyles.lightSummary}>
-            <strong style={homeStyles.lightSummaryTitle}>Canli Operasyon Ozeti</strong>
+            <strong style={homeStyles.lightSummaryTitle}>Canlı Operasyon Özeti</strong>
             <div style={homeStyles.lightMetricGrid}>
               {metrics.map(([label, value]) => (
                 <div key={label} style={homeStyles.lightMetric}>
@@ -224,8 +224,8 @@ function LegacyWelcomePage() {
   return (
     <div style={welcomeStyles.page}>
       <header style={welcomeStyles.nav}>
-        <div style={welcomeStyles.brandMark}>Y</div>
-        <strong style={welcomeStyles.brandText}>YemekhanAI</strong>
+        <div style={welcomeStyles.brandMark}>T</div>
+        <strong style={welcomeStyles.brandText}>TabloDot</strong>
         <Link to="/modules/catering-management" style={welcomeStyles.navButton}>Giriş Yap</Link>
       </header>
 
@@ -235,13 +235,13 @@ function LegacyWelcomePage() {
             <div style={welcomeStyles.badge}>Üniversite Beslenme Sistemi</div>
             <h1 style={welcomeStyles.title}>Kampüs yemek operasyonlarını daha akıllı yönetin.</h1>
             <p style={welcomeStyles.text}>
-              YemekhanAI; malzeme stoğu, AI menü planlama, öğrenci verileri ve catering
+              TabloDot; malzeme stoğu, AI menü planlama, öğrenci verileri ve catering
               yönetimini sade bir panelde birleştirir. Ekipleriniz daha hızlı karar alır,
               öğrencileriniz daha dengeli menülere ulaşır.
             </p>
             <div style={welcomeStyles.actions}>
               <Link to="/modules/catering-management" style={welcomeStyles.primary}>Giriş Yap / Kayıt Ol</Link>
-              <Link to="/dashboard" style={welcomeStyles.secondary}>Ana Dashboard</Link>
+              <Link to="/dashboard" style={welcomeStyles.secondary}>Ana Panel</Link>
             </div>
           </div>
 
@@ -332,7 +332,7 @@ const homeStyles = {
   },
   darkPanel: {
     overflow: "hidden",
-    border: "3px solid #5b54d8",
+    border: "1px solid rgba(232, 128, 0, 0.34)",
     borderRadius: 8,
     padding: "28px 24px 32px",
     background:
@@ -400,7 +400,7 @@ const homeStyles = {
     minWidth: 214,
     padding: "0 22px",
     borderRadius: 8,
-    background: "#ee7f39",
+    background: "#e88000",
     color: "white",
     fontWeight: 900,
     textDecoration: "none",
@@ -443,7 +443,7 @@ const homeStyles = {
     minHeight: 70,
     padding: 10,
     borderRadius: 8,
-    background: "rgba(255, 255, 255, 0.06)",
+    background: "rgba(255, 255, 255, 0.10)",
     display: "flex",
     alignItems: "center",
     gap: 8,
@@ -455,8 +455,8 @@ const homeStyles = {
     borderRadius: 6,
     display: "grid",
     placeItems: "center",
-    background: "rgba(59, 130, 246, 0.17)",
-    color: "#60a5fa",
+    background: "rgba(232, 128, 0, 0.12)",
+    color: "#e88000",
     fontSize: 11,
     fontWeight: 900,
     flexShrink: 0,
@@ -493,13 +493,13 @@ const homeStyles = {
     width: "50%",
     height: "100%",
     borderRadius: "5px 5px 0 0",
-    background: "#3b82f6",
+    background: "#8a8f78",
   },
   orangeBar: {
     width: "50%",
     height: "72%",
     borderRadius: "5px 5px 0 0",
-    background: "#ee7f39",
+    background: "#e88000",
   },
   darkFeatures: {
     display: "grid",
@@ -511,7 +511,7 @@ const homeStyles = {
     minHeight: 150,
     borderRadius: 8,
     border: "1px solid rgba(255, 255, 255, 0.1)",
-    background: "rgba(255, 255, 255, 0.045)",
+    background: "rgba(255, 255, 255, 0.10)",
     padding: 18,
   },
   featurePlus: {
@@ -520,8 +520,8 @@ const homeStyles = {
     borderRadius: 8,
     display: "grid",
     placeItems: "center",
-    background: "#a7f3c4",
-    color: "#166534",
+    background: "rgba(232, 128, 0, 0.10)",
+    color: "#b76500",
     fontSize: 22,
     fontWeight: 900,
     marginBottom: 22,
@@ -575,7 +575,7 @@ const homeStyles = {
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 8,
-    background: "#ee7f39",
+    background: "#e88000",
     color: "#fff",
     textDecoration: "none",
     fontWeight: 900,
@@ -611,7 +611,7 @@ const homeStyles = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#ee7f39",
+    background: "#e88000",
     color: "#fff",
     textDecoration: "none",
     fontWeight: 900,
@@ -623,8 +623,8 @@ const homeStyles = {
     alignItems: "center",
     justifyContent: "center",
     background: "#fff",
-    color: "#c66f35",
-    border: "2px solid #f0c8ae",
+    color: "#5b4c08",
+    border: "2px solid rgba(183, 154, 18, 0.22)",
     textDecoration: "none",
     fontWeight: 900,
   },
@@ -684,7 +684,7 @@ const homeStyles = {
   lightOrangeBar: {
     width: "50%",
     borderRadius: "5px 5px 0 0",
-    background: "#ee7f39",
+    background: "#e88000",
   },
   lightGrayBar: {
     width: "50%",
@@ -711,8 +711,8 @@ const homeStyles = {
     borderRadius: 8,
     display: "grid",
     placeItems: "center",
-    background: "#fff3ea",
-    color: "#d97738",
+    background: "rgba(232, 128, 0, 0.10)",
+    color: "#b76500",
     fontSize: 23,
     fontWeight: 900,
     marginBottom: 14,
@@ -760,7 +760,7 @@ const welcomeStyles = {
   page: {
     minHeight: "100vh",
     padding: "24px",
-    background: "linear-gradient(135deg, #f8fafc 0%, #eef6ff 48%, #ecfdf5 100%)",
+    background: "linear-gradient(135deg, #fafafa 0%, #f4f5f2 48%, #ffffff 100%)",
     color: "var(--text)",
   },
   nav: {
@@ -817,7 +817,7 @@ const welcomeStyles = {
     alignItems: "center",
     padding: "8px 12px",
     borderRadius: 999,
-    background: "rgba(37, 99, 235, 0.09)",
+    background: "rgba(232, 128, 0, 0.10)",
     color: "var(--accent)",
     fontSize: 12,
     fontWeight: 900,
@@ -917,12 +917,12 @@ const welcomeStyles = {
     gap: 14,
     padding: "18px 16px",
     borderRadius: 8,
-    background: "linear-gradient(180deg, #eff6ff 0%, #f8fafc 100%)",
+    background: "linear-gradient(180deg, #fff7ec 0%, #f8f8f4 100%)",
   },
   chartBar: {
     flex: 1,
     borderRadius: "8px 8px 4px 4px",
-    background: "linear-gradient(180deg, #22d3ee 0%, #2563eb 100%)",
+    background: "linear-gradient(180deg, #e88000 0%, #c96f00 100%)",
   },
   features: {
     display: "grid",

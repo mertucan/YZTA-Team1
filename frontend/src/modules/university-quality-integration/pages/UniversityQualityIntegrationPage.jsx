@@ -6,6 +6,7 @@ import {
   getQualityExportPreview,
   getRankingOrganizations,
 } from "../api/universityQualityIntegration";
+import LoadingSpinner from "../../../components/LoadingSpinner";
 
 const emptyPreview = {
   organization: null,
@@ -84,6 +85,7 @@ export default function UniversityQualityIntegrationPage() {
   const [exporting, setExporting] = useState(false);
   const [message, setMessage] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [explainerOpen, setExplainerOpen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiInsights, setAiInsights] = useState(null);
 
@@ -142,11 +144,11 @@ export default function UniversityQualityIntegrationPage() {
     setExporting(true);
     downloadQualityExport({ ...filters, exportFormat })
       .then(() => {
-        setMessage({ type: "success", text: "Export dosyası oluşturuldu ve denetim kaydı eklendi." });
+        setMessage({ type: "success", text: "Dışa aktarım dosyası oluşturuldu ve denetim kaydı eklendi." });
         refreshHistory();
       })
       .catch((error) => {
-        setMessage({ type: "error", text: error.response?.data?.detail || "Export oluşturulamadı." });
+        setMessage({ type: "error", text: error.response?.data?.detail || "Dışa aktarım oluşturulamadı." });
       })
       .finally(() => setExporting(false));
   };
@@ -183,19 +185,26 @@ export default function UniversityQualityIntegrationPage() {
       </div>
 
       <section style={s.explainer}>
-        <strong>Bu modül ne yapar?</strong>
-        <span>
-          Üniversitenin yemekhane ve menü verilerinden sağlık, sürdürülebilirlik, veri kapsama ve operasyonel kalite metrikleri üretir. QS Sustainability,
-          THE Impact Rankings ve UI GreenMetric gibi kuruluşların resmi metodoloji başlıklarına eşlenen doğrulanabilir kanıt veri seti hazırlar.
-          Nihai sıralama puanını hesaplamaz; resmi başvuruda kullanılabilecek kurumsal kanıt paketini CSV veya JSON olarak dışa aktarır.
-        </span>
-        <div style={s.quickLinks}>
-          {methodologyReferences.map((reference) => (
-            <a key={reference.organization} href={reference.url} target="_blank" rel="noreferrer" style={s.quickLink}>
-              {reference.organization}
-            </a>
-          ))}
-        </div>
+        <button type="button" style={s.explainerHeader} onClick={() => setExplainerOpen((open) => !open)}>
+          <strong>Bu modül ne yapar?</strong>
+          <span style={s.historyToggle}>{explainerOpen ? "Kapat" : "Detayları Aç"}</span>
+        </button>
+        {explainerOpen && (
+          <>
+            <span>
+              Üniversitenin yemekhane ve menü verilerinden sağlık, sürdürülebilirlik, veri kapsama ve operasyonel kalite metrikleri üretir. QS Sustainability,
+              THE Impact Rankings ve UI GreenMetric gibi kuruluşların resmi metodoloji başlıklarına eşlenen doğrulanabilir kanıt veri seti hazırlar.
+              Nihai sıralama puanını hesaplamaz; resmi başvuruda kullanılabilecek kurumsal kanıt paketini CSV veya JSON olarak dışa aktarır.
+            </span>
+            <div style={s.quickLinks}>
+              {methodologyReferences.map((reference) => (
+                <a key={reference.organization} href={reference.url} target="_blank" rel="noreferrer" style={s.quickLink}>
+                  {reference.organization}
+                </a>
+              ))}
+            </div>
+          </>
+        )}
       </section>
 
       <section style={s.toolbar}>
@@ -228,7 +237,7 @@ export default function UniversityQualityIntegrationPage() {
           ))}
         </div>
         <button style={{ ...s.button, opacity: exporting || !preview.export_allowed ? 0.7 : 1 }} disabled={exporting || loading || !preview.export_allowed} onClick={handleExport}>
-          {exporting ? "Hazırlanıyor..." : "Export Et"}
+          {exporting ? "Hazırlanıyor..." : "Dışa Aktar"}
         </button>
       </section>
 
@@ -284,15 +293,15 @@ export default function UniversityQualityIntegrationPage() {
         <section style={s.panel}>
           <div style={s.panelTitle}>Kurumsal Veri Seti</div>
           <div style={s.metricGrid}>
-            <Metric label="Menü" value={loading ? "..." : dataset.menu_count} />
-            <Metric label="Onaylı" value={loading ? "..." : dataset.approved_menu_count} />
-            <Metric label="Kalem" value={loading ? "..." : dataset.item_count} />
-            <Metric label="Dönem" value={loading ? "..." : periodLabel} wide />
+            <Metric label="Menü" value={loading ? <LoadingSpinner minHeight={24} size={22} /> : dataset.menu_count} />
+            <Metric label="Onaylı" value={loading ? <LoadingSpinner minHeight={24} size={22} /> : dataset.approved_menu_count} />
+            <Metric label="Kalem" value={loading ? <LoadingSpinner minHeight={24} size={22} /> : dataset.item_count} />
+            <Metric label="Dönem" value={loading ? <LoadingSpinner minHeight={24} size={22} /> : periodLabel} wide />
           </div>
           <div style={{ ...s.notice, ...(preview.export_allowed ? s.noticeOk : s.noticeWarn) }}>
             {preview.export_allowed
               ? dataset.methodology_note || "Veri seti resmi başlıklara kanıt olarak hazır. Dosya kişi verisi içermez."
-              : preview.suppression_reason || "Export için yeterli menü verisi yok."}
+              : preview.suppression_reason || "Dışa aktarım için yeterli menü verisi yok."}
           </div>
         </section>
 
@@ -368,7 +377,7 @@ export default function UniversityQualityIntegrationPage() {
 
       <section style={{ ...s.panel, marginTop: 16 }}>
         <button type="button" style={s.historyHeader} onClick={() => setHistoryOpen((open) => !open)}>
-          <span style={s.panelTitleInline}>Son Exportlar</span>
+          <span style={s.panelTitleInline}>Son Dışa Aktarımlar</span>
           <span style={s.historyToggle}>{historyOpen ? "Kapat" : `Aç (${history.length})`}</span>
         </button>
         {historyOpen && (
@@ -429,18 +438,19 @@ function formatDate(value) {
 const s = {
   page: { display: "grid", gap: 0 },
   header: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, marginBottom: 18 },
-  title: { fontSize: 20, fontWeight: 800, color: "var(--text)" },
+  title: { color: "var(--text)", fontFamily: "Georgia, 'Times New Roman', serif", fontSize: 30, lineHeight: 1.05, fontWeight: 700 },
   subtitle: { fontSize: 13, color: "var(--text2)", marginTop: 4 },
   scoreBox: { width: 220, border: "1px solid var(--border)", borderRadius: 8, background: "var(--surface)", padding: "10px 12px", textAlign: "right", boxShadow: "var(--shadow)" },
   scoreLabel: { display: "block", color: "var(--text3)", fontSize: 11, fontWeight: 800, textTransform: "uppercase" },
   score: { display: "block", color: "var(--accent)", fontSize: 28, fontFamily: "var(--mono)", marginTop: 2 },
   scoreWarning: { display: "block", color: "var(--text3)", fontSize: 10, lineHeight: 1.35, marginTop: 5 },
   explainer: { display: "grid", gap: 6, marginBottom: 16, padding: 14, border: "1px solid var(--border)", borderRadius: 8, background: "var(--surface)", boxShadow: "var(--shadow)", color: "var(--text2)", fontSize: 13, lineHeight: 1.6 },
+  explainerHeader: { width: "100%", border: "none", background: "transparent", color: "var(--text)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: 0, cursor: "pointer", textAlign: "left", fontSize: 13 },
   quickLinks: { display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6 },
   quickLink: { border: "1px solid var(--border2)", borderRadius: 18, background: "var(--surface2)", color: "var(--accent)", padding: "5px 10px", fontSize: 12, fontWeight: 900, textDecoration: "none" },
   toolbar: { display: "grid", gridTemplateColumns: "minmax(220px, 1fr) 150px 150px auto 130px", gap: 10, alignItems: "end", marginBottom: 16 },
   weightPanel: { marginBottom: 16, border: "1px solid var(--border)", borderRadius: 8, background: "var(--surface)", padding: 14, boxShadow: "var(--shadow)" },
-  weightTitle: { color: "var(--text)", fontSize: 13, fontWeight: 900, marginBottom: 10 },
+  weightTitle: { color: "var(--text)", fontFamily: "Georgia, 'Times New Roman', serif", fontSize: 17, lineHeight: 1.15, fontWeight: 700, marginBottom: 10 },
   weightGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 8 },
   weightItem: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, border: "1px solid var(--border)", borderRadius: 8, background: "var(--surface2)", padding: "8px 10px", color: "var(--text2)", fontSize: 12 },
   aiPanel: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 12, alignItems: "start", marginBottom: 16, border: "1px solid var(--border)", borderRadius: 8, background: "var(--surface)", padding: 16, boxShadow: "var(--shadow)" },
@@ -448,7 +458,7 @@ const s = {
   aiButton: { minHeight: 38, border: "none", borderRadius: 8, background: "var(--accent)", color: "#fff", fontWeight: 900, padding: "0 14px", cursor: "pointer", whiteSpace: "nowrap" },
   aiResultGrid: { gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 12, marginTop: 2 },
   aiResultCard: { border: "1px solid var(--border)", borderRadius: 8, background: "var(--surface2)", padding: 14, minHeight: 150 },
-  aiCardTitle: { color: "var(--text)", fontSize: 13, fontWeight: 900, marginBottom: 8 },
+  aiCardTitle: { color: "var(--text)", fontFamily: "Georgia, 'Times New Roman', serif", fontSize: 16, lineHeight: 1.15, fontWeight: 700, marginBottom: 8 },
   aiText: { color: "var(--text2)", fontSize: 12, lineHeight: 1.6, margin: 0 },
   aiSource: { display: "inline-flex", marginTop: 10, border: "1px solid var(--border2)", borderRadius: 18, padding: "4px 8px", color: "var(--text3)", fontSize: 11, fontWeight: 800 },
   aiList: { margin: 0, paddingLeft: 18, color: "var(--text2)", fontSize: 12, lineHeight: 1.6 },
@@ -461,8 +471,8 @@ const s = {
   button: { minHeight: 38, border: "none", borderRadius: 8, background: "var(--accent)", color: "#fff", fontWeight: 900, cursor: "pointer" },
   grid: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(340px, .8fr)", gap: 16 },
   panel: { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 18, boxShadow: "var(--shadow)" },
-  panelTitle: { fontSize: 15, fontWeight: 800, marginBottom: 14, color: "var(--text)" },
-  panelTitleInline: { fontSize: 15, fontWeight: 800, color: "var(--text)" },
+  panelTitle: { color: "var(--text)", fontFamily: "Georgia, 'Times New Roman', serif", fontSize: 17, lineHeight: 1.15, fontWeight: 700, marginBottom: 14 },
+  panelTitleInline: { color: "var(--text)", fontFamily: "Georgia, 'Times New Roman', serif", fontSize: 17, lineHeight: 1.15, fontWeight: 700 },
   metricGrid: { display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 },
   metric: { background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 8, padding: 14, minHeight: 78 },
   metricLabel: { display: "block", color: "var(--text3)", fontSize: 11, fontWeight: 800, textTransform: "uppercase", marginBottom: 6 },

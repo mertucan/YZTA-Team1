@@ -5,25 +5,26 @@ import {
   getStudentHealthFlags,
   updateStudentHealthFlag,
 } from "../api/studentHealthFlags";
+import LoadingSpinner from "../../../components/LoadingSpinner";
 
 const conditionOptions = [
   { value: "diabetes", label: "Diyabet" },
-  { value: "celiac", label: "Colyak" },
+  { value: "celiac", label: "Çölyak" },
   { value: "allergy", label: "Alerji" },
   { value: "hypertension", label: "Hipertansiyon" },
-  { value: "other", label: "Diger" },
+  { value: "other", label: "Diğer" },
 ];
 
 const severityOptions = [
-  { value: "low", label: "Dusuk" },
+  { value: "low", label: "Düşük" },
   { value: "medium", label: "Orta" },
-  { value: "high", label: "Yuksek" },
+  { value: "high", label: "Yüksek" },
 ];
 
 const severityStyle = {
-  low: { label: "Dusuk", color: "var(--green)", bg: "var(--green-bg)", border: "var(--green-border)" },
+  low: { label: "Düşük", color: "var(--green)", bg: "var(--green-bg)", border: "var(--green-border)" },
   medium: { label: "Orta", color: "var(--amber)", bg: "var(--amber-bg)", border: "var(--amber-border)" },
-  high: { label: "Yuksek", color: "var(--red)", bg: "var(--red-bg)", border: "var(--red-border)" },
+  high: { label: "Yüksek", color: "var(--red)", bg: "var(--red-bg)", border: "var(--red-border)" },
 };
 
 const emptyForm = {
@@ -42,6 +43,8 @@ export default function StudentHealthFlags() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("active");
+  const [formOpen, setFormOpen] = useState(true);
+  const [flagsOpen, setFlagsOpen] = useState(false);
 
   const refresh = () =>
     Promise.all([getStudents(), getStudentHealthFlags()])
@@ -94,18 +97,15 @@ export default function StudentHealthFlags() {
 
   return (
     <div>
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 20, fontWeight: 600 }}>Saglik Bayraklari</div>
-        <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 3 }}>
-          Diyabet, colyak ve benzeri kronik rahatsizliklar icin ogrenci bazli menu kisitlari
-        </div>
+      <div style={pageHeader}>
+        <div style={pageTitle}>Sağlık Bayrakları</div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 16 }}>
+      <div style={summaryGrid}>
         {[
           { label: "Aktif Bayrak", value: activeCount, color: "var(--accent)" },
-          { label: "Isaretli Ogrenci", value: flaggedStudentCount, color: "var(--purple)" },
-          { label: "Yuksek Oncelik", value: highRiskCount, color: "var(--red)" },
+          { label: "İşaretli Öğrenci", value: flaggedStudentCount, color: "var(--purple)" },
+          { label: "Yüksek Öncelik", value: highRiskCount, color: "var(--red)" },
         ].map((item) => (
           <div key={item.label} style={statCard}>
             <div style={{ ...statBar, background: item.color }} />
@@ -116,12 +116,19 @@ export default function StudentHealthFlags() {
       </div>
 
       <div style={card}>
-        <div style={cardHd}>Yeni Kisitlama / Bayrak Ekle</div>
-        <div style={{ padding: 18, display: "grid", gridTemplateColumns: "1.3fr 1fr 1.2fr .8fr auto", gap: 10, alignItems: "end" }}>
+        <button type="button" onClick={() => setFormOpen((open) => !open)} style={accordionHeader} aria-expanded={formOpen}>
           <div>
-            <div style={fieldLabel}>Ogrenci</div>
+            <div style={cardTitle}>Yeni Kısıtlama / Bayrak Ekle</div>
+            <div style={cardHint}>Öğrenci bazlı rahatsızlık, alerji veya menü kısıtı tanımlayın.</div>
+          </div>
+          <span style={accordionToggle}>{formOpen ? "Kapat" : "Aç"}</span>
+        </button>
+        {formOpen && (
+        <div style={formGrid}>
+          <div>
+            <div style={fieldLabel}>Öğrenci</div>
             <select value={form.student_id} onChange={(e) => setForm({ ...form, student_id: e.target.value })} style={input}>
-              <option value="">Ogrenci sec</option>
+              <option value="">Öğrenci seç</option>
               {students.map((student) => (
                 <option key={student.id} value={student.id}>
                   {student.first_name} {student.last_name}
@@ -131,7 +138,7 @@ export default function StudentHealthFlags() {
           </div>
 
           <div>
-            <div style={fieldLabel}>Rahatsizlik</div>
+            <div style={fieldLabel}>Rahatsızlık</div>
             <select
               value={form.condition_type}
               onChange={(e) => {
@@ -147,17 +154,17 @@ export default function StudentHealthFlags() {
           </div>
 
           <div>
-            <div style={fieldLabel}>Bayrak Basligi</div>
+            <div style={fieldLabel}>Bayrak Başlığı</div>
             <input
               value={form.flag_label}
-              placeholder={`${selectedConditionLabel} menu kisiti`}
+              placeholder={`${selectedConditionLabel} menü kısıtı`}
               onChange={(e) => setForm({ ...form, flag_label: e.target.value })}
               style={input}
             />
           </div>
 
           <div>
-            <div style={fieldLabel}>Oncelik</div>
+            <div style={fieldLabel}>Öncelik</div>
             <select value={form.severity} onChange={(e) => setForm({ ...form, severity: e.target.value })} style={input}>
               {severityOptions.map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
@@ -165,39 +172,51 @@ export default function StudentHealthFlags() {
             </select>
           </div>
 
-          <button onClick={handleAdd} style={btnPrimary} data-toast="Saglik bayragi eklendi">Ekle</button>
+          <button onClick={handleAdd} style={btnPrimary} data-toast="Sağlık bayrağı eklendi">Ekle</button>
 
           <div style={{ gridColumn: "1 / -1" }}>
             <div style={fieldLabel}>Not</div>
             <input
               value={form.notes}
-              placeholder="Orn. Glutensiz menu, dusuk sekerli secenek, alerjen uyarisi..."
+              placeholder="Örn. Glutensiz menü, düşük şekerli seçenek, alerjen uyarısı..."
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               style={input}
             />
           </div>
         </div>
+        )}
       </div>
 
       <div style={card}>
-        <div style={{ ...cardHd, display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ flex: 1 }}>Ogrenci Saglik Kisitlari</span>
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Ogrenci veya not ara..." style={{ ...input, width: 260 }} />
-          <select value={activeFilter} onChange={(e) => setActiveFilter(e.target.value)} style={{ ...input, width: 150 }}>
-            <option value="active">Aktifler</option>
-            <option value="inactive">Pasifler</option>
-            <option value="all">Tumu</option>
-          </select>
-        </div>
-
-        {loading ? (
-          <div style={{ padding: 24, color: "var(--text3)" }}>Yukleniyor...</div>
-        ) : filteredFlags.length === 0 ? (
-          <div style={{ padding: 28, color: "var(--text3)", textAlign: "center" }}>Kayit bulunamadi.</div>
-        ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <button type="button" onClick={() => setFlagsOpen((open) => !open)} style={accordionHeader} aria-expanded={flagsOpen}>
+          <div>
+            <div style={cardTitle}>Öğrenci Sağlık Kısıtları</div>
+            <div style={cardHint}>Kayıtları öğrenci, not veya durum filtresiyle inceleyin.</div>
+          </div>
+          <span style={accordionToggle}>{flagsOpen ? "Kapat" : "Aç"}</span>
+        </button>
+        {flagsOpen && (
+          <>
+            <div style={listToolbar}>
+              <div style={activeListLabel}>{filteredFlags.length} kayıt gösteriliyor</div>
+              <div style={filterActions}>
+                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Öğrenci veya not ara..." style={{ ...input, maxWidth: 300 }} />
+                <select value={activeFilter} onChange={(e) => setActiveFilter(e.target.value)} style={{ ...input, maxWidth: 150 }}>
+                  <option value="active">Aktifler</option>
+                  <option value="inactive">Pasifler</option>
+                  <option value="all">Tümü</option>
+                </select>
+              </div>
+            </div>
+            {loading ? (
+              <LoadingSpinner label="Sağlık kısıtları yükleniyor" minHeight={180} size={38} />
+            ) : filteredFlags.length === 0 ? (
+              <div style={emptyState}>Kayıt bulunamadı.</div>
+            ) : (
+          <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", minWidth: 760, borderCollapse: "collapse" }}>
             <thead>
-              <tr>{["Ogrenci", "Bayrak", "Oncelik", "Not", "Durum", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
+              <tr>{["Öğrenci", "Bayrak", "Öncelik", "Not", "Durum", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {filteredFlags.map((flag) => {
@@ -236,9 +255,9 @@ export default function StudentHealthFlags() {
                         <button
                           onClick={() => toggleActive(flag)}
                           style={flag.is_active ? btnSm : btnPrimary}
-                          data-toast={flag.is_active ? "Saglik bayragi pasiflestirildi" : "Saglik bayragi aktiflestirildi"}
+                          data-toast={flag.is_active ? "Sağlık bayrağı pasifleştirildi" : "Sağlık bayrağı aktifleştirildi"}
                         >
-                          {flag.is_active ? "Pasiflestir" : "Aktiflestir"}
+                          {flag.is_active ? "Pasifleştir" : "Aktifleştir"}
                         </button>
                       </div>
                     </td>
@@ -247,17 +266,31 @@ export default function StudentHealthFlags() {
               })}
             </tbody>
           </table>
+          </div>
+            )}
+          </>
         )}
       </div>
     </div>
   );
 }
 
-const card = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow)", marginBottom: 16 };
-const cardHd = { padding: "14px 18px 12px", borderBottom: "1px solid var(--border)", fontSize: 13, fontWeight: 600 };
-const fieldLabel = { fontSize: 11, color: "var(--text2)", marginBottom: 5, fontWeight: 500 };
-const input = { width: "100%", background: "var(--surface2)", border: "1px solid var(--border2)", borderRadius: 7, padding: "7px 12px", fontSize: 13, color: "var(--text)", outline: "none" };
-const th = { textAlign: "left", fontSize: 10, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".06em", padding: "10px 18px", borderBottom: "1px solid var(--border)" };
+const card = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, boxShadow: "0 14px 36px rgba(24, 24, 24, 0.07)", marginBottom: 16, overflow: "hidden" };
+const pageHeader = { display: "flex", justifyContent: "space-between", alignItems: "end", gap: 16, marginBottom: 14 };
+const pageTitle = { color: "var(--ingredients-text)", fontFamily: "Georgia, 'Times New Roman', serif", fontSize: 34, lineHeight: 1.05, fontWeight: 700 };
+const summaryGrid = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 16 };
+const cardTitle = { color: "var(--text)", fontFamily: "Georgia, 'Times New Roman', serif", fontSize: 18, lineHeight: 1.15, fontWeight: 700 };
+const cardHint = { color: "var(--text3)", fontSize: 12, marginTop: 4, fontWeight: 600 };
+const accordionHeader = { width: "100%", padding: "15px 18px 13px", border: "none", borderBottom: "1px solid var(--border)", background: "var(--surface2)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, textAlign: "left", cursor: "pointer" };
+const accordionToggle = { color: "var(--accent)", background: "var(--accent-bg)", border: "1px solid var(--accent-border)", borderRadius: 999, padding: "5px 12px", fontSize: 11, fontWeight: 800, whiteSpace: "nowrap" };
+const formGrid = { padding: 18, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr)) auto", gap: 10, alignItems: "end" };
+const listToolbar = { padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", background: "var(--surface2)", borderBottom: "1px solid var(--border)" };
+const activeListLabel = { color: "var(--text)", fontFamily: "Georgia, 'Times New Roman', serif", fontSize: 17, lineHeight: 1.15, fontWeight: 700 };
+const filterActions = { display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, flexWrap: "wrap", flex: 1 };
+const emptyState = { padding: 28, color: "var(--text3)", textAlign: "center" };
+const fieldLabel = { fontSize: 11, color: "var(--text2)", marginBottom: 5, fontWeight: 700 };
+const input = { width: "100%", background: "var(--surface2)", border: "1px solid var(--border2)", borderRadius: 7, padding: "8px 12px", fontSize: 13, color: "var(--text)", outline: "none", boxSizing: "border-box" };
+const th = { textAlign: "left", fontSize: 10, fontWeight: 800, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".06em", padding: "11px 16px", borderBottom: "1px solid var(--border)", background: "var(--surface2)" };
 const td = { padding: "10px 18px", fontSize: 12, color: "var(--text2)", borderBottom: "1px solid var(--border)", verticalAlign: "top" };
 const btnPrimary = { background: "var(--accent)", border: "none", color: "#fff", padding: "8px 18px", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer" };
 const btnSm = { background: "var(--surface2)", border: "1px solid var(--border2)", color: "var(--text2)", padding: "4px 10px", borderRadius: 6, fontSize: 11, cursor: "pointer" };

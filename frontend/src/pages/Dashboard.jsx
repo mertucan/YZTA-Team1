@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getDashboardStats } from "../api/dashboard";
 import { getMenus, getMenu } from "../modules/ai-menu-planner/api/aiMenuPlanner";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 const TR_MONTHS_SHORT = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
 const ALL_DAYS = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
@@ -121,18 +122,19 @@ export default function Dashboard() {
       .sort((a, b) => a.weekStart - b.weekStart);
   }, [menusDetailed]);
 
-  // Açılışta bu haftanın kartını yatayda ortala (layout otursun diye kısa gecikmeyle, animasyonsuz).
+  // Açılışta bu haftanın kartını görünür alanın ortasına al.
   useEffect(() => {
     if (!weekCards.length) return;
-    const t = setTimeout(() => {
+    let frame = requestAnimationFrame(() => {
       const card = currentWeekRef.current;
       const sc = scrollerRef.current;
       if (!card || !sc) return;
-      const cardRect = card.getBoundingClientRect();
-      const scRect = sc.getBoundingClientRect();
-      sc.scrollLeft += (cardRect.left - scRect.left) - (scRect.width - cardRect.width) / 2;
-    }, 80);
-    return () => clearTimeout(t);
+      sc.scrollTo({
+        left: card.offsetLeft - (sc.clientWidth - card.clientWidth) / 2,
+        behavior: "auto",
+      });
+    });
+    return () => cancelAnimationFrame(frame);
   }, [weekCards.length]);
 
   const handlePointerDown = (e) => {
@@ -158,7 +160,13 @@ export default function Dashboard() {
     setModalInfo({ day, dayDate, dayItems });
   };
 
-  if (loading) return <div style={{ color: "var(--text3)", padding: 32 }}>Yükleniyor...</div>;
+  if (loading) {
+    return (
+      <div className="dashboard-home" style={dashboardLoadingPage}>
+        <LoadingSpinner label="Kontrol paneli yükleniyor" minHeight="calc(100vh - 96px)" size={48} />
+      </div>
+    );
+  }
   if (statsError || !stats) {
     return (
       <div style={{ padding: 32, color: "var(--red)" }}>
@@ -178,10 +186,13 @@ export default function Dashboard() {
   ];
 
   return (
-    <div>
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 20, fontWeight: 600 }}>Genel Bakış</div>
-        <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 3 }}>A Üniversitesi Yemekhane Paneli</div>
+    <div className="dashboard-home" style={dashboardPage}>
+      <div style={pageHeader}>
+        <div>
+          <div style={eyebrow}>Operasyon Paneli</div>
+          <div style={pageTitle}>Genel Bakış</div>
+        </div>
+        <div style={pageSubtitle}>Haftalık menü ve stok özeti</div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 24 }}>
@@ -194,10 +205,10 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>🗓️ Haftalık Menü Takvimi</div>
+      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Haftalık Menü Takvimi</div>
       {menusDetailed === null ? (
         <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow)", padding: 24, color: "var(--text3)", fontSize: 12, marginBottom: 24 }}>
-          Yükleniyor...
+          <LoadingSpinner label="Haftalık menü yükleniyor" minHeight={140} size={38} />
         </div>
       ) : weekCards.length === 0 ? (
         <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow)", padding: 24, color: "var(--text3)", fontSize: 12, marginBottom: 24 }}>
@@ -213,7 +224,7 @@ export default function Dashboard() {
           onMouseLeave={endDrag}
           style={{
             display: "flex", gap: 16, overflowX: "auto", marginBottom: 24,
-            padding: "18px 16px 10px",
+            padding: "18px max(16px, calc((100% - 980px) / 2)) 10px",
             cursor: isDragging ? "grabbing" : "grab",
             userSelect: isDragging ? "none" : "auto",
             scrollSnapType: isDragging ? "none" : "x proximity",
@@ -253,7 +264,7 @@ export default function Dashboard() {
                     {formatShort(weekStart)} – {formatShort(weekEnd)}
                   </div>
                   <div style={{ fontSize: 10, color: "var(--text3)" }}>
-                    {menu.status === "approved" ? "✓ Onaylandı" : "Taslak"} · Bütçe {menu.budget.toFixed(0)} TL
+                    {menu.status === "approved" ? "Onaylandı" : "Taslak"} · Bütçe {menu.budget.toFixed(0)} TL
                   </div>
                 </div>
 
@@ -299,9 +310,9 @@ export default function Dashboard() {
                           )}
                         </div>
                         <div style={{ padding: "6px 8px", borderTop: "1px solid var(--border2)", fontSize: 9, color: "var(--text3)", display: "grid", gap: 2 }}>
-                          <div>👥 {portions ?? "—"} kişi</div>
-                          <div>💰 {totalCost.toFixed(0)} TL</div>
-                          <div>🎫 {perPerson !== null ? `${perPerson.toFixed(2)} TL/kişi` : "—"}</div>
+                          <div>{portions ?? "—"} kişi</div>
+                          <div>{totalCost.toFixed(0)} TL</div>
+                          <div>{perPerson !== null ? `${perPerson.toFixed(2)} TL/kişi` : "—"}</div>
                         </div>
                       </div>
                     );
@@ -316,7 +327,7 @@ export default function Dashboard() {
       {stats.low_stock_ingredients.length > 0 && (
         <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow)" }}>
           <div style={{ padding: "14px 18px 12px", borderBottom: "1px solid var(--border)", fontSize: 13, fontWeight: 600 }}>
-            📉 Düşük Stok Uyarısı
+            Düşük Stok Uyarısı
           </div>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
@@ -345,7 +356,7 @@ export default function Dashboard() {
           <div onClick={(e) => e.stopPropagation()} style={modalStyle}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <div style={{ fontSize: 15, fontWeight: 700 }}>{modalInfo.day} · {formatShort(modalInfo.dayDate)}</div>
-              <button onClick={() => setModalInfo(null)} style={{ background: "none", border: "none", color: "var(--text3)", fontSize: 16, cursor: "pointer" }}>✕</button>
+              <button onClick={() => setModalInfo(null)} style={{ background: "none", border: "none", color: "var(--text3)", fontSize: 12, cursor: "pointer" }}>Kapat</button>
             </div>
             {modalInfo.dayItems.length === 0 ? (
               <div style={{ fontSize: 12, color: "var(--text3)" }}>Bu gün için planlanmış yemek yok.</div>
@@ -378,6 +389,48 @@ export default function Dashboard() {
     </div>
   );
 }
+
+const dashboardPage = {
+  minHeight: "calc(100vh - 48px)",
+  margin: -24,
+  padding: 24,
+  background: "var(--dashboard-bg)",
+};
+
+const dashboardLoadingPage = {
+  ...dashboardPage,
+  display: "grid",
+  placeItems: "center",
+};
+
+const pageHeader = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "end",
+  gap: 16,
+  marginBottom: 20,
+};
+const eyebrow = {
+  color: "var(--ingredients-accent)",
+  fontSize: 11,
+  fontWeight: 900,
+  letterSpacing: ".08em",
+  textTransform: "uppercase",
+  marginBottom: 4,
+};
+const pageTitle = {
+  color: "var(--ingredients-text)",
+  fontFamily: "Georgia, 'Times New Roman', serif",
+  fontSize: 30,
+  lineHeight: 1.05,
+  fontWeight: 700,
+};
+const pageSubtitle = {
+  color: "var(--ingredients-muted)",
+  fontSize: 13,
+  fontWeight: 700,
+  paddingBottom: 3,
+};
 
 const th = { textAlign: "left", fontSize: 10, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".06em", padding: "10px 18px", borderBottom: "1px solid var(--border)" };
 const td = { padding: "10px 18px", fontSize: 12, color: "var(--text2)", borderBottom: "1px solid var(--border)" };

@@ -480,7 +480,7 @@ export default function HealthRiskAnalysisPage() {
   // ─── PDF RAPOR ÜRETICI ───
   const printPdfInIframe = async (htmlContent) => {
     const h1Match = htmlContent.match(/<h1>([\s\S]*?)<\/h1>/);
-    let fileName = "saglik_risk_analiz_raporu.pdf";
+    let fileName = "sağlık_risk_analiz_raporu.pdf";
     if (h1Match?.[1]) {
       const clean = h1Match[1].replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
       fileName = clean
@@ -562,9 +562,9 @@ export default function HealthRiskAnalysisPage() {
     <style>
       @page { size: A4; margin: 20mm 18mm; }
       * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; font-size: 11pt; line-height: 1.6; background: #fff; }
+      body { font-family: 'Segoe UI', Arial, sans-serif; color: #1d1f1d; font-size: 11pt; line-height: 1.6; background: #fff; }
       tr, p, .kpi, h2, h3, .cover, .footer, .disclaimer, svg { page-break-inside: avoid; break-inside: avoid; }
-      .cover { display: flex; flex-direction: column; justify-content: center; min-height: 110mm; background-color: #0b4f54; background: linear-gradient(135deg, #0b4f54, #0d9488); color: #ffffff !important; border-radius: 10px; padding: 32px 36px; margin-bottom: 28px; }
+      .cover { display: flex; flex-direction: column; justify-content: center; min-height: 110mm; background-color: #181818; background: linear-gradient(135deg, #181818, #e88000); color: #ffffff !important; border-radius: 10px; padding: 32px 36px; margin-bottom: 28px; }
       .cover h1, .cover div, .cover span, .cover-label { color: #ffffff !important; }
       .cover-label { font-size: 8pt; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 14px; }
       .cover h1 { font-size: 22pt; font-weight: 800; line-height: 1.2; margin-bottom: 12px; }
@@ -576,20 +576,20 @@ export default function HealthRiskAnalysisPage() {
       table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 9.5pt; }
       thead tr { background: #0b4f54; color: #fff; }
       thead th { padding: 8px 12px; text-align: left; font-weight: 700; font-size: 8.5pt; letter-spacing: 0.04em; text-transform: uppercase; }
-      tbody tr:nth-child(even) { background: #f0f7f7; }
-      tbody td { padding: 7px 12px; border-bottom: 1px solid #ccdada; }
+      tbody tr:nth-child(even) { background: #f8f5ef; }
+      tbody td { padding: 7px 12px; border-bottom: 1px solid #ded8ce; }
       .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 14px 0 22px; }
-      .kpi { background: #f0f7f7; border: 1px solid #ccdada; border-radius: 8px; padding: 14px 16px; }
+      .kpi { background: #f8f5ef; border: 1px solid #ded8ce; border-radius: 8px; padding: 14px 16px; }
       .kpi-label { font-size: 8pt; font-weight: 700; color: #47666b; text-transform: uppercase; letter-spacing: 0.06em; }
       .kpi-val { font-size: 20pt; font-weight: 800; color: #0b4f54; line-height: 1.2; margin: 4px 0 2px; }
       .kpi-sub { font-size: 8.5pt; color: #64748b; }
       .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 8pt; font-weight: 700; }
-      .badge-green { background: #ccfbf1; color: #0d9488; }
+      .badge-green { background: #edfaf3; color: #16a05e; }
       .badge-red { background: #fee2e2; color: #ef4444; }
       .badge-amber { background: #fef9c3; color: #b45309; }
-      .footer { margin-top: 30px; border-top: 1px solid #ccdada; padding-top: 12px; font-size: 8pt; color: #94a3b8; display: flex; justify-content: space-between; }
-      .disclaimer { background: #f0f7f7; border: 1px solid #99f6e4; border-radius: 6px; padding: 10px 14px; font-size: 8.5pt; color: #47666b; margin: 20px 0; }
-      .section-divider { height: 2px; background: linear-gradient(90deg, #14b8a6, transparent); margin: 22px 0; }
+      .footer { margin-top: 30px; border-top: 1px solid #ded8ce; padding-top: 12px; font-size: 8pt; color: #858b82; display: flex; justify-content: space-between; }
+      .disclaimer { background: #fff7ec; border: 1px solid rgba(232, 128, 0, 0.28); border-radius: 6px; padding: 10px 14px; font-size: 8.5pt; color: #5d625c; margin: 20px 0; }
+      .section-divider { height: 2px; background: linear-gradient(90deg, #e88000, transparent); margin: 22px 0; }
     </style>
   `;
 
@@ -765,8 +765,8 @@ export default function HealthRiskAnalysisPage() {
       const svgs = getVisibleSvgs();
       const escapedNotes = escapeHtml(researcherNotes);
       const notesHtml = (researcherNotes && includeNotes)
-        ? `<div style="background:#f0fdf9;border-left:4px solid #0d9488;padding:16px;border-radius:8px;margin:20px 0;border:1px solid #99f6e4;">
-             <div style="font-size:11pt;font-weight:700;color:#0b4f54;margin-bottom:8px;">📝 Araştırmacı Analiz Değerlendirmesi</div>
+        ? `<div style="background:#fff7ec;border-left:4px solid #e88000;padding:16px;border-radius:8px;margin:20px 0;border:1px solid rgba(232,128,0,.28);">
+             <div style="font-size:11pt;font-weight:700;color:#b76500;margin-bottom:8px;">Araştırmacı Analiz Değerlendirmesi</div>
              <div style="font-size:10pt;color:#334155;white-space:pre-wrap;line-height:1.7;font-family:'Segoe UI',Arial,sans-serif;">${escapedNotes}</div>
            </div>`
         : "";
@@ -813,11 +813,11 @@ export default function HealthRiskAnalysisPage() {
         if (includeMetrics) {
           resultsTableHtml = `
             <div style="display:flex;gap:14px;margin-bottom:20px;">
-              <div style="flex:1;background:#f0f7f7;border:1px solid #ccdada;padding:12px;border-radius:8px;">
+              <div style="flex:1;background:#f8f5ef;border:1px solid #ded8ce;padding:12px;border-radius:8px;">
                 <div style="font-size:8pt;color:#47666b;text-transform:uppercase;">Menü 1 Enerji</div>
                 <div style="font-size:16pt;font-weight:800;color:#0b4f54;margin-top:4px;">${menuComparisonResult?.menu1.total_calories||0} kcal</div>
               </div>
-              <div style="flex:1;background:#f0f7f7;border:1px solid #ccdada;padding:12px;border-radius:8px;">
+              <div style="flex:1;background:#f8f5ef;border:1px solid #ded8ce;padding:12px;border-radius:8px;">
                 <div style="font-size:8pt;color:#47666b;text-transform:uppercase;">Menü 2 Enerji</div>
                 <div style="font-size:16pt;font-weight:800;color:#0b4f54;margin-top:4px;">${menuComparisonResult?.menu2.total_calories||0} kcal</div>
               </div>
@@ -864,9 +864,9 @@ export default function HealthRiskAnalysisPage() {
       const rechartsHtml = (svgs.length > 0 && includeCharts)
         ? `<div style="margin:24px 0;">
              <div style="font-size:11pt;font-weight:700;color:#0b4f54;margin-bottom:12px;border-bottom:2px solid #14b8a6;padding-bottom:4px;">
-               📈 İstatistiksel Risk Grafikleri
+               İstatistiksel Risk Grafikleri
              </div>
-             ${svgs.map(s => `<div style="margin-bottom:20px;background:#fff;border:1px solid #ccdada;padding:16px;border-radius:8px;text-align:center;">${s}</div>`).join("")}
+             ${svgs.map(s => `<div style="margin-bottom:20px;background:#fff;border:1px solid #ded8ce;padding:16px;border-radius:8px;text-align:center;">${s}</div>`).join("")}
            </div>`
         : "";
 
@@ -888,7 +888,7 @@ export default function HealthRiskAnalysisPage() {
         </head>
         <body>
           <div class="cover" style="min-height:75mm;margin-bottom:20px;">
-            <div class="cover-label">🔍 Araştırmacı Analiz ve Not Defteri Çıktısı</div>
+            <div class="cover-label">Araştırmacı Analiz ve Not Defteri Çıktısı</div>
             <h1>${reportTitle}</h1>
             <div class="meta">
               <span>Canlı Supabase Analizi</span>
@@ -926,12 +926,12 @@ export default function HealthRiskAnalysisPage() {
       const execSummary = includeNotes
         ? `<h2>1. Yönetici Özeti</h2>
            <p>Bu Rapor, 2026 yılının ilk yarısına (Ocak–Haziran) ait anonimleştirilmiş üniversite yemekhane tüketim verileri üzerinden gerçekleştirilen popülasyon düzeyinde beslenme risk analizi bulgularını özetlemektedir. Toplam <strong>${meals.toLocaleString("tr-TR")}</strong> adet öğün kaydı incelenmiştir.</p>
-           <div class="disclaimer">⚠ Bu Rapor bireysel teşhis niteliği taşımaz; yalnızca istatistiksel popülasyon eğilimlerini yansıtır.</div>`
+           <div class="disclaimer">Dikkat: Bu Rapor bireysel teşhis niteliği taşımaz; yalnızca istatistiksel popülasyon eğilimlerini yansıtır.</div>`
         : "";
 
       const kpiGrid = includeMetrics
         ? `<div class="kpi-grid">
-            <div class="kpi"><div class="kpi-label">Anemi Risk Oranı</div><div class="kpi-val">${aVal.toFixed(1)}%</div><div class="kpi-sub"><span class="badge badge-green">↓ İyileşme Var</span></div></div>
+            <div class="kpi"><div class="kpi-label">Anemi Risk Oranı</div><div class="kpi-val">${aVal.toFixed(1)}%</div><div class="kpi-sub"><span class="badge badge-green">İyileşme Var</span></div></div>
             <div class="kpi"><div class="kpi-label">Obezite Eğilim Oranı</div><div class="kpi-val">${oVal.toFixed(1)}%</div><div class="kpi-sub"><span class="badge badge-amber">↔ Stabil</span></div></div>
             <div class="kpi"><div class="kpi-label">Analiz Edilen Öğün</div><div class="kpi-val">${(meals/1000).toFixed(0)}K</div><div class="kpi-sub">6 aylık veri seti</div></div>
           </div>`
@@ -960,7 +960,7 @@ export default function HealthRiskAnalysisPage() {
 
       return `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8">${reportBaseStyle}</head><body>
         <div class="cover">
-          <div class="cover-label">📊 Popülasyon Sağlık Analiz Raporu</div>
+          <div class="cover-label">Popülasyon Sağlık Analiz Raporu</div>
           <h1>2026 Yılı I. Dönem<br/>Popülasyon Sağlık Raporu</h1>
           ${metaSection}
         </div>
@@ -983,7 +983,7 @@ export default function HealthRiskAnalysisPage() {
       const studyAim = includeNotes
         ? `<h2>1. Çalışma Amacı</h2>
            <p>Bu çalışma, üniversite yemekhanesinde tüketilen günlük kalori miktarı, makro besin dağılımı ve vücut kitle indeksi (BMI) göstergeleri arasındaki ilişkiyi Pearson korelasyon analizi ile incelemeyi amaçlamaktadır.</p>
-           <div class="disclaimer">⚠ Sonuçlar popülasyon düzeyini yansıtmakta olup bireysel medikal değerlendirme niteliği taşımaz.</div>`
+           <div class="disclaimer">Dikkat: Sonuçlar popülasyon düzeyini yansıtmakta olup bireysel medikal değerlendirme niteliği taşımaz.</div>`
         : "";
 
       const kpiGrid = includeMetrics
@@ -1025,7 +1025,7 @@ export default function HealthRiskAnalysisPage() {
 
       return `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8">${reportBaseStyle}</head><body>
         <div class="cover">
-          <div class="cover-label">🔗 Korelasyon Analizi Raporu</div>
+          <div class="cover-label">Korelasyon Analizi Raporu</div>
           <h1>Yemekhane Tüketim &amp;<br/>Obezite Korelasyon Raporu</h1>
           ${metaSection}
         </div>
@@ -1047,7 +1047,7 @@ export default function HealthRiskAnalysisPage() {
       const scopeSection = includeNotes
         ? `<h2>1. Giriş ve Kapsam</h2>
            <p>Bu analiz, Türkiye'deki 19 üniversitede 58.420 student üzerinde yürütülmüş; anonimleştirilmiş hemoglobin ölçümleri ve günlük demir tüketim verileri temel alınmıştır. Dünya Sağlık Örgütü (WHO) anemi sınır değerleri (erkek: 13 g/dL, kadın: 12 g/dL) referans alınmıştır.</p>
-           <div class="disclaimer">⚠ Bireysel hemoglobin değerlerini içermemektedir. Tüm veriler istatistiksel toplu analizden türetilmiştir.</div>`
+           <div class="disclaimer">Dikkat: Bireysel hemoglobin değerlerini içermemektedir. Tüm veriler istatistiksel toplu analizden türetilmiştir.</div>`
         : "";
 
       const kpiGrid = includeMetrics
@@ -1074,11 +1074,11 @@ export default function HealthRiskAnalysisPage() {
            <table>
             <thead><tr><th>Bölge</th><th>Anemi Riski (%)</th><th>Öğün Başı Demir (mg)</th><th>Trend</th></tr></thead>
             <tbody>
-              <tr><td>Marmara</td><td>${(aVal * 0.9).toFixed(1)}</td><td>11.8</td><td><span class="badge badge-green">↓ İyileşiyor</span></td></tr>
-              <tr><td>Ege</td><td>${(aVal * 0.95).toFixed(1)}</td><td>11.2</td><td><span class="badge badge-green">↓ İyileşiyor</span></td></tr>
-              <tr><td>İç Anadolu</td><td>${(aVal * 1.05).toFixed(1)}</td><td>9.6</td><td><span class="badge badge-amber">→ Stabil</span></td></tr>
-              <tr><td>Karadeniz</td><td>${(aVal * 1.12).toFixed(1)}</td><td>9.1</td><td><span class="badge badge-red">↑ Kötüleşiyor</span></td></tr>
-              <tr><td>Güneydoğu</td><td>${(aVal * 1.18).toFixed(1)}</td><td>8.4</td><td><span class="badge badge-red">↑ Kötüleşiyor</span></td></tr>
+              <tr><td>Marmara</td><td>${(aVal * 0.9).toFixed(1)}</td><td>11.8</td><td><span class="badge badge-green">İyileşiyor</span></td></tr>
+              <tr><td>Ege</td><td>${(aVal * 0.95).toFixed(1)}</td><td>11.2</td><td><span class="badge badge-green">İyileşiyor</span></td></tr>
+              <tr><td>İç Anadolu</td><td>${(aVal * 1.05).toFixed(1)}</td><td>9.6</td><td><span class="badge badge-amber">Stabil</span></td></tr>
+              <tr><td>Karadeniz</td><td>${(aVal * 1.12).toFixed(1)}</td><td>9.1</td><td><span class="badge badge-red">Kötüleşiyor</span></td></tr>
+              <tr><td>Güneydoğu</td><td>${(aVal * 1.18).toFixed(1)}</td><td>8.4</td><td><span class="badge badge-red">Kötüleşiyor</span></td></tr>
             </tbody>
            </table>
            <h2>4. Demir Kaynaklarının Menü İçindeki Oranı</h2>
@@ -1094,7 +1094,7 @@ export default function HealthRiskAnalysisPage() {
 
       return `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8">${reportBaseStyle}</head><body>
         <div class="cover">
-          <div class="cover-label">🩸 Anemi &amp; Demir Analizi Raporu</div>
+          <div class="cover-label">Anemi &amp; Demir Analizi Raporu</div>
           <h1>Üniversite Geneli Anemi<br/>Prevalansı ve Demir Alımı Analizi</h1>
           ${metaSection}
         </div>
@@ -1114,7 +1114,7 @@ export default function HealthRiskAnalysisPage() {
     const rows = ["DONEM;ANEMI_RISK;OBEZITE_RISK;D_VITAMINI;DEMIR_EKSIKLIGI"];
     trendData.forEach(r => rows.push(`${r.name};${r.anemi};${r.obezite};${r.d_vitamini};${r.demir}`));
     const uri = "data:text/csv;charset=utf-8,\uFEFFsep=;\n" + rows.join("\n");
-    const a = document.createElement("a"); a.href = encodeURI(uri); a.download = "populasyon_saglik_raporu_I_donem_2026.csv";
+    const a = document.createElement("a"); a.href = encodeURI(uri); a.download = "popülasyon_sağlık_raporu_I_dönem_2026.csv";
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
 
@@ -1259,7 +1259,7 @@ export default function HealthRiskAnalysisPage() {
                   ? formatNumber(data.student_consumption_risks.total_active_students)
                   : "58.420"}
               </span>
-              <span className="stat-card-sub up">↑ %6.2 son 30 güne göre</span>
+              <span className="stat-card-sub up">%6.2 artış, son 30 güne göre</span>
             </div>
           </div>
 
@@ -1272,7 +1272,7 @@ export default function HealthRiskAnalysisPage() {
                   ? formatNumber(data.summary.analyzed_meals)
                   : "124.852"}
               </span>
-              <span className="stat-card-sub up">↑ %7.5 son 30 güne göre</span>
+              <span className="stat-card-sub up">%7.5 artış, son 30 güne göre</span>
             </div>
           </div>
 
@@ -1431,20 +1431,20 @@ export default function HealthRiskAnalysisPage() {
                       "Obezite": "amber",   "obesity": "amber",
                       "Other": "blue",      "other": "blue",
                     };
-                    const emojiMap = {
-                      "Diyabet": "⚡", "diabetes": "⚡",
-                      "Alerji": "🌿", "allergy": "🌿",
-                      "Hipertansiyon": "❤️", "hypertension": "❤️",
-                      "Çölyak": "🌾", "celiac": "🌾",
-                      "Anemi": "🩸", "anemia": "🩸",
-                      "Obezite": "⚖️", "obesity": "⚖️",
+                    const codeMap = {
+                      "Diyabet": "DB", "diabetes": "DB",
+                      "Alerji": "AL", "allergy": "AL",
+                      "Hipertansiyon": "HT", "hypertension": "HT",
+                      "Çölyak": "CL", "celiac": "CL",
+                      "Anemi": "AN", "anemia": "AN",
+                      "Obezite": "OB", "obesity": "OB",
                       "Other": "●", "other": "●",
                     };
                     return (
                       <div className="flag-item-row" key={key}>
                         <div className="flag-item-left">
                           <div className={`flag-dot ${dotClassMap[key] || "blue"}`}>
-                            {emojiMap[key] || "●"}
+                            {codeMap[key] || "●"}
                           </div>
                           <span className="flag-name">{labelMap[key] || key}</span>
                         </div>
@@ -1482,7 +1482,7 @@ export default function HealthRiskAnalysisPage() {
               <span className="card-value">
                 {data?.student_consumption_risks?.anemia_risk_ratio !== undefined ? `${data.student_consumption_risks.anemia_risk_ratio}%` : "8.7%"}
               </span>
-              <span className="card-subtext trend-down">↓ -2.2% geçen döneme göre</span>
+              <span className="card-subtext trend-down">-2.2% geçen döneme göre</span>
             </div>
 
             <div className="summary-card">
@@ -1490,7 +1490,7 @@ export default function HealthRiskAnalysisPage() {
               <span className="card-value">
                 {data?.student_consumption_risks?.obesity_risk_ratio !== undefined ? `${data.student_consumption_risks.obesity_risk_ratio}%` : "25.4%"}
               </span>
-              <span className="card-subtext trend-up">↑ +1.2% geçen döneme göre</span>
+              <span className="card-subtext trend-up">+1.2% geçen döneme göre</span>
             </div>
 
             <div className="summary-card">
@@ -1551,7 +1551,7 @@ export default function HealthRiskAnalysisPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="name" stroke="#475569" style={{ fontSize: "11px", fontFamily: "var(--font-mono)" }} />
                   <YAxis stroke="#475569" style={{ fontSize: "11px", fontFamily: "var(--font-mono)" }} unit="%" />
-                  <Tooltip contentStyle={{ backgroundColor: "#ffffff", borderColor: "#cbd5e1", color: "#0f172a" }} />
+                  <Tooltip contentStyle={{ backgroundColor: "#ffffff", borderColor: "#ded8ce", color: "#1d1f1d" }} />
                   <Area type="monotone" dataKey={selectedDisease} stroke={activeAreaColor.stroke} fillOpacity={1} fill="url(#areaColor)" strokeWidth={2.5} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -2102,7 +2102,7 @@ export default function HealthRiskAnalysisPage() {
                               <Legend />
                               <Line type="monotone" dataKey="anemi" name="Anemi Riski (%)" stroke="#ef4444" strokeWidth={2.5} dot={{ r: 4 }} />
                               <Line type="monotone" dataKey="obezite" name="Obezite Riski (%)" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 4 }} />
-                              <Line type="monotone" dataKey="avg_calorie" name="Ort. Kalori (kcal)" stroke="#0d9488" strokeWidth={2} dot={{ r: 3 }} />
+                              <Line type="monotone" dataKey="avg_calorie" name="Ort. Kalori (kcal)" stroke="#e88000" strokeWidth={2} dot={{ r: 3 }} />
                             </LineChart>
                           </ResponsiveContainer>
                         </div>
@@ -2293,8 +2293,8 @@ export default function HealthRiskAnalysisPage() {
                         Tarih: 30.06.2026 • Aylık trend, KPI özeti, öneriler
                       </div>
                       <div style={{ display: "flex", gap: "6px", marginTop: "8px", flexWrap: "wrap" }}>
-                        <span style={{ fontSize: "11px", padding: "2px 8px", background: "#ccfbf1", color: "#0d9488", borderRadius: "4px", fontWeight: 700 }}>PDF: Kapsamlı Rapor</span>
-                        <span style={{ fontSize: "11px", padding: "2px 8px", background: "#dbeafe", color: "#2563eb", borderRadius: "4px", fontWeight: 700 }}>CSV: Ham Sayısal Veri</span>
+                        <span style={{ fontSize: "11px", padding: "2px 8px", background: "var(--green-bg)", color: "var(--green)", borderRadius: "4px", fontWeight: 700 }}>PDF: Kapsamlı Rapor</span>
+                        <span style={{ fontSize: "11px", padding: "2px 8px", background: "var(--accent-bg)", color: "var(--accent)", borderRadius: "4px", fontWeight: 700 }}>CSV: Ham Sayısal Veri</span>
                       </div>
                     </div>
                   </div>
@@ -2329,8 +2329,8 @@ export default function HealthRiskAnalysisPage() {
                         Tarih: 15.05.2026 • Pearson korelasyonu, menü karşılaştırması
                       </div>
                       <div style={{ display: "flex", gap: "6px", marginTop: "8px", flexWrap: "wrap" }}>
-                        <span style={{ fontSize: "11px", padding: "2px 8px", background: "#ccfbf1", color: "#0d9488", borderRadius: "4px", fontWeight: 700 }}>PDF: Kapsamlı Rapor</span>
-                        <span style={{ fontSize: "11px", padding: "2px 8px", background: "#dbeafe", color: "#2563eb", borderRadius: "4px", fontWeight: 700 }}>CSV: Ham Sayısal Veri</span>
+                        <span style={{ fontSize: "11px", padding: "2px 8px", background: "var(--green-bg)", color: "var(--green)", borderRadius: "4px", fontWeight: 700 }}>PDF: Kapsamlı Rapor</span>
+                        <span style={{ fontSize: "11px", padding: "2px 8px", background: "var(--accent-bg)", color: "var(--accent)", borderRadius: "4px", fontWeight: 700 }}>CSV: Ham Sayısal Veri</span>
                       </div>
                     </div>
                   </div>
@@ -2365,8 +2365,8 @@ export default function HealthRiskAnalysisPage() {
                         Tarih: 12.04.2026 • Yaş grubu & bölgesel kırılım, politika önerileri
                       </div>
                       <div style={{ display: "flex", gap: "6px", marginTop: "8px", flexWrap: "wrap" }}>
-                        <span style={{ fontSize: "11px", padding: "2px 8px", background: "#ccfbf1", color: "#0d9488", borderRadius: "4px", fontWeight: 700 }}>PDF: Kapsamlı Rapor</span>
-                        <span style={{ fontSize: "11px", padding: "2px 8px", background: "#dbeafe", color: "#2563eb", borderRadius: "4px", fontWeight: 700 }}>CSV: Ham Sayısal Veri</span>
+                        <span style={{ fontSize: "11px", padding: "2px 8px", background: "var(--green-bg)", color: "var(--green)", borderRadius: "4px", fontWeight: 700 }}>PDF: Kapsamlı Rapor</span>
+                        <span style={{ fontSize: "11px", padding: "2px 8px", background: "var(--accent-bg)", color: "var(--accent)", borderRadius: "4px", fontWeight: 700 }}>CSV: Ham Sayısal Veri</span>
                       </div>
                     </div>
                   </div>
@@ -2392,8 +2392,8 @@ export default function HealthRiskAnalysisPage() {
                 {/* Bilgilendirme notu */}
                 <div style={{
                   marginTop: "16px",
-                  background: "#f0f7f7",
-                  border: "1px solid #ccdada",
+                  background: "var(--surface2)",
+                  border: "1px solid var(--border)",
                   borderRadius: "10px",
                   padding: "12px 16px",
                   fontSize: "12.5px",
@@ -2405,7 +2405,7 @@ export default function HealthRiskAnalysisPage() {
                   <FileText size={16} style={{ color: "var(--color-green-primary)", flexShrink: 0 }} />
                   <span>
                     <strong style={{ color: "var(--text-primary)" }}>Raporu İndir</strong> butonuna bastığınızda tarayıcının yazdırma diyaloğu açılır.
-                    Açılan pencerede <strong>Hedef → PDF Olarak Kaydet</strong> seçeneğini seçerek raporu PDF formatında bilgisayarınıza kaydedebilirsiniz.
+                    Açılan pencerede <strong>Hedef: PDF Olarak Kaydet</strong> seçeneğini seçerek raporu PDF formatında bilgisayarınıza kaydedebilirsiniz.
                   </span>
                 </div>
 

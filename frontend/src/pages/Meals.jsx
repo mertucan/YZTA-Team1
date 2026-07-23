@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getMeals, createMeal, updateMeal, deleteMeal } from "../api/meals";
 import { getIngredients } from "../api/ingredients";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 const CATEGORIES = [
   "Çorba",
@@ -111,17 +112,38 @@ export default function Meals() {
     () => items.filter((m) => m.category === activeCategory && m.name.toLowerCase().includes(search.toLowerCase())),
     [items, activeCategory, search]
   );
+  const ingredientUsageCount = items.reduce((sum, meal) => sum + (meal.items?.length || 0), 0);
+  const summary = [
+    { label: "Toplam yemek", value: items.length },
+    { label: "Aktif kategori", value: countsByCategory[activeCategory] || 0 },
+    { label: "Malzeme kaydı", value: ingredientUsageCount },
+    { label: "Depo malzemesi", value: ingredients.length },
+  ];
 
   return (
     <div>
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 20, fontWeight: 600 }}>🍽️ Yemek Kategorisi</div>
+      <div style={pageHeader}>
+        <div style={pageTitle}>Yemek Kategorisi</div>
+      </div>
+
+      <div style={summaryGrid}>
+        {summary.map((item) => (
+          <div key={item.label} style={summaryCard}>
+            <div style={summaryLabel}>{item.label}</div>
+            <div style={summaryValue}>{item.value}</div>
+          </div>
+        ))}
       </div>
 
       <div style={card}>
-        <div style={cardHd}>{editingId ? "✏️ Yemeği Düzenle" : "➕ Yeni Yemek Ekle"}</div>
+        <div style={cardHdSplit}>
+          <div>
+            <div style={cardTitle}>{editingId ? "Yemeği Düzenle" : "Yeni Yemek Ekle"}</div>
+            <div style={cardHint}>Porsiyon, kategori ve 1 porsiyonluk malzeme miktarlarını tanımlayın.</div>
+          </div>
+        </div>
         <div style={{ padding: 18 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1.2fr 0.8fr", gap: 10, marginBottom: 14 }}>
+          <div style={formGrid}>
             <div>
               <div style={fieldLabel}>Yemek Adı</div>
               <input value={form.name} placeholder="Örn: Mercimek Çorbası" onChange={(e) => setForm({ ...form, name: e.target.value })} style={input} />
@@ -142,14 +164,15 @@ export default function Meals() {
             </div>
           </div>
 
-          <div style={fieldLabel}>Kullanılan Malzemeler — miktar 1 porsiyon içindir, depodaki stokla karşılaştırılır</div>
+          <div style={sectionTitle}>Kullanılan Malzemeler</div>
+          <div style={sectionHint}>Miktar 1 porsiyon içindir; sistem depodaki stokla otomatik karşılaştırır.</div>
           {form.items.map((it, index) => {
             const ing = ingredientMap[Number(it.ingredient_id)];
             const totalNeeded = it.quantity !== "" ? Number(it.quantity) * portionsNum : 0;
             const overStock = ing && totalNeeded > ing.stock;
             return (
               <div key={index}>
-                <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr auto", gap: 8, marginTop: 6 }}>
+                <div style={ingredientRow}>
                   <select value={it.ingredient_id} onChange={(e) => handleItemChange(index, "ingredient_id", e.target.value)} style={input}>
                     <option value="">Malzeme seçin...</option>
                     {ingredients.map((opt) => <option key={opt.id} value={opt.id}>{opt.name} ({opt.unit}) — depoda {opt.stock}{opt.unit}</option>)}
@@ -171,7 +194,7 @@ export default function Meals() {
               </div>
             );
           })}
-          <button onClick={addItemRow} style={{ ...btnSm, marginTop: 8 }}>+ Malzeme Ekle</button>
+          <button onClick={addItemRow} style={{ ...btnSm, marginTop: 10 }}>+ Malzeme Ekle</button>
 
           <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
             <button onClick={handleSubmit} style={btnPrimary}>{editingId ? "Güncelle" : "Ekle"}</button>
@@ -181,7 +204,13 @@ export default function Meals() {
       </div>
 
       <div style={card}>
-        <div style={{ ...cardHd, display: "flex", flexWrap: "wrap", gap: 6, borderBottom: "1px solid var(--border)" }}>
+        <div style={cardHdSplit}>
+          <div>
+            <div style={cardTitle}>Kategori Listesi</div>
+            <div style={cardHint}>Kategori seçin, ardından yemek adıyla filtreleyin.</div>
+          </div>
+        </div>
+        <div style={categoryTabs}>
           {CATEGORIES.map((c) => (
             <button
               key={c}
@@ -193,23 +222,22 @@ export default function Meals() {
             </button>
           ))}
         </div>
-        <div style={{ padding: "10px 18px 2px", fontSize: 13, fontWeight: 600, color: "var(--text2)" }}>
-          🍽️ {activeCategory} Listesi
-        </div>
-        <div style={{ padding: "8px 18px 12px" }}>
+        <div style={listToolbar}>
+          <div style={activeCategoryLabel}>{activeCategory} Listesi</div>
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="🔍 Bu kategoride yemek ara..."
-            style={input}
+            placeholder="Bu kategoride yemek ara..."
+            style={{ ...input, maxWidth: 360 }}
           />
         </div>
-        {loading ? <div style={{ padding: 24, color: "var(--text3)" }}>Yükleniyor...</div> : (
+        {loading ? <LoadingSpinner label="Yemek listesi yükleniyor" minHeight={180} size={38} /> : (
           visibleItems.length === 0 ? (
             <div style={{ padding: 24, color: "var(--text3)", fontSize: 13 }}>Bu kategoride henüz yemek yok.</div>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", minWidth: 760, borderCollapse: "collapse" }}>
               <thead>
                 <tr>{["Yemek", "Porsiyon", "Kalori", "Protein", "Demir", "Malzemeler (1 Porsiyon)", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
               </thead>
@@ -232,6 +260,7 @@ export default function Meals() {
                 ))}
               </tbody>
             </table>
+            </div>
           )
         )}
       </div>
@@ -239,14 +268,30 @@ export default function Meals() {
   );
 }
 
-const card       = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow)", marginBottom: 16 };
+const card       = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, boxShadow: "0 14px 36px rgba(24, 24, 24, 0.07)", marginBottom: 16, overflow: "hidden" };
+const pageHeader = { display: "flex", justifyContent: "space-between", alignItems: "end", gap: 16, marginBottom: 14 };
+const pageTitle = { color: "var(--ingredients-text)", fontFamily: "Georgia, 'Times New Roman', serif", fontSize: 34, lineHeight: 1.05, fontWeight: 700 };
+const summaryGrid = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 16 };
+const summaryCard = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: "13px 15px", boxShadow: "0 10px 26px rgba(24, 24, 24, 0.06)" };
+const summaryLabel = { color: "var(--text3)", fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 5 };
+const summaryValue = { color: "var(--text)", fontSize: 24, lineHeight: 1, fontWeight: 800, fontFamily: "var(--mono)" };
 const cardHd     = { padding: "14px 18px 12px", borderBottom: "1px solid var(--border)", fontSize: 13, fontWeight: 600 };
-const fieldLabel = { fontSize: 11, color: "var(--text2)", marginBottom: 5, fontWeight: 500 };
-const input      = { width: "100%", background: "var(--surface2)", border: "1px solid var(--border2)", borderRadius: 7, padding: "7px 12px", fontSize: 13, color: "var(--text)", outline: "none" };
-const th         = { textAlign: "left", fontSize: 10, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".06em", padding: "10px 18px", borderBottom: "1px solid var(--border)" };
-const td         = { padding: "10px 18px", fontSize: 12, color: "var(--text2)", borderBottom: "1px solid var(--border)" };
-const btnPrimary = { background: "var(--accent)", border: "none", color: "#fff", padding: "8px 18px", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer" };
-const btnSm      = { background: "var(--surface2)", border: "1px solid var(--border2)", color: "var(--text2)", padding: "4px 10px", borderRadius: 6, fontSize: 11, cursor: "pointer" };
+const cardHdSplit = { padding: "15px 18px 13px", borderBottom: "1px solid var(--border)", background: "var(--surface2)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" };
+const cardTitle = { color: "var(--text)", fontFamily: "Georgia, 'Times New Roman', serif", fontSize: 18, lineHeight: 1.15, fontWeight: 700 };
+const cardHint = { color: "var(--text3)", fontSize: 12, marginTop: 4, fontWeight: 600 };
+const formGrid = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 16 };
+const sectionTitle = { color: "var(--text3)", fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 4 };
+const sectionHint = { color: "var(--text3)", fontSize: 12, marginBottom: 10 };
+const ingredientRow = { display: "grid", gridTemplateColumns: "minmax(220px, 1.6fr) minmax(120px, 1fr) auto", gap: 8, marginTop: 7 };
+const categoryTabs = { padding: "12px 18px", display: "flex", flexWrap: "wrap", gap: 7, borderBottom: "1px solid var(--border)", background: "var(--surface)" };
+const listToolbar = { padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", background: "var(--surface2)", borderBottom: "1px solid var(--border)" };
+const activeCategoryLabel = { color: "var(--text)", fontFamily: "Georgia, 'Times New Roman', serif", fontSize: 17, lineHeight: 1.15, fontWeight: 700 };
+const fieldLabel = { fontSize: 11, color: "var(--text2)", marginBottom: 5, fontWeight: 700 };
+const input      = { width: "100%", background: "var(--surface2)", border: "1px solid var(--border2)", borderRadius: 7, padding: "8px 12px", fontSize: 13, color: "var(--text)", outline: "none", boxSizing: "border-box" };
+const th         = { textAlign: "left", fontSize: 10, fontWeight: 800, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".06em", padding: "11px 16px", borderBottom: "1px solid var(--border)", background: "var(--surface2)" };
+const td         = { padding: "11px 16px", fontSize: 12, color: "var(--text2)", borderBottom: "1px solid var(--border)" };
+const btnPrimary = { background: "var(--accent)", border: "none", color: "#fff", padding: "8px 18px", borderRadius: 8, fontSize: 12, fontWeight: 800, cursor: "pointer" };
+const btnSm      = { background: "var(--surface2)", border: "1px solid var(--border2)", color: "var(--text2)", padding: "5px 10px", borderRadius: 6, fontSize: 11, cursor: "pointer" };
 const tabBtn = {
   display: "inline-flex", alignItems: "center", gap: 6,
   background: "var(--surface2)", border: "1px solid var(--border2)", color: "var(--text2)",
