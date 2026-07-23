@@ -18,7 +18,6 @@ class Role(str, enum.Enum):
     finance_manager = "FINANCE_MANAGER"
     operations_manager = "OPERATIONS_MANAGER"
     student = "STUDENT"
-    system_support = "SYSTEM_SUPPORT"
     warehouse_staff = "WAREHOUSE_STAFF"
     purchasing_staff = "PURCHASING_STAFF"
     researcher = "RESEARCHER"

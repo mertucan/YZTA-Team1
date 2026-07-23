@@ -4,6 +4,16 @@ import { downloadTemplate, parseSheet, pickField } from "../utils/excel";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 const emptyForm = { first_name: "", last_name: "", national_id: "", age: 18 };
+const CATERING_SESSION_KEY = "catering_mock_session";
+
+function readRole() {
+  try {
+    const session = JSON.parse(localStorage.getItem(CATERING_SESSION_KEY) || "{}");
+    return session?.user?.role_name || null;
+  } catch {
+    return null;
+  }
+}
 
 function digitsOnly(value, maxLength) {
   const digits = String(value).replace(/\D/g, "");
@@ -17,6 +27,7 @@ function integerInputValue(value, min = 0) {
 }
 
 export default function Students() {
+  const [role, setRole]       = useState(() => readRole());
   const [items, setItems]     = useState([]);
   const [form, setForm]       = useState(emptyForm);
   const [loading, setLoading] = useState(true);
@@ -25,11 +36,23 @@ export default function Students() {
   const [importResult, setImportResult] = useState(null);
   const [studentListOpen, setStudentListOpen] = useState(false);
   const fileInputRef = useRef(null);
+  const isDietitian = role === "DIETITIAN";
+  const canMutateStudents = !isDietitian;
 
   const refresh = () => getStudents().then(setItems).finally(() => setLoading(false));
   useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    const refreshRole = () => setRole(readRole());
+    window.addEventListener("storage", refreshRole);
+    window.addEventListener("catering-session-changed", refreshRole);
+    return () => {
+      window.removeEventListener("storage", refreshRole);
+      window.removeEventListener("catering-session-changed", refreshRole);
+    };
+  }, []);
 
   const handleAdd = async () => {
+    if (!canMutateStudents) return;
     if (!form.first_name || !form.national_id) return;
     await createStudent(form);
     setForm(emptyForm);
@@ -37,6 +60,7 @@ export default function Students() {
   };
 
   const handleDownloadTemplate = () => {
+    if (!canMutateStudents) return;
     downloadTemplate(
       ["Ad", "Soyad", "TC Kimlik No", "Yaş"],
       [
@@ -50,7 +74,7 @@ export default function Students() {
 
   const handleFileSelected = async (e) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !canMutateStudents) return;
     setImporting(true);
     setImportResult(null);
     try {
@@ -99,7 +123,10 @@ export default function Students() {
   ];
   const filteredItems = items.filter((s) => {
     const q = search.toLowerCase();
-    return `${s.first_name} ${s.last_name}`.toLowerCase().includes(q) || s.national_id.includes(search);
+    const searchable = isDietitian
+      ? `${s.first_name} ${s.last_name} ${s.age}`
+      : `${s.first_name} ${s.last_name} ${s.national_id} ${s.age}`;
+    return searchable.toLowerCase().includes(q);
   });
   const avgAge = items.length
     ? Math.round(items.reduce((sum, student) => sum + Number(student.age || 0), 0) / items.length)
@@ -108,8 +135,21 @@ export default function Students() {
     { label: "Toplam öğrenci", value: items.length },
     { label: "Listelenen kayıt", value: filteredItems.length },
     { label: "Ortalama yaş", value: avgAge || "-" },
-    { label: "İçe aktarma", value: importResult ? importResult.successCount : "-" },
+    { label: isDietitian ? "Gizli alanlar" : "İçe aktarma", value: isDietitian ? "TC" : importResult ? importResult.successCount : "-" },
   ];
+
+  if (role === "CATERING_ADMIN") {
+    return (
+      <div style={card}>
+        <div style={cardHdSplit}>
+          <div>
+            <div style={cardTitle}>Erişim kısıtlandı</div>
+            <div style={cardHint}>Catering yöneticileri öğrenci detay ekranına erişemez. Öğrenci verileri üniversite ve beslenme rolleriyle sınırlıdır.</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -126,6 +166,7 @@ export default function Students() {
         ))}
       </div>
 
+      {canMutateStudents && (
       <div style={card}>
         <div style={cardHdSplit}>
           <div>
@@ -212,6 +253,7 @@ export default function Students() {
           <button onClick={handleAdd} style={btnPrimary}>Ekle</button>
         </div>
       </div>
+      )}
 
       <div style={card}>
         <button
@@ -222,7 +264,11 @@ export default function Students() {
         >
           <div>
             <div style={cardTitle}>Öğrenci Listesi</div>
-            <div style={cardHint}>Kayıtları isim veya TC kimlik numarasıyla hızlıca filtreleyin.</div>
+            <div style={cardHint}>
+              {isDietitian
+                ? "Diyetisyen görünümünde kimlik bilgileri gizlenir; liste sadece beslenme takibi için gösterilir."
+                : "Kayıtları isim veya TC kimlik numarasıyla hızlıca filtreleyin."}
+            </div>
           </div>
           <span style={accordionToggle}>{studentListOpen ? "Kapat" : "Aç"}</span>
         </button>
@@ -234,7 +280,7 @@ export default function Students() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="İsim veya TC ile ara..."
+                placeholder={isDietitian ? "İsim veya yaş ile ara..." : "İsim veya TC ile ara..."}
                 style={{ ...input, maxWidth: 360 }}
               />
             </div>
@@ -245,15 +291,19 @@ export default function Students() {
               <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", minWidth: 620, borderCollapse: "collapse" }}>
                 <thead>
-                  <tr>{["Ad Soyad", "TC Kimlik No", "Yaş", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr>
+                  <tr>{(isDietitian ? ["Ad Soyad", "Yaş"] : ["Ad Soyad", "TC Kimlik No", "Yaş", ""]).map((h) => <th key={h} style={th}>{h}</th>)}</tr>
                 </thead>
                 <tbody>
                   {filteredItems.map((s) => (
                     <tr key={s.id}>
                       <td style={td}><span style={{ fontWeight: 500, color: "var(--text)" }}>{s.first_name} {s.last_name}</span></td>
-                      <td style={{ ...td, fontFamily: "var(--mono)" }}>{s.national_id}</td>
+                      {!isDietitian && (
+                        <td style={{ ...td, fontFamily: "var(--mono)" }}>{s.national_id}</td>
+                      )}
                       <td style={td}>{s.age}</td>
-                      <td style={td}><button onClick={() => deleteStudent(s.id).then(refresh)} style={btnSm}>Sil</button></td>
+                      {!isDietitian && (
+                        <td style={td}><button onClick={() => deleteStudent(s.id).then(refresh)} style={btnSm}>Sil</button></td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
