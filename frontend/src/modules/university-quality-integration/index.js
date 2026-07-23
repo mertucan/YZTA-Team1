@@ -3,9 +3,9 @@ import UniversityQualityIntegrationPage from "./pages/UniversityQualityIntegrati
 export const universityQualityIntegrationModule = {
   id: "university-quality-integration",
   label: "Beslenme Kalitesi",
-  icon: "Q",
+  icon: "award",
   route: "/modules/university-quality-integration",
-  description: "Beslenme kalite metriklerini universite siralama kuruluslari icin disa aktarir",
-  author: "Takim uyesi 1",
+  description: "Beslenme kalite metriklerini üniversite sıralama kuruluşları için dışa aktarır",
+  author: "Takım üyesi 1",
   component: UniversityQualityIntegrationPage,
 };

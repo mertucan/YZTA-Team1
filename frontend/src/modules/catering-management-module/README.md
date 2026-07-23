@@ -1,11 +1,11 @@
-# 🍽️ Catering Management SaaS
+# Catering Management SaaS
 
 Üniversiteler için çok kiracılı (multi-tenant) catering yönetim platformu.
 FastAPI + React + Supabase ile geliştirilmiştir.
 
 ---
 
-## 📁 Proje Yapısı
+## Proje Yapısı
 
 ```
 CateringManagement/
@@ -55,7 +55,7 @@ CateringManagement/
 
 ---
 
-## ⚙️ Teknoloji Yığını
+## Teknoloji Yığını
 
 | Katman | Teknoloji |
 |---|---|
@@ -69,7 +69,7 @@ CateringManagement/
 
 ---
 
-## 🔐 Rol Sistemi (RBAC)
+## Rol Sistemi (RBAC)
 
 | Rol | Açıklama |
 |---|---|
@@ -84,7 +84,7 @@ Tüm yetki kontrolleri **backend'de** FastAPI bağımlılıkları (`Depends`) ar
 
 ---
 
-## 🚀 Kurulum & Çalıştırma
+## Kurulum & Çalıştırma
 
 ### Gereksinimler
 
@@ -139,7 +139,7 @@ npm run dev
 
 
 
-## 📡 API Endpoint Özeti
+## API Endpoint Özeti
 
 | Method | Endpoint | Açıklama |
 |---|---|---|
@@ -157,7 +157,7 @@ npm run dev
 
 ---
 
-## 🏗️ Mimari Notlar
+## Mimari Notlar
 
 - **Multi-tenancy**: Her kullanıcı `company_id` ile şirketine bağlıdır. Tüm sorgular otomatik olarak kiracı kapsamında filtrelenir.
 - **Lisans Yönetimi**: Her şirketin maksimum üniversite ve kullanıcı sayısını sınırlayan lisans kaydı bulunur.

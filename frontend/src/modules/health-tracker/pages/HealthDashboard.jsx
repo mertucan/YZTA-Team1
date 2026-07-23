@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getMealLogs, getCaloriesByStudent } from "../api/healthTracker";
+import LoadingSpinner from "../../../components/LoadingSpinner";
 
 const DAILY_RECOMMENDED = 2000;
 
@@ -12,9 +13,9 @@ const getStatus = (cal, count) => {
 };
 
 const statusStyle = {
-  low:  { color: "var(--amber)", bg: "var(--amber-bg)", border: "var(--amber-border)", label: "⚠ Düşük Kalori" },
-  ok:   { color: "var(--green)", bg: "var(--green-bg)", border: "var(--green-border)", label: "✓ Normal" },
-  high: { color: "var(--red)",   bg: "var(--red-bg)",   border: "var(--red-border)",   label: "↑ Yüksek Kalori" },
+  low:  { color: "var(--amber)", bg: "var(--amber-bg)", border: "var(--amber-border)", label: "Düşük Kalori" },
+  ok:   { color: "var(--green)", bg: "var(--green-bg)", border: "var(--green-border)", label: "Normal" },
+  high: { color: "var(--red)",   bg: "var(--red-bg)",   border: "var(--red-border)",   label: "Yüksek Kalori" },
 };
 
 export default function HealthDashboard() {
@@ -48,45 +49,45 @@ export default function HealthDashboard() {
   const lowRisk       = summaries.filter((s) => getStatus(s.total_calories, s.meal_count) === "low").length;
   const maxCal        = Math.max(...summaries.map((s) => s.total_calories), 1);
 
-  if (loading) return <div style={{ padding: 40, color: "var(--text3)" }}>Veriler yükleniyor...</div>;
+  if (loading) return <LoadingSpinner label="Sağlık takibi verileri yükleniyor" minHeight="calc(100vh - 120px)" size={48} />;
 
   return (
-    <div>
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 20, fontWeight: 600 }}>🩺 Sağlık & Kalori Takibi</div>
-        <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 3 }}>Öğrenci bazında kalori alımı — beslenme uzmanı görünümü</div>
+    <div style={page}>
+      <div style={pageHeader}>
+        <div style={pageTitle}>Sağlık & Kalori Takibi</div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 24 }}>
+      <div style={summaryGrid}>
         {[
           { label: "Takip Edilen Öğrenci",  value: summaries.length,          color: "var(--accent)" },
           { label: "Toplam Öğün Kaydı",     value: logs.length,               color: "var(--purple)" },
           { label: "Öğrenci Başı Ort. Kal", value: `${avgPerStudent} kcal`,   color: "var(--green)" },
           { label: "Dikkat Gerektiren",     value: highRisk + lowRisk,        color: "var(--red)" },
         ].map((c) => (
-          <div key={c.label} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "16px 18px", boxShadow: "var(--shadow)", position: "relative", overflow: "hidden" }}>
-            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: c.color }} />
-            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>{c.label}</div>
-            <div style={{ fontSize: 26, fontWeight: 700, fontFamily: "var(--mono)" }}>{c.value}</div>
+          <div key={c.label} style={summaryCard}>
+            <div style={{ ...summaryBar, background: c.color }} />
+            <div style={summaryLabel}>{c.label}</div>
+            <div style={summaryValue}>{c.value}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 16 }}>
+      <div style={contentGrid}>
         <div>
-          {/* Filtreler */}
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "14px 18px", marginBottom: 14, display: "flex", gap: 10, alignItems: "center", boxShadow: "var(--shadow)" }}>
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 Öğrenci ara..."
-              style={{ flex: 1, background: "var(--surface2)", border: "1px solid var(--border2)", borderRadius: 7, padding: "7px 12px", fontSize: 13, color: "var(--text)", outline: "none" }} />
+          <div style={filterBar}>
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Öğrenci ara..."
+              style={searchInput} />
+            <div style={filterButtons}>
             {["all", "ok", "low", "high"].map((f) => (
               <button key={f} onClick={() => setStatusFilter(f)}
                 style={{ padding: "6px 14px", borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: "pointer", border: "1px solid", transition: "all .15s",
                   background: statusFilter === f ? "var(--accent)" : "var(--surface2)",
                   borderColor: statusFilter === f ? "var(--accent)" : "var(--border2)",
                   color: statusFilter === f ? "#fff" : "var(--text2)" }}>
-                {f === "all" ? "Tümü" : f === "ok" ? "✓ Normal" : f === "low" ? "⚠ Düşük" : "↑ Yüksek"}
+                {f === "all" ? "Tümü" : f === "ok" ? "Normal" : f === "low" ? "Düşük" : "Yüksek"}
               </button>
             ))}
+            </div>
           </div>
 
           {/* Öğrenci kartları */}
@@ -101,7 +102,7 @@ export default function HealthDashboard() {
               const isSelected = selectedStudent === s.student_id;
               return (
                 <div key={s.student_id} onClick={() => setSelectedStudent(isSelected ? null : s.student_id)}
-                  style={{ background: "var(--surface)", border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`, borderRadius: "var(--radius)", padding: "14px 18px", cursor: "pointer", boxShadow: isSelected ? "0 0 0 3px var(--accent-bg)" : "var(--shadow)", transition: "all .15s" }}>
+                  style={{ background: "var(--surface)", border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`, borderRadius: 10, padding: "14px 18px", cursor: "pointer", boxShadow: isSelected ? "0 0 0 3px var(--accent-bg)" : "0 10px 26px rgba(24, 24, 24, 0.06)", transition: "all .15s" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
                     <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--accent-bg)", border: "2px solid var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "var(--accent)", flexShrink: 0 }}>
                       {s.first_name[0]}{s.last_name[0]}
@@ -130,10 +131,9 @@ export default function HealthDashboard() {
 
         {/* Detay paneli */}
         <div>
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow)", position: "sticky", top: 70 }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, boxShadow: "0 14px 36px rgba(24, 24, 24, 0.07)", position: "sticky", top: 70, overflow: "hidden" }}>
             {selectedStudent === null ? (
               <div style={{ padding: 40, textAlign: "center", color: "var(--text3)" }}>
-                <div style={{ fontSize: 32, marginBottom: 12 }}>🩺</div>
                 <div style={{ fontSize: 13, fontWeight: 500 }}>Detay görmek için<br />bir öğrenci seçin</div>
               </div>
             ) : (() => {
@@ -191,3 +191,28 @@ export default function HealthDashboard() {
     </div>
   );
 }
+
+const page = { display: "grid", gap: 16 };
+const pageHeader = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "end",
+  gap: 16,
+  marginBottom: 0,
+};
+const pageTitle = {
+  color: "var(--ingredients-text)",
+  fontFamily: "Georgia, 'Times New Roman', serif",
+  fontSize: 34,
+  lineHeight: 1.05,
+  fontWeight: 700,
+};
+const summaryGrid = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12 };
+const summaryCard = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, padding: "15px 16px", boxShadow: "0 10px 26px rgba(24, 24, 24, 0.06)", position: "relative", overflow: "hidden" };
+const summaryBar = { position: "absolute", top: 0, left: 0, right: 0, height: 3 };
+const summaryLabel = { fontSize: 10, fontWeight: 800, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 };
+const summaryValue = { fontSize: 24, fontWeight: 800, fontFamily: "var(--mono)", color: "var(--text)" };
+const contentGrid = { display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(320px, 380px)", gap: 16 };
+const filterBar = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, padding: 12, marginBottom: 14, display: "flex", gap: 10, alignItems: "center", boxShadow: "0 10px 26px rgba(24, 24, 24, 0.06)", flexWrap: "wrap" };
+const searchInput = { flex: "1 1 240px", background: "var(--surface2)", border: "1px solid var(--border2)", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "var(--text)", outline: "none" };
+const filterButtons = { display: "flex", gap: 8, flexWrap: "wrap" };

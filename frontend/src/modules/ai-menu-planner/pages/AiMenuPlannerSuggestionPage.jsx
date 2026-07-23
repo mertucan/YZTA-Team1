@@ -1,9 +1,9 @@
-// AI Destekli Menü Planlayıcı — ÖNERİ (UX sadeleştirme denemesi)
+// AI Destekli Menü Planlayıcı
 // Mevcut AiMenuPlannerPage.jsx'in işlevini korur; arayüz düzeni sadeleştirilmiştir.
 // Bu sürümde ek olarak: sekmelerin hemen altında tek "aktif taslak" önizlemesi,
 // yeni üretimde önceki onaylanmamış taslağın otomatik silinmesi (birikme yok),
 // menü seviyesinde "kaç kişi/porsiyon" seçimi — onaylı menüde bile değiştirilebilir,
-// değişiklik Dashboard'a yansır (kalem porsiyonu güncellenir).
+// değişiklik Kontrol Paneli'ne yansır (kalem porsiyonu güncellenir).
 import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   getMenus,
@@ -132,10 +132,10 @@ function buildSeasonalInsights(ingredients, weekStartDate) {
 
 function plainBadges(rev) {
   const badges = [];
-  if (rev.estimated_savings > 0) badges.push({ text: `💰 ${rev.estimated_savings.toFixed(2)} TL tasarruf/porsiyon`, color: "var(--green)" });
-  if (rev.seasonal_ingredients?.length) badges.push({ text: `🌿 Mevsiminde: ${rev.seasonal_ingredients.slice(0, 3).join(", ")}`, color: "#16a34a" });
-  if (rev.local_ingredients?.length) badges.push({ text: `🌍 Yerel: ${rev.local_ingredients.slice(0, 3).join(", ")}`, color: "var(--accent)" });
-  if (rev.price_advantage_score > 0) badges.push({ text: "📉 Piyasadan ucuz malzeme", color: "var(--amber)" });
+  if (rev.estimated_savings > 0) badges.push({ text: `${rev.estimated_savings.toFixed(2)} TL tasarruf/porsiyon`, color: "var(--green)" });
+  if (rev.seasonal_ingredients?.length) badges.push({ text: `Mevsiminde: ${rev.seasonal_ingredients.slice(0, 3).join(", ")}`, color: "#16a34a" });
+  if (rev.local_ingredients?.length) badges.push({ text: `Yerel: ${rev.local_ingredients.slice(0, 3).join(", ")}`, color: "var(--accent)" });
+  if (rev.price_advantage_score > 0) badges.push({ text: "Piyasadan ucuz malzeme", color: "var(--amber)" });
   return badges;
 }
 
@@ -156,13 +156,13 @@ function MealItemRow({ item, onRemoveItem, onChangeItemPortions, readOnly }) {
             <div style={{ fontWeight: 600 }}>{item.meal_name}</div>
             <div style={{ color: "var(--text3)", fontSize: 10 }}>{item.category} · {item.calories} kcal</div>
           </div>
-          {!readOnly && <button onClick={() => onRemoveItem(item.id)} style={btnX} title="Kaldır">✕</button>}
+          {!readOnly && <button onClick={() => onRemoveItem(item.id)} style={btnX} title="Kaldır">Sil</button>}
         </div>
         {readOnly ? (
-          <div style={{ fontSize: 10, color: "var(--text3)", marginTop: 4 }}>👥 {item.portions ?? "—"} kişi</div>
+          <div style={{ fontSize: 10, color: "var(--text3)", marginTop: 4 }}>{item.portions ?? "—"} kişi</div>
         ) : (
           <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
-            <span style={{ fontSize: 10, color: "var(--text3)" }}>👥</span>
+            <span style={{ fontSize: 10, color: "var(--text3)" }}>Kişi</span>
             <input
               value={val}
               inputMode="numeric"
@@ -187,7 +187,7 @@ function DayCard({ day, dayItems, mealsByCategory, ingredientsById, picker, onPi
   const mealItems = dayItems.filter((it) => it.meal_id);
   return (
     <div style={{ ...dayCard, opacity: readOnly ? 0.65 : 1 }}>
-      <div style={dayCardHd}>{day}{readOnly && <span style={{ fontWeight: 400, color: "var(--text3)" }}> · 🔒 geçti</span>}</div>
+      <div style={dayCardHd}>{day}{readOnly && <span style={{ fontWeight: 400, color: "var(--text3)" }}> · Geçti</span>}</div>
       <div style={{ padding: 10, flex: 1 }}>
         {mealItems.length === 0 && aiItems.length === 0 && <div style={{ fontSize: 11, color: "var(--text3)" }}>—</div>}
         {mealItems.map((item) => (
@@ -260,10 +260,10 @@ function MenuDetailPanel({ menu, ingredientsById, mealsByCategory, studentCount,
 
   return (
     <div style={{ padding: "4px 0 8px" }}>
-      {menu.notes && <div style={notesBar}>💬 Yönetici talimatı: <em>{menu.notes}</em></div>}
+      {menu.notes && <div style={notesBar}>Yönetici talimatı: <em>{menu.notes}</em></div>}
 
       {/* ÖZET */}
-      <SectionTitle>📊 Özet</SectionTitle>
+      <SectionTitle>Özet</SectionTitle>
       <div style={summaryGrid}>
         {[
           { label: "Bütçe", value: `${menu.budget.toFixed(2)} TL`, color: "var(--accent)" },
@@ -281,7 +281,7 @@ function MenuDetailPanel({ menu, ingredientsById, mealsByCategory, studentCount,
 
       {/* Kaç kişi / porsiyon — elle girilebilir + hızlı ön ayarlar; onaylı menüde bile değiştirilebilir */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 18px 10px", flexWrap: "wrap" }}>
-        <span style={{ fontSize: 12, color: "var(--text2)", fontWeight: 600 }}>👥 Kaç kişi için:</span>
+        <span style={{ fontSize: 12, color: "var(--text2)", fontWeight: 600 }}>Kaç kişi için:</span>
         <input
           type="text"
           inputMode="numeric"
@@ -298,7 +298,7 @@ function MenuDetailPanel({ menu, ingredientsById, mealsByCategory, studentCount,
           </button>
         ) : null}
         <span style={{ fontSize: 11, color: "var(--text3)" }}>
-          (şu an <strong>{portions}</strong> kişi{portionsSaving ? " · kaydediliyor…" : ""}) — Dashboard'a yansır
+          (şu an <strong>{portions}</strong> kişi{portionsSaving ? " · kaydediliyor..." : ""}) — Kontrol Paneli'ne yansır
         </span>
       </div>
 
@@ -313,8 +313,8 @@ function MenuDetailPanel({ menu, ingredientsById, mealsByCategory, studentCount,
       </div>
 
       {/* GÜNLÜK PLAN — onaylı menü de düzenlenebilir; yalnızca geçmiş günler kilitli.
-          Değişiklikler Dashboard'a yansır. */}
-      <SectionTitle>🗓️ Günlük Plan {isApproved && <span style={{ fontWeight: 400, color: "var(--text3)" }}>(onaylı — bugün ve sonrası düzenlenebilir, geçmiş günler kilitli)</span>}</SectionTitle>
+          Değişiklikler Kontrol Paneli'ne yansır. */}
+      <SectionTitle>Günlük Plan {isApproved && <span style={{ fontWeight: 400, color: "var(--text3)" }}>(onaylı — bugün ve sonrası düzenlenebilir, geçmiş günler kilitli)</span>}</SectionTitle>
       <div style={dayGrid}>
         {DAYS_OF_WEEK.map((day, idx) => {
           const dayDate = new Date(`${menu.week_start_date}T00:00:00`);
@@ -339,14 +339,14 @@ function MenuDetailPanel({ menu, ingredientsById, mealsByCategory, studentCount,
       </div>
 
       {/* İŞLEMLER */}
-      <SectionTitle>⚙️ İşlemler</SectionTitle>
+      <SectionTitle>İşlemler</SectionTitle>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: "0 18px 16px" }}>
-        {!isApproved && <button onClick={onApprove} style={btnPrimary}>✓ Taslağı Onayla</button>}
-        {isApproved && <span style={{ ...pill, borderColor: "var(--green)", color: "var(--green)", alignSelf: "center" }}>✓ Onaylandı</span>}
+        {!isApproved && <button onClick={onApprove} style={btnPrimary}>Taslağı Onayla</button>}
+        {isApproved && <span style={{ ...pill, borderColor: "var(--green)", color: "var(--green)", alignSelf: "center" }}>Onaylandı</span>}
         <button onClick={onSeasonalRevisions} disabled={revisionsLoading} style={{ ...btnSecondary, borderColor: "var(--green)", color: "var(--green)" }}>
-          {revisionsLoading ? "Analiz ediliyor..." : "🌿 Mevsimsel Revizyon Öner"}
+          {revisionsLoading ? "Analiz ediliyor..." : "Mevsimsel Revizyon Öner"}
         </button>
-        <button onClick={onDelete} style={{ ...btnSm, color: "var(--red)" }}>🗑 Menüyü Sil</button>
+        <button onClick={onDelete} style={{ ...btnSm, color: "var(--red)" }}>Menüyü Sil</button>
       </div>
     </div>
   );
@@ -362,8 +362,8 @@ function RevisionModal({ data, onClose, onApply, applyingId }) {
     <div onClick={onClose} style={overlay}>
       <div onClick={(e) => e.stopPropagation()} style={modal}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 6 }}>
-          <div style={{ fontSize: 15, fontWeight: 700 }}>🌿 Mevsimsel Revizyon Önerileri</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text3)", fontSize: 16, cursor: "pointer" }}>✕</button>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>Mevsimsel Revizyon Önerileri</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text3)", fontSize: 12, cursor: "pointer" }}>Kapat</button>
         </div>
         <div style={{ fontSize: 12, color: "var(--text2)", marginBottom: 12 }}>
           Toplam tahmini tasarruf: <strong style={{ color: "var(--green)" }}>{data.total_estimated_savings.toFixed(2)} TL</strong>
@@ -381,18 +381,18 @@ function RevisionModal({ data, onClose, onApply, applyingId }) {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
                   <div style={{ fontSize: 12 }}>
                     <span style={{ color: "var(--red)", fontWeight: 600 }}>{rev.current_meal_name}</span>
-                    <span style={{ color: "var(--text3)", margin: "0 6px" }}>→</span>
+                    <span style={{ color: "var(--text3)", margin: "0 6px" }}>yerine</span>
                     <span style={{ color: "var(--green)", fontWeight: 600 }}>{rev.suggested_meal_name}</span>
                   </div>
                   {rev._applied ? (
-                    <span style={{ ...pill, borderColor: "var(--green)", color: "var(--green)", fontWeight: 700 }}>✓ Uygulandı</span>
+                    <span style={{ ...pill, borderColor: "var(--green)", color: "var(--green)", fontWeight: 700 }}>Uygulandı</span>
                   ) : (
                     <button
                       onClick={() => onApply(rev)}
                       disabled={applyingId != null}
                       style={{ ...btnPrimary, padding: "5px 14px", opacity: applyingId != null && applyingId !== rev.menu_item_id ? 0.6 : 1 }}
                     >
-                      {applyingId === rev.menu_item_id ? "Uygulanıyor..." : "✓ Uygula"}
+                      {applyingId === rev.menu_item_id ? "Uygulanıyor..." : "Uygula"}
                     </button>
                   )}
                 </div>
@@ -570,7 +570,7 @@ export default function AiMenuPlannerSuggestionPage() {
   };
 
   // Mevsimsel revizyon önerisini teker teker uygula: kalemdeki yemek önerilenle değişir,
-  // kişi sayısı korunur, maliyet yeniden hesaplanır ve Dashboard'a yansır.
+  // kişi sayısı korunur, maliyet yeniden hesaplanır ve Kontrol Paneli'ne yansır.
   const handleApplyRevision = async (rev) => {
     if (!active) return;
     setApplyingRevisionId(rev.menu_item_id);
@@ -650,7 +650,7 @@ export default function AiMenuPlannerSuggestionPage() {
                 <td style={td}>{m.portions || 40}</td>
                 <td style={td}>{m.budget.toFixed(0)} TL</td>
                 <td style={td}>{m.total_cost.toFixed(0)} TL</td>
-                <td style={td}>{m.status === "approved" ? "✓ Onaylandı" : "Taslak"}</td>
+                <td style={td}>{m.status === "approved" ? "Onaylandı" : "Taslak"}</td>
                 <td style={td}>
                   <button onClick={() => openFromList(m.id)} style={btnSm}>{active && active.id === m.id ? "Kapat" : "Aç"}</button>{" "}
                   {m.status === "draft" && <button onClick={() => handleApproveById(m.id)} style={{ ...btnSm, color: "var(--green)" }}>Onayla</button>}{" "}
@@ -665,9 +665,12 @@ export default function AiMenuPlannerSuggestionPage() {
 
   return (
     <div>
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 20, fontWeight: 600 }}>🤖 AI Destekli Menü Planlayıcı Öneri</div>
-        <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 3 }}>
+      <div style={pageHeader}>
+        <div>
+          <div style={eyebrow}>Operasyon Paneli</div>
+          <div style={pageTitle}>AI Destekli Menü Planlayıcı</div>
+        </div>
+        <div style={pageSubtitle}>
           Sadeleştirilmiş arayüz denemesi — üretilen taslak hemen aşağıda çıkar, tıklayıp onaylarsın.
         </div>
       </div>
@@ -679,8 +682,8 @@ export default function AiMenuPlannerSuggestionPage() {
       <div style={card}>
         {/* R1: mod sekmeleri */}
         <div style={tabRow}>
-          <button onClick={() => setCreateMode("ai")} style={createMode === "ai" ? tabActive : tab}>🤖 AI'ya bıraktır</button>
-          <button onClick={() => setCreateMode("manual")} style={createMode === "manual" ? tabActive : tab}>✍️ Kendim seçeyim</button>
+          <button onClick={() => setCreateMode("ai")} style={createMode === "ai" ? tabActive : tab}>AI'ya bıraktır</button>
+          <button onClick={() => setCreateMode("manual")} style={createMode === "manual" ? tabActive : tab}>Kendim seçeyim</button>
         </div>
 
         <div style={{ padding: 18 }}>
@@ -724,9 +727,9 @@ export default function AiMenuPlannerSuggestionPage() {
                 style={input} />
             </div>
             {createMode === "ai" ? (
-              <button onClick={handleGenerate} disabled={generating} style={btnPrimary}>{generating ? "Oluşturuluyor..." : "✨ AI ile Taslak Üret"}</button>
+              <button onClick={handleGenerate} disabled={generating} style={btnPrimary}>{generating ? "Oluşturuluyor..." : "AI ile Taslak Üret"}</button>
             ) : (
-              <button onClick={handleCreateManual} style={btnPrimary}>📋 Boş Taslak Oluştur</button>
+              <button onClick={handleCreateManual} style={btnPrimary}>Boş Taslak Oluştur</button>
             )}
           </div>
 
@@ -785,7 +788,7 @@ export default function AiMenuPlannerSuggestionPage() {
           <div style={{ borderTop: "2px solid var(--accent)", background: "var(--surface2)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 18px", flexWrap: "wrap", gap: 6 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)" }}>
-                {active.status === "approved" ? "✓ Onaylı Menü" : "📝 Aktif Taslak"} · {weekRangeLabel(snapToMonday(active.week_start_date))} haftası
+                {active.status === "approved" ? "Onaylı Menü" : "Aktif Taslak"} · {weekRangeLabel(snapToMonday(active.week_start_date))} haftası
               </div>
               <button onClick={() => setActive(null)} style={btnSm}>Kapat</button>
             </div>
@@ -811,13 +814,13 @@ export default function AiMenuPlannerSuggestionPage() {
       </div>
 
       <div style={card}>
-        <div style={cardHd}>📆 Güncel Menüler <span style={{ fontWeight: 400, color: "var(--text3)" }}>(bugün ve sonrası — açmak için "Aç")</span></div>
+        <div style={cardHd}>Güncel Menüler <span style={{ fontWeight: 400, color: "var(--text3)" }}>(bugün ve sonrası — açmak için "Aç")</span></div>
         {renderMenuTable(currentMenus, "Güncel bir menü yok.")}
       </div>
 
       <div style={card}>
         <div style={{ ...cardHd, display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }} onClick={() => setShowPast(!showPast)}>
-          <span>🗄️ Geçmiş Menüler <span style={{ fontWeight: 400, color: "var(--text3)" }}>({pastMenus.length})</span></span>
+          <span>Geçmiş Menüler <span style={{ fontWeight: 400, color: "var(--text3)" }}>({pastMenus.length})</span></span>
           <span style={{ fontSize: 11, color: "var(--text3)" }}>{showPast ? "▲ Gizle" : "▼ Göster"}</span>
         </div>
         {showPast && renderMenuTable(pastMenus, "Geçmiş menü yok.")}
@@ -835,6 +838,10 @@ export default function AiMenuPlannerSuggestionPage() {
 
 // ─── Stiller ───
 const card = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow)", marginBottom: 16 };
+const pageHeader = { display: "flex", justifyContent: "space-between", alignItems: "end", gap: 16, marginBottom: 20 };
+const eyebrow = { color: "var(--ingredients-accent)", fontSize: 11, fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 4 };
+const pageTitle = { color: "var(--ingredients-text)", fontFamily: "Georgia, 'Times New Roman', serif", fontSize: 30, lineHeight: 1.05, fontWeight: 700 };
+const pageSubtitle = { color: "var(--ingredients-muted)", fontSize: 13, fontWeight: 700, paddingBottom: 3, textAlign: "right", maxWidth: 560 };
 const cardHd = { padding: "14px 18px 12px", borderBottom: "1px solid var(--border)", fontSize: 13, fontWeight: 600 };
 const fieldLabel = { fontSize: 11, color: "var(--text2)", marginBottom: 5, fontWeight: 500 };
 const input = { width: "100%", background: "var(--surface2)", border: "1px solid var(--border2)", borderRadius: 7, padding: "7px 12px", fontSize: 13, color: "var(--text)", outline: "none" };
