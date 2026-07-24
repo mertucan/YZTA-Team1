@@ -11,6 +11,7 @@ import {
   fetchMarketPrice,
   getMarketHealth,
   selfHealMarket,
+  getStockAlerts,
 } from "../api/ingredients";
 import { todayLocal } from "../utils/date";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -467,6 +468,8 @@ export default function Ingredients() {
   const [a101Notice, setA101Notice] = useState(""); // birim değişimi/özet bildirimi
   const [health, setHealth] = useState(null);
   const [healing, setHealing] = useState(false);
+  const [alerts, setAlerts] = useState(null);   // {expired, expiring_soon, shortages, counts}
+  const [alertsOpen, setAlertsOpen] = useState(true);
 
   const refresh = () =>
     getIngredients()
@@ -476,9 +479,11 @@ export default function Ingredients() {
     getMarketPrices()
       .then((list) => setA101(Object.fromEntries(list.map((r) => [r.ingredient_id, r]))))
       .catch(() => {});
+  const refreshAlerts = () => getStockAlerts().then(setAlerts).catch(() => {});
   useEffect(() => {
     refresh();
     refreshA101();
+    refreshAlerts();
   }, []);
 
   const handleFetchA101 = async (id) => {
@@ -616,16 +621,17 @@ export default function Ingredients() {
   const filtered = items.filter((i) =>
     i.name.toLowerCase().includes(search.toLowerCase()),
   );
-  const lowStockCount = items.filter((i) => Number(i.stock || 0) < 20).length;
   const localCount = items.filter((i) => i.is_local).length;
-  const seasonalCount = items.filter(isInSeason).length;
   const pricedCount = items.filter((i) => a101[i.id]).length;
+  const expiredCount = alerts?.counts?.expired ?? 0;
+  const expiringCount = alerts?.counts?.expiring_soon ?? 0;
+  const shortageCount = alerts?.counts?.shortages ?? items.filter((i) => Number(i.stock || 0) < 20).length;
   const stockSummary = [
     { label: "Toplam malzeme", value: items.length },
-    { label: "Kritik stok", value: lowStockCount, tone: lowStockCount ? "var(--red)" : "var(--ingredients-muted-strong)" },
-    { label: "Yerel ürün", value: localCount },
+    { label: "SKT'si geçen", value: expiredCount, tone: expiredCount ? "var(--red)" : "var(--ingredients-muted-strong)" },
+    { label: "SKT'si yaklaşan", value: expiringCount, tone: expiringCount ? "var(--amber)" : "var(--ingredients-muted-strong)" },
+    { label: "Eksik / kritik", value: shortageCount, tone: shortageCount ? "var(--red)" : "var(--ingredients-muted-strong)" },
     { label: "Migros fiyatlı", value: pricedCount },
-    { label: "Mevsimde", value: seasonalCount },
   ];
 
   return (
@@ -644,6 +650,69 @@ export default function Ingredients() {
           </div>
         ))}
       </div>
+
+      {/* ── Akıllı Stok Uyarıları: SKT geçen/yaklaşan + gelecek menü ihtiyacına göre eksik ── */}
+      {alerts && (expiredCount > 0 || expiringCount > 0 || shortageCount > 0) && (
+        <div style={{ ...card, borderColor: "var(--red)" }}>
+          <button type="button" style={accordionHeader} onClick={() => setAlertsOpen((v) => !v)} aria-expanded={alertsOpen}>
+            <div>
+              <div style={cardTitle}>⚠ Stok Uyarıları & İhtiyaç Listesi</div>
+              <div style={cardHint}>
+                SKT'si geçen {expiredCount} parti · Yaklaşan {expiringCount} · Gelecek menülere göre {shortageCount} eksik malzeme
+              </div>
+            </div>
+            <span style={{ fontSize: 12, color: "var(--ingredients-muted)" }}>{alertsOpen ? "Gizle ▲" : "Göster ▼"}</span>
+          </button>
+          {alertsOpen && (
+            <div style={{ padding: "0 16px 16px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              {/* Eksik malzemeler (ne kadar sipariş edilmeli) */}
+              <div>
+                <div style={alertColTitle}>Sipariş edilecek (eksik) malzemeler</div>
+                {alerts.shortages.length === 0 ? (
+                  <div style={alertEmpty}>Eksik malzeme yok.</div>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                    <thead><tr>{["Malzeme", "Stok", "Gereken", "Eksik"].map((h) => <th key={h} style={alertTh}>{h}</th>)}</tr></thead>
+                    <tbody>
+                      {alerts.shortages.slice(0, 12).map((r) => (
+                        <tr key={r.ingredient_id}>
+                          <td style={alertTd}>{r.name} {r.reason === "menu" && <span style={menuTag}>menü</span>}</td>
+                          <td style={alertTd}>{r.stock} {r.unit}</td>
+                          <td style={alertTd}>{r.required} {r.unit}</td>
+                          <td style={{ ...alertTd, color: "var(--red)", fontWeight: 700 }}>{r.shortage} {r.unit}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+              {/* SKT geçen / yaklaşan partiler */}
+              <div>
+                <div style={alertColTitle}>SKT'si geçen / yaklaşan partiler</div>
+                {alerts.expired.length === 0 && alerts.expiring_soon.length === 0 ? (
+                  <div style={alertEmpty}>SKT sorunu yok.</div>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                    <thead><tr>{["Malzeme", "Miktar", "SKT", "Durum"].map((h) => <th key={h} style={alertTh}>{h}</th>)}</tr></thead>
+                    <tbody>
+                      {[...alerts.expired, ...alerts.expiring_soon].slice(0, 12).map((r, idx) => (
+                        <tr key={idx}>
+                          <td style={alertTd}>{r.name}</td>
+                          <td style={alertTd}>{r.quantity} {r.unit}</td>
+                          <td style={alertTd}>{r.expiry_date}</td>
+                          <td style={{ ...alertTd, color: r.days_left < 0 ? "var(--red)" : "var(--amber)", fontWeight: 700 }}>
+                            {r.days_left < 0 ? `${-r.days_left} gün geçti` : `${r.days_left} gün kaldı`}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Form ── */}
       <div style={card}>
@@ -1025,7 +1094,7 @@ export default function Ingredients() {
                             borderBottom: "1px solid var(--border)",
                           }}
                         >
-                          <BatchPanel ingredient={i} onStockChanged={refresh} />
+                          <BatchPanel ingredient={i} onStockChanged={() => { refresh(); refreshAlerts(); }} />
                         </td>
                       </tr>
                     )}
@@ -1083,6 +1152,11 @@ const summaryGrid = {
   gap: 12,
   marginBottom: 16,
 };
+const alertColTitle = { fontSize: 12, fontWeight: 700, color: "var(--ingredients-text)", margin: "6px 0 8px" };
+const alertEmpty = { fontSize: 12, color: "var(--ingredients-muted)", padding: "8px 0" };
+const alertTh = { textAlign: "left", fontSize: 10, fontWeight: 700, color: "var(--ingredients-muted)", textTransform: "uppercase", letterSpacing: ".05em", padding: "6px 8px", borderBottom: "1px solid var(--ingredients-border)" };
+const alertTd = { padding: "6px 8px", color: "var(--ingredients-text)", borderBottom: "1px solid var(--ingredients-border)" };
+const menuTag = { fontSize: 9, background: "var(--accent-bg, #eef)", color: "var(--accent, #4661d8)", borderRadius: 4, padding: "1px 5px", marginLeft: 4, fontWeight: 700 };
 const summaryCard = {
   background: "var(--ingredients-card)",
   border: "1px solid var(--ingredients-border)",
