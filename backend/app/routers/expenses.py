@@ -4,6 +4,7 @@ from datetime import date
 from fastapi import APIRouter, HTTPException
 from app.database import get_db
 from app.models.expense import Expense, ExpenseCreate, ExpenseUpdate
+from app.services.expense_ai import analyze_expenses
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
 
@@ -38,6 +39,13 @@ def expense_summary():
         "by_month": [{"month": k, "amount": round(v, 2)} for k, v in sorted(by_month.items())],
         "biggest": biggest,
     }
+
+
+@router.get("/ai-insights")
+def expense_ai_insights():
+    """Yapay zeka gider analizi: kategori/aylık trendden gözlem + tasarruf önerileri.
+    Gemini varsa onu, yoksa kural tabanlı analizi kullanır."""
+    return analyze_expenses()
 
 
 @router.post("/", response_model=Expense, status_code=201)
