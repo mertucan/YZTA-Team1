@@ -470,6 +470,7 @@ export default function Ingredients() {
   const [healing, setHealing] = useState(false);
   const [alerts, setAlerts] = useState(null);   // {expired, expiring_soon, shortages, counts}
   const [alertsOpen, setAlertsOpen] = useState(true);
+  const [alertBusy, setAlertBusy] = useState(null);
 
   const refresh = () =>
     getIngredients()
@@ -485,6 +486,37 @@ export default function Ingredients() {
     refreshA101();
     refreshAlerts();
   }, []);
+
+  // SKT'si geçmiş partiyi imha et (DB'den sil → stok otomatik düşer)
+  const handleDiscardBatch = async (ingredientId, batchId) => {
+    setAlertBusy(`d${batchId}`);
+    try {
+      await deleteBatch(ingredientId, batchId);
+      await Promise.all([refresh(), refreshAlerts()]);
+    } finally {
+      setAlertBusy(null);
+    }
+  };
+
+  // Eksik malzeme için tek tıkla stok girişi: eksik miktarı yeni parti olarak ekler (DB)
+  const handleQuickRestock = async (row) => {
+    setAlertBusy(`r${row.ingredient_id}`);
+    try {
+      await createBatch(row.ingredient_id, {
+        quantity: Number(row.shortage) || 0,
+        purchase_date: todayLocal(),
+        expiry_date: null,
+      });
+      await Promise.all([refresh(), refreshAlerts()]);
+    } finally {
+      setAlertBusy(null);
+    }
+  };
+
+  const scrollToAlerts = () => {
+    setAlertsOpen(true);
+    document.getElementById("stock-alerts")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const handleFetchA101 = async (id) => {
     setA101Busy(id);
@@ -636,8 +668,19 @@ export default function Ingredients() {
 
   return (
     <div className="ingredients-page" style={page}>
-      <div style={pageHeader}>
+      <div style={{ ...pageHeader, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={pageTitle}>Malzeme Deposu</div>
+        {(expiredCount + expiringCount + shortageCount) > 0 && (
+          <button
+            type="button"
+            onClick={scrollToAlerts}
+            title={`${expiredCount} SKT geçen · ${expiringCount} yaklaşan · ${shortageCount} eksik malzeme`}
+            style={bellBtn}
+          >
+            <span style={{ fontSize: 18 }}>🔔</span>
+            <span style={bellBadge}>{expiredCount + expiringCount + shortageCount}</span>
+          </button>
+        )}
       </div>
 
       <div style={summaryGrid}>
@@ -653,7 +696,7 @@ export default function Ingredients() {
 
       {/* ── Akıllı Stok Uyarıları: SKT geçen/yaklaşan + gelecek menü ihtiyacına göre eksik ── */}
       {alerts && (expiredCount > 0 || expiringCount > 0 || shortageCount > 0) && (
-        <div style={{ ...card, borderColor: "var(--red)" }}>
+        <div id="stock-alerts" style={{ ...card, borderColor: "var(--red)" }}>
           <button type="button" style={accordionHeader} onClick={() => setAlertsOpen((v) => !v)} aria-expanded={alertsOpen}>
             <div>
               <div style={cardTitle}>⚠ Stok Uyarıları & İhtiyaç Listesi</div>
@@ -672,7 +715,7 @@ export default function Ingredients() {
                   <div style={alertEmpty}>Eksik malzeme yok.</div>
                 ) : (
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                    <thead><tr>{["Malzeme", "Stok", "Gereken", "Eksik"].map((h) => <th key={h} style={alertTh}>{h}</th>)}</tr></thead>
+                    <thead><tr>{["Malzeme", "Stok", "Gereken", "Eksik", ""].map((h) => <th key={h} style={alertTh}>{h}</th>)}</tr></thead>
                     <tbody>
                       {alerts.shortages.slice(0, 12).map((r) => (
                         <tr key={r.ingredient_id}>
@@ -680,6 +723,16 @@ export default function Ingredients() {
                           <td style={alertTd}>{r.stock} {r.unit}</td>
                           <td style={alertTd}>{r.required} {r.unit}</td>
                           <td style={{ ...alertTd, color: "var(--red)", fontWeight: 700 }}>{r.shortage} {r.unit}</td>
+                          <td style={alertTd}>
+                            <button
+                              onClick={() => handleQuickRestock(r)}
+                              disabled={alertBusy === `r${r.ingredient_id}`}
+                              style={alertActionBtn}
+                              title={`${r.shortage} ${r.unit} stok girişi yap (parti olarak eklenir)`}
+                            >
+                              {alertBusy === `r${r.ingredient_id}` ? "..." : "+ Stok Ekle"}
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -693,15 +746,27 @@ export default function Ingredients() {
                   <div style={alertEmpty}>SKT sorunu yok.</div>
                 ) : (
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                    <thead><tr>{["Malzeme", "Miktar", "SKT", "Durum"].map((h) => <th key={h} style={alertTh}>{h}</th>)}</tr></thead>
+                    <thead><tr>{["Malzeme", "Miktar", "SKT", "Durum", ""].map((h) => <th key={h} style={alertTh}>{h}</th>)}</tr></thead>
                     <tbody>
-                      {[...alerts.expired, ...alerts.expiring_soon].slice(0, 12).map((r, idx) => (
-                        <tr key={idx}>
+                      {[...alerts.expired, ...alerts.expiring_soon].slice(0, 12).map((r) => (
+                        <tr key={r.batch_id}>
                           <td style={alertTd}>{r.name}</td>
                           <td style={alertTd}>{r.quantity} {r.unit}</td>
                           <td style={alertTd}>{r.expiry_date}</td>
                           <td style={{ ...alertTd, color: r.days_left < 0 ? "var(--red)" : "var(--amber)", fontWeight: 700 }}>
                             {r.days_left < 0 ? `${-r.days_left} gün geçti` : `${r.days_left} gün kaldı`}
+                          </td>
+                          <td style={alertTd}>
+                            {r.days_left < 0 && (
+                              <button
+                                onClick={() => handleDiscardBatch(r.ingredient_id, r.batch_id)}
+                                disabled={alertBusy === `d${r.batch_id}`}
+                                style={{ ...alertActionBtn, color: "var(--red)", borderColor: "var(--red)" }}
+                                title="Süresi geçen partiyi imha et (stoktan düşülür)"
+                              >
+                                {alertBusy === `d${r.batch_id}` ? "..." : "İmha Et"}
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -1152,6 +1217,9 @@ const summaryGrid = {
   gap: 12,
   marginBottom: 16,
 };
+const bellBtn = { position: "relative", background: "var(--ingredients-card)", border: "1px solid var(--ingredients-border)", borderRadius: 10, padding: "8px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center" };
+const bellBadge = { position: "absolute", top: -6, right: -6, background: "var(--red)", color: "#fff", borderRadius: 999, fontSize: 10, fontWeight: 700, minWidth: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" };
+const alertActionBtn = { background: "transparent", border: "1px solid var(--accent, #4661d8)", color: "var(--accent, #4661d8)", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" };
 const alertColTitle = { fontSize: 12, fontWeight: 700, color: "var(--ingredients-text)", margin: "6px 0 8px" };
 const alertEmpty = { fontSize: 12, color: "var(--ingredients-muted)", padding: "8px 0" };
 const alertTh = { textAlign: "left", fontSize: 10, fontWeight: 700, color: "var(--ingredients-muted)", textTransform: "uppercase", letterSpacing: ".05em", padding: "6px 8px", borderBottom: "1px solid var(--ingredients-border)" };

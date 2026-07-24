@@ -35,7 +35,7 @@ def stock_alerts():
 
     # ── SKT durumu (partiler) ──
     batches = db.table("ingredient_batches").select(
-        "ingredient_id, quantity, expiry_date"
+        "id, ingredient_id, quantity, expiry_date"
     ).gt("quantity", 0).execute().data
     expired, expiring = [], []
     for b in batches:
@@ -48,7 +48,7 @@ def stock_alerts():
             continue
         days = (exp_d - today).days
         ing = ing_by_id.get(b["ingredient_id"], {})
-        row = {"ingredient_id": b["ingredient_id"], "name": ing.get("name", "?"),
+        row = {"batch_id": b["id"], "ingredient_id": b["ingredient_id"], "name": ing.get("name", "?"),
                "unit": ing.get("unit", ""), "quantity": b["quantity"],
                "expiry_date": exp, "days_left": days}
         if days < 0:
