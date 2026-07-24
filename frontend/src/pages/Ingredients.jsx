@@ -1,4 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { generateOrder } from "../api/orders";
 import {
   getIngredients,
   createIngredient,
@@ -471,6 +473,8 @@ export default function Ingredients() {
   const [alerts, setAlerts] = useState(null);   // {expired, expiring_soon, shortages, counts}
   const [alertsOpen, setAlertsOpen] = useState(true);
   const [alertBusy, setAlertBusy] = useState(null);
+  const [orderBusy, setOrderBusy] = useState(false);
+  const navigate = useNavigate();
 
   const refresh = () =>
     getIngredients()
@@ -516,6 +520,23 @@ export default function Ingredients() {
   const scrollToAlerts = () => {
     setAlertsOpen(true);
     document.getElementById("stock-alerts")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // Otomatik Sipariş Ajanı: eksik listesinden taslak sipariş üret, Siparişler sayfasına git
+  const handleGenerateOrder = async () => {
+    setOrderBusy(true);
+    try {
+      const res = await generateOrder();
+      if (res?.created === false) {
+        window.alert(res.message || "Sipariş gerektiren malzeme yok.");
+      } else {
+        navigate("/orders");
+      }
+    } catch {
+      window.alert("Sipariş oluşturulamadı.");
+    } finally {
+      setOrderBusy(false);
+    }
   };
 
   const handleFetchA101 = async (id) => {
@@ -737,6 +758,20 @@ export default function Ingredients() {
                       ))}
                     </tbody>
                   </table>
+                )}
+                {alerts.shortages.length > 0 && (
+                  <button
+                    onClick={handleGenerateOrder}
+                    disabled={orderBusy}
+                    style={{
+                      marginTop: 10, width: "100%", padding: "9px 12px", borderRadius: 8,
+                      border: "none", background: "var(--accent)", color: "#fff",
+                      fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: orderBusy ? 0.6 : 1,
+                    }}
+                    title="Eksik malzemelerden otomatik tedarikçi sipariş taslağı oluştur"
+                  >
+                    {orderBusy ? "Oluşturuluyor..." : "🤖 Bu eksiklerden Otomatik Sipariş Oluştur"}
+                  </button>
                 )}
               </div>
               {/* SKT geçen / yaklaşan partiler */}

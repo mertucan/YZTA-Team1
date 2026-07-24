@@ -11,6 +11,7 @@ const recordItems = [
   { to: "/students", icon: "graduation", label: "Öğrenciler" },
   { to: "/absences", icon: "calendar", label: "Devamsızlık" },
   { to: "/expenses", icon: "box", label: "Harcamalar" },
+  { to: "/orders", icon: "cart", label: "Siparişler" },
 ];
 
 const cateringItems = [
@@ -50,6 +51,7 @@ const recordRoles = {
   "/students": ["UNIVERSITY_ADMIN", "DIETITIAN", "RESEARCHER"],
   "/absences": ["UNIVERSITY_ADMIN", "OPERATIONS_MANAGER"],
   "/expenses": ["OPERATIONS_MANAGER", "FINANCE_MANAGER", "CATERING_ADMIN"],
+  "/orders": ["OPERATIONS_MANAGER", "PURCHASING_STAFF", "WAREHOUSE_STAFF", "CATERING_ADMIN"],
 };
 
 function readCateringSession() {
