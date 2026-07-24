@@ -130,6 +130,23 @@ function A101Cell({ rec, ingredientName, error, busy, onFetch }) {
     const d = new Date(iso);
     return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   };
+  // LLM ajanı Migros'ta uygun ham ürün bulamadıysa → net "manuel giriş" durumu
+  if (rec && rec.needs_manual_entry) {
+    return (
+      <div style={marketCell}>
+        <div style={{ fontSize: 10, color: "var(--amber)", fontWeight: 700 }} title={rec.warning || ""}>
+          Migros'ta yok — elle girin
+        </div>
+        <div style={{ fontSize: 9, color: "var(--text3)" }}>
+          Fiyatı "Fiyat (TL)" alanından girin
+        </div>
+        <button onClick={onFetch} disabled={busy} style={{ ...btnIconSm, marginTop: 2 }} title="Tekrar dene">
+          {busy ? "..." : "Tekrar dene"}
+        </button>
+        {error && <div style={{ fontSize: 9, color: "var(--red)" }}>{String(error).slice(0, 40)}</div>}
+      </div>
+    );
+  }
   return (
     <div style={marketCell}>
       {rec ? (
