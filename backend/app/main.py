@@ -9,6 +9,7 @@ from app.routers import (
     ingredients,
     meals,
     menus,
+    orders,
     partner_products,
     research_exports,
     student_health_flags,
@@ -35,6 +36,7 @@ app.include_router(meals.router)
 app.include_router(students.router)
 app.include_router(absences.router)
 app.include_router(expenses.router)
+app.include_router(orders.router)
 app.include_router(student_meals.router)
 app.include_router(student_health_flags.router)
 app.include_router(menus.router)
