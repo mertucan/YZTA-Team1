@@ -18,13 +18,16 @@ export default function Expenses() {
   const [aiLoading, setAiLoading] = useState(false);
   const [materials, setMaterials] = useState(null);
   const [matOpen, setMatOpen] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(todayLocal().slice(0, 7)); // "" = Tümü
 
   const refresh = () => {
     getExpenses().then(setItems).catch(() => setError("Harcamalar yüklenemedi (tablo oluşturuldu mu?)")).finally(() => setLoading(false));
     getExpenseSummary().then(setSummary).catch(() => {});
-    getMaterialExpenses().then(setMaterials).catch(() => {});
+    getMaterialExpenses(selectedMonth || undefined).then(setMaterials).catch(() => {});
   };
   useEffect(() => { refresh(); }, []);
+  // Ay değişince malzeme özetini o aya göre yeniden çek (top/total aya göre süzülür)
+  useEffect(() => { getMaterialExpenses(selectedMonth || undefined).then(setMaterials).catch(() => {}); }, [selectedMonth]);
 
   const handleAdd = async () => {
     if (!form.category || form.amount === "") return;
@@ -51,37 +54,72 @@ export default function Expenses() {
     }
   };
 
-  const filtered = useMemo(() => items.filter((e) => {
+  const monthLabel = (m) => {
+    if (!m) return "Tüm Aylar";
+    const d = new Date(`${m}-01T00:00:00`);
+    return d.toLocaleDateString("tr-TR", { month: "long", year: "numeric" });
+  };
+
+  // Ay seçenekleri: harcama tarihleri + malzeme aylarının birleşimi + bu ay
+  const monthOptions = useMemo(() => {
+    const set = new Set();
+    items.forEach((e) => { const m = String(e.expense_date || "").slice(0, 7); if (m) set.add(m); });
+    (materials?.by_month || []).forEach((m) => set.add(m.month));
+    set.add(todayLocal().slice(0, 7));
+    return Array.from(set).filter(Boolean).sort().reverse();
+  }, [items, materials]);
+
+  // Seçili aya ait manuel harcamalar
+  const monthItems = useMemo(
+    () => (selectedMonth ? items.filter((e) => String(e.expense_date || "").startsWith(selectedMonth)) : items),
+    [items, selectedMonth],
+  );
+
+  const filtered = useMemo(() => monthItems.filter((e) => {
     const q = search.toLowerCase();
     return `${e.category} ${e.description || ""}`.toLowerCase().includes(q);
-  }), [items, search]);
+  }), [monthItems, search]);
 
-  const maxCat = summary?.by_category?.[0]?.amount || 1;
-  const matTotal = Number(materials?.total || 0);
-  const manualTotal = Number(summary?.total || 0);
+  const matTotal = Number(materials?.total || 0); // sunucu tarafında aya göre süzülü
+  const manualTotal = useMemo(() => monthItems.reduce((s, e) => s + Number(e.amount || 0), 0), [monthItems]);
   const generalTotal = manualTotal + matTotal;
-  const thisMonth = todayLocal().slice(0, 7); // YYYY-MM
-  const thisMonthTotal =
-    Number((summary?.by_month || []).find((m) => m.month === thisMonth)?.amount || 0) +
-    Number((materials?.by_month || []).find((m) => m.month === thisMonth)?.amount || 0);
+
+  // Kategori dağılımı (seçili ay) — manuel kalemler + malzeme tek bar
+  const catDist = useMemo(() => {
+    const map = {};
+    monthItems.forEach((e) => { map[e.category] = (map[e.category] || 0) + Number(e.amount || 0); });
+    const arr = Object.entries(map).map(([category, amount]) => ({ category, amount }));
+    if (matTotal > 0) arr.push({ category: "Malzeme (Gıda)", amount: matTotal });
+    return arr.sort((a, b) => b.amount - a.amount);
+  }, [monthItems, matTotal]);
+  const maxCat = catDist[0]?.amount || 1;
   const maxMatMonth = Math.max(1, ...(materials?.by_month || []).map((m) => Number(m.amount || 0)));
 
   return (
     <div>
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 20, fontWeight: 600 }}>💸 Harcamalar</div>
-        <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 3 }}>
-          Personel, elektrik, su, tamir gibi işletme giderleri — kategori bazında takip ve analiz
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontSize: 20, fontWeight: 600 }}>💸 Harcamalar</div>
+          <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 3 }}>
+            Personel, elektrik, su, tamir ve malzeme giderleri — ay bazında takip ve analiz
+          </div>
+        </div>
+        <div>
+          <div style={fieldLabel}>Ay</div>
+          <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} style={{ ...input, minWidth: 170 }}>
+            <option value="">Tüm Aylar</option>
+            {monthOptions.map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
+          </select>
         </div>
       </div>
 
-      {/* Özet kartlar */}
+      {/* Özet kartlar (seçili ay) */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px,1fr))", gap: 12, marginBottom: 16 }}>
         {[
-          { label: "Genel Toplam (malzeme dahil)", value: `${fmt(generalTotal)} TL`, color: "var(--red)" },
+          { label: `Genel Toplam · ${monthLabel(selectedMonth)}`, value: `${fmt(generalTotal)} TL`, color: "var(--red)" },
           { label: "İşletme Gideri (manuel)", value: `${fmt(manualTotal)} TL`, color: "var(--accent)" },
           { label: "Malzeme Gideri (otomatik)", value: `${fmt(matTotal)} TL`, color: "var(--amber)" },
-          { label: "Bu Ay (genel)", value: `${fmt(thisMonthTotal)} TL`, color: "var(--purple)" },
+          { label: "Kayıt Sayısı", value: monthItems.length, color: "var(--purple)" },
         ].map((c) => (
           <div key={c.label} style={statCard}>
             <div style={statLabel}>{c.label}</div>
@@ -124,7 +162,7 @@ export default function Expenses() {
             onClick={() => setMatOpen((o) => !o)}
             style={{ ...cardHd, width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: matOpen ? "1px solid var(--border)" : "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}
           >
-            <span>🥕 Malzeme Giderleri <span style={{ fontWeight: 400, color: "var(--text3)" }}>(fiili alımlardan · {materials.batch_count} parti)</span></span>
+            <span>🥕 Malzeme Giderleri <span style={{ fontWeight: 400, color: "var(--text3)" }}>· {monthLabel(selectedMonth)} (fiili alımlardan · {materials.batch_count} parti)</span></span>
             <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <b style={{ fontFamily: "var(--mono)", color: "var(--amber)" }}>{fmt(matTotal)} TL</b>
               <span style={{ color: "var(--text3)" }}>{matOpen ? "▾" : "▸"}</span>
@@ -144,17 +182,20 @@ export default function Expenses() {
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>Aylık Malzeme Alımı</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>Aylık Malzeme Alımı <span style={{ fontWeight: 400, textTransform: "none" }}>(tıkla → o ayı seç)</span></div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                  {(materials.by_month || []).map((m) => (
-                    <div key={m.month} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ width: 60, fontSize: 11, color: "var(--text2)", fontFamily: "var(--mono)" }}>{m.month}</span>
-                      <div style={{ flex: 1, height: 8, background: "var(--surface3, #eee)", borderRadius: 4, overflow: "hidden" }}>
-                        <div style={{ height: "100%", width: `${Math.round((m.amount / maxMatMonth) * 100)}%`, background: "var(--amber)", borderRadius: 4 }} />
+                  {(materials.by_month || []).map((m) => {
+                    const active = m.month === selectedMonth;
+                    return (
+                      <div key={m.month} onClick={() => setSelectedMonth(m.month)} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", opacity: !selectedMonth || active ? 1 : 0.55 }}>
+                        <span style={{ width: 60, fontSize: 11, color: active ? "var(--amber)" : "var(--text2)", fontWeight: active ? 700 : 400, fontFamily: "var(--mono)" }}>{m.month}</span>
+                        <div style={{ flex: 1, height: 8, background: "var(--surface3, #eee)", borderRadius: 4, overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${Math.round((m.amount / maxMatMonth) * 100)}%`, background: "var(--amber)", borderRadius: 4 }} />
+                        </div>
+                        <span style={{ width: 90, textAlign: "right", fontSize: 11, fontFamily: "var(--mono)" }}>{fmt(m.amount)} TL</span>
                       </div>
-                      <span style={{ width: 90, textAlign: "right", fontSize: 11, fontFamily: "var(--mono)" }}>{fmt(m.amount)} TL</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -165,16 +206,16 @@ export default function Expenses() {
         </div>
       )}
 
-      {/* Kategori dağılımı */}
-      {summary?.by_category?.length > 0 && (
+      {/* Kategori dağılımı (seçili ay · malzeme dahil) */}
+      {catDist.length > 0 && (
         <div style={card}>
-          <div style={cardHd}>📊 Kategori Dağılımı</div>
+          <div style={cardHd}>📊 Kategori Dağılımı · {monthLabel(selectedMonth)}</div>
           <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 8 }}>
-            {summary.by_category.map((c) => (
+            {catDist.map((c) => (
               <div key={c.category} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ width: 110, fontSize: 12, color: "var(--text2)" }}>{c.category}</span>
+                <span style={{ width: 120, fontSize: 12, color: "var(--text2)" }}>{c.category}</span>
                 <div style={{ flex: 1, height: 10, background: "var(--surface3, #eee)", borderRadius: 5, overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${Math.round((c.amount / maxCat) * 100)}%`, background: "var(--accent)", borderRadius: 5 }} />
+                  <div style={{ height: "100%", width: `${Math.round((c.amount / maxCat) * 100)}%`, background: c.category === "Malzeme (Gıda)" ? "var(--amber)" : "var(--accent)", borderRadius: 5 }} />
                 </div>
                 <span style={{ width: 110, textAlign: "right", fontSize: 12, fontWeight: 600, fontFamily: "var(--mono)" }}>{fmt(c.amount)} TL</span>
               </div>
@@ -237,7 +278,7 @@ export default function Expenses() {
 
       {/* Liste */}
       <div style={card}>
-        <div style={cardHd}>🧾 Harcama Listesi</div>
+        <div style={cardHd}>🧾 Harcama Listesi · {monthLabel(selectedMonth)}</div>
         <div style={{ padding: "12px 18px" }}>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 Kategori veya açıklama ara..." style={input} />
         </div>
