@@ -36,17 +36,20 @@ _SCHEMA = {
 }
 
 
-def material_expense_summary(db) -> dict:
+def material_expense_summary(db, month: str | None = None) -> dict:
     """Malzeme (gıda) gideri: fiili satın alımlardan (ingredient_batches) hesaplanır.
     Tutar = miktar × alım birim fiyatı. Birim fiyatı girilmemiş partiler (maliyeti
-    bilinmeyen) sayılmaz. Sipariş 'teslim alındı' olunca oluşan partiler de buraya düşer."""
+    bilinmeyen) sayılmaz. Sipariş 'teslim alındı' olunca oluşan partiler de buraya düşer.
+
+    month verilirse (YYYY-MM) total/top_ingredients/batch_count o ayı yansıtır; aylık
+    trend (by_month) her zaman tüm aylardır (ay seçici + grafik için)."""
     batches = db.table("ingredient_batches").select(
         "ingredient_id, quantity, unit_price, purchase_date"
     ).execute().data
     ings = {i["id"]: i for i in db.table("ingredients").select("id, name").execute().data}
 
-    by_month = defaultdict(float)
-    by_ing = defaultdict(float)
+    by_month = defaultdict(float)  # daima tüm aylar (trend)
+    by_ing = defaultdict(float)    # month verilirse yalnız o ay
     total = 0.0
     count = 0
     for b in batches:
@@ -56,11 +59,13 @@ def material_expense_summary(db) -> dict:
         amt = float(q) * float(up)
         if amt <= 0:
             continue
-        total += amt
-        count += 1
         m = str(b.get("purchase_date") or "")[:7]
         if m:
             by_month[m] += amt
+        if month and m != month:
+            continue
+        total += amt
+        count += 1
         by_ing[b["ingredient_id"]] += amt
 
     top = sorted(
@@ -71,6 +76,7 @@ def material_expense_summary(db) -> dict:
     return {
         "total": round(total, 2),
         "batch_count": count,
+        "month": month,
         "by_month": [{"month": k, "amount": round(v, 2)} for k, v in sorted(by_month.items())],
         "top_ingredients": top,
     }

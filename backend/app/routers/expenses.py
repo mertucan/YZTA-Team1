@@ -42,10 +42,10 @@ def expense_summary():
 
 
 @router.get("/materials")
-def material_expenses():
+def material_expenses(month: str | None = None):
     """Malzeme (gıda) gideri — fiili satın alımlardan (partiler) toplu/konsolide özet:
-    toplam, aylık dağılım, en çok harcanan malzemeler."""
-    return material_expense_summary(get_db())
+    toplam, aylık dağılım, en çok harcanan malzemeler. month=YYYY-MM ile aya göre süzülür."""
+    return material_expense_summary(get_db(), month)
 
 
 @router.get("/ai-insights")
