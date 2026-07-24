@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getExpenses, getExpenseSummary, getExpenseAiInsights, createExpense, deleteExpense } from "../api/expenses";
+import { getExpenses, getExpenseSummary, getExpenseAiInsights, getMaterialExpenses, createExpense, deleteExpense } from "../api/expenses";
 import { todayLocal } from "../utils/date";
 
 const CATEGORIES = ["Personel", "Elektrik", "Su", "Doğalgaz", "Tamir-Bakım", "Kira", "Temizlik", "Diğer"];
@@ -16,10 +16,13 @@ export default function Expenses() {
   const [error, setError] = useState("");
   const [ai, setAi] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [materials, setMaterials] = useState(null);
+  const [matOpen, setMatOpen] = useState(false);
 
   const refresh = () => {
     getExpenses().then(setItems).catch(() => setError("Harcamalar yüklenemedi (tablo oluşturuldu mu?)")).finally(() => setLoading(false));
     getExpenseSummary().then(setSummary).catch(() => {});
+    getMaterialExpenses().then(setMaterials).catch(() => {});
   };
   useEffect(() => { refresh(); }, []);
 
@@ -54,6 +57,14 @@ export default function Expenses() {
   }), [items, search]);
 
   const maxCat = summary?.by_category?.[0]?.amount || 1;
+  const matTotal = Number(materials?.total || 0);
+  const manualTotal = Number(summary?.total || 0);
+  const generalTotal = manualTotal + matTotal;
+  const thisMonth = todayLocal().slice(0, 7); // YYYY-MM
+  const thisMonthTotal =
+    Number((summary?.by_month || []).find((m) => m.month === thisMonth)?.amount || 0) +
+    Number((materials?.by_month || []).find((m) => m.month === thisMonth)?.amount || 0);
+  const maxMatMonth = Math.max(1, ...(materials?.by_month || []).map((m) => Number(m.amount || 0)));
 
   return (
     <div>
@@ -67,10 +78,10 @@ export default function Expenses() {
       {/* Özet kartlar */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px,1fr))", gap: 12, marginBottom: 16 }}>
         {[
-          { label: "Toplam Gider", value: `${fmt(summary?.total)} TL`, color: "var(--red)" },
-          { label: "Kayıt Sayısı", value: summary?.count ?? items.length, color: "var(--accent)" },
-          { label: "En Büyük Kalem", value: summary?.biggest ? `${summary.biggest.category} · ${fmt(summary.biggest.amount)} TL` : "—", color: "var(--amber)" },
-          { label: "Bu Ay", value: `${fmt((summary?.by_month || []).slice(-1)[0]?.amount)} TL`, color: "var(--purple)" },
+          { label: "Genel Toplam (malzeme dahil)", value: `${fmt(generalTotal)} TL`, color: "var(--red)" },
+          { label: "İşletme Gideri (manuel)", value: `${fmt(manualTotal)} TL`, color: "var(--accent)" },
+          { label: "Malzeme Gideri (otomatik)", value: `${fmt(matTotal)} TL`, color: "var(--amber)" },
+          { label: "Bu Ay (genel)", value: `${fmt(thisMonthTotal)} TL`, color: "var(--purple)" },
         ].map((c) => (
           <div key={c.label} style={statCard}>
             <div style={statLabel}>{c.label}</div>
@@ -105,6 +116,54 @@ export default function Expenses() {
         </div>
         {error && <div style={{ padding: "0 18px 14px", fontSize: 12, color: "var(--red)" }}>{error}</div>}
       </div>
+
+      {/* Malzeme Giderleri — konsolide (yer kaplamasın diye tek kart, açılır) */}
+      {matTotal > 0 && (
+        <div style={card}>
+          <button
+            onClick={() => setMatOpen((o) => !o)}
+            style={{ ...cardHd, width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: matOpen ? "1px solid var(--border)" : "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}
+          >
+            <span>🥕 Malzeme Giderleri <span style={{ fontWeight: 400, color: "var(--text3)" }}>(fiili alımlardan · {materials.batch_count} parti)</span></span>
+            <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <b style={{ fontFamily: "var(--mono)", color: "var(--amber)" }}>{fmt(matTotal)} TL</b>
+              <span style={{ color: "var(--text3)" }}>{matOpen ? "▾" : "▸"}</span>
+            </span>
+          </button>
+          {matOpen && (
+            <div style={{ padding: 18, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>En Çok Harcanan Malzemeler</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {(materials.top_ingredients || []).map((t) => (
+                    <div key={t.name} style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                      <span style={{ color: "var(--text2)" }}>{t.name}</span>
+                      <span style={{ fontFamily: "var(--mono)", fontWeight: 600 }}>{fmt(t.amount)} TL</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>Aylık Malzeme Alımı</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                  {(materials.by_month || []).map((m) => (
+                    <div key={m.month} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ width: 60, fontSize: 11, color: "var(--text2)", fontFamily: "var(--mono)" }}>{m.month}</span>
+                      <div style={{ flex: 1, height: 8, background: "var(--surface3, #eee)", borderRadius: 4, overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${Math.round((m.amount / maxMatMonth) * 100)}%`, background: "var(--amber)", borderRadius: 4 }} />
+                      </div>
+                      <span style={{ width: 90, textAlign: "right", fontSize: 11, fontFamily: "var(--mono)" }}>{fmt(m.amount)} TL</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          <div style={{ padding: "0 18px 12px", fontSize: 11, color: "var(--text3)" }}>
+            ℹ Sipariş "teslim alındı" olunca veya Malzeme Deposu'nda birim fiyatlı parti eklenince buraya otomatik yansır.
+          </div>
+        </div>
+      )}
 
       {/* Kategori dağılımı */}
       {summary?.by_category?.length > 0 && (

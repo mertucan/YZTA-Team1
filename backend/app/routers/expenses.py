@@ -4,7 +4,7 @@ from datetime import date
 from fastapi import APIRouter, HTTPException
 from app.database import get_db
 from app.models.expense import Expense, ExpenseCreate, ExpenseUpdate
-from app.services.expense_ai import analyze_expenses
+from app.services.expense_ai import analyze_expenses, material_expense_summary
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
 
@@ -39,6 +39,13 @@ def expense_summary():
         "by_month": [{"month": k, "amount": round(v, 2)} for k, v in sorted(by_month.items())],
         "biggest": biggest,
     }
+
+
+@router.get("/materials")
+def material_expenses():
+    """Malzeme (gıda) gideri — fiili satın alımlardan (partiler) toplu/konsolide özet:
+    toplam, aylık dağılım, en çok harcanan malzemeler."""
+    return material_expense_summary(get_db())
 
 
 @router.get("/ai-insights")
