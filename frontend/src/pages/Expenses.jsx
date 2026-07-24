@@ -1,0 +1,153 @@
+import { useEffect, useMemo, useState } from "react";
+import { getExpenses, getExpenseSummary, createExpense, deleteExpense } from "../api/expenses";
+import { todayLocal } from "../utils/date";
+
+const CATEGORIES = ["Personel", "Elektrik", "Su", "Doğalgaz", "Tamir-Bakım", "Kira", "Temizlik", "Diğer"];
+const emptyForm = { category: "Personel", description: "", amount: "", expense_date: todayLocal() };
+
+const fmt = (n) => Number(n || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+export default function Expenses() {
+  const [items, setItems] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [form, setForm] = useState(emptyForm);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [error, setError] = useState("");
+
+  const refresh = () => {
+    getExpenses().then(setItems).catch(() => setError("Harcamalar yüklenemedi (tablo oluşturuldu mu?)")).finally(() => setLoading(false));
+    getExpenseSummary().then(setSummary).catch(() => {});
+  };
+  useEffect(() => { refresh(); }, []);
+
+  const handleAdd = async () => {
+    if (!form.category || form.amount === "") return;
+    setError("");
+    try {
+      await createExpense({ ...form, amount: Number(form.amount) || 0 });
+      setForm({ ...emptyForm, expense_date: form.expense_date });
+      refresh();
+    } catch {
+      setError("Harcama eklenemedi. Supabase'de 'expenses' tablosu oluşturuldu mu?");
+    }
+  };
+
+  const handleDelete = async (id) => { await deleteExpense(id); refresh(); };
+
+  const filtered = useMemo(() => items.filter((e) => {
+    const q = search.toLowerCase();
+    return `${e.category} ${e.description || ""}`.toLowerCase().includes(q);
+  }), [items, search]);
+
+  const maxCat = summary?.by_category?.[0]?.amount || 1;
+
+  return (
+    <div>
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 20, fontWeight: 600 }}>💸 Harcamalar</div>
+        <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 3 }}>
+          Personel, elektrik, su, tamir gibi işletme giderleri — kategori bazında takip ve analiz
+        </div>
+      </div>
+
+      {/* Özet kartlar */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px,1fr))", gap: 12, marginBottom: 16 }}>
+        {[
+          { label: "Toplam Gider", value: `${fmt(summary?.total)} TL`, color: "var(--red)" },
+          { label: "Kayıt Sayısı", value: summary?.count ?? items.length, color: "var(--accent)" },
+          { label: "En Büyük Kalem", value: summary?.biggest ? `${summary.biggest.category} · ${fmt(summary.biggest.amount)} TL` : "—", color: "var(--amber)" },
+          { label: "Bu Ay", value: `${fmt((summary?.by_month || []).slice(-1)[0]?.amount)} TL`, color: "var(--purple)" },
+        ].map((c) => (
+          <div key={c.label} style={statCard}>
+            <div style={statLabel}>{c.label}</div>
+            <div style={{ ...statValue, color: c.color }}>{c.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Ekleme formu */}
+      <div style={card}>
+        <div style={cardHd}>➕ Yeni Harcama Ekle</div>
+        <div style={{ padding: 18, display: "grid", gridTemplateColumns: "1fr 1.6fr 1fr 1fr auto", gap: 10, alignItems: "end" }}>
+          <div>
+            <div style={fieldLabel}>Kategori</div>
+            <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} style={input}>
+              {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={fieldLabel}>Açıklama</div>
+            <input value={form.description} placeholder="Örn: Temmuz aşçı maaşı" onChange={(e) => setForm({ ...form, description: e.target.value })} style={input} />
+          </div>
+          <div>
+            <div style={fieldLabel}>Tutar (TL)</div>
+            <input type="number" value={form.amount} placeholder="0" onChange={(e) => setForm({ ...form, amount: e.target.value })} style={input} />
+          </div>
+          <div>
+            <div style={fieldLabel}>Tarih</div>
+            <input type="date" value={form.expense_date} onChange={(e) => setForm({ ...form, expense_date: e.target.value })} style={input} />
+          </div>
+          <button onClick={handleAdd} style={btnPrimary}>Ekle</button>
+        </div>
+        {error && <div style={{ padding: "0 18px 14px", fontSize: 12, color: "var(--red)" }}>{error}</div>}
+      </div>
+
+      {/* Kategori dağılımı */}
+      {summary?.by_category?.length > 0 && (
+        <div style={card}>
+          <div style={cardHd}>📊 Kategori Dağılımı</div>
+          <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 8 }}>
+            {summary.by_category.map((c) => (
+              <div key={c.category} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ width: 110, fontSize: 12, color: "var(--text2)" }}>{c.category}</span>
+                <div style={{ flex: 1, height: 10, background: "var(--surface3, #eee)", borderRadius: 5, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${Math.round((c.amount / maxCat) * 100)}%`, background: "var(--accent)", borderRadius: 5 }} />
+                </div>
+                <span style={{ width: 110, textAlign: "right", fontSize: 12, fontWeight: 600, fontFamily: "var(--mono)" }}>{fmt(c.amount)} TL</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Liste */}
+      <div style={card}>
+        <div style={cardHd}>🧾 Harcama Listesi</div>
+        <div style={{ padding: "12px 18px" }}>
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 Kategori veya açıklama ara..." style={input} />
+        </div>
+        {loading ? <div style={{ padding: 24, color: "var(--text3)" }}>Yükleniyor...</div> : (
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead><tr>{["Tarih", "Kategori", "Açıklama", "Tutar", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
+            <tbody>
+              {filtered.length === 0 && <tr><td style={td} colSpan={5}>Kayıt yok.</td></tr>}
+              {filtered.map((e) => (
+                <tr key={e.id}>
+                  <td style={{ ...td, fontFamily: "var(--mono)" }}>{e.expense_date}</td>
+                  <td style={td}><span style={catTag}>{e.category}</span></td>
+                  <td style={td}>{e.description || "—"}</td>
+                  <td style={{ ...td, fontWeight: 700, fontFamily: "var(--mono)" }}>{fmt(e.amount)} TL</td>
+                  <td style={td}><button onClick={() => handleDelete(e.id)} style={btnSm}>Sil</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const card = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow)", marginBottom: 16 };
+const cardHd = { padding: "14px 18px 12px", borderBottom: "1px solid var(--border)", fontSize: 13, fontWeight: 600 };
+const fieldLabel = { fontSize: 11, color: "var(--text2)", marginBottom: 5, fontWeight: 500 };
+const input = { width: "100%", background: "var(--surface2)", border: "1px solid var(--border2)", borderRadius: 7, padding: "7px 12px", fontSize: 13, color: "var(--text)", outline: "none" };
+const th = { textAlign: "left", fontSize: 10, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".06em", padding: "10px 18px", borderBottom: "1px solid var(--border)" };
+const td = { padding: "10px 18px", fontSize: 12, color: "var(--text2)", borderBottom: "1px solid var(--border)" };
+const btnPrimary = { background: "var(--accent)", border: "none", color: "#fff", padding: "8px 18px", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer" };
+const btnSm = { background: "var(--surface2)", border: "1px solid var(--border2)", color: "var(--text2)", padding: "4px 10px", borderRadius: 6, fontSize: 11, cursor: "pointer" };
+const statCard = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "14px 16px", boxShadow: "var(--shadow)" };
+const statLabel = { fontSize: 11, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 6 };
+const statValue = { fontSize: 18, fontWeight: 700, fontFamily: "var(--mono)" };
+const catTag = { fontSize: 11, background: "var(--surface2)", border: "1px solid var(--border2)", borderRadius: 5, padding: "2px 8px", fontWeight: 600 };
