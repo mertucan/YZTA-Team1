@@ -5,6 +5,7 @@ export const createIngredient = (data)    => client.post("/ingredients", data).t
 export const updateIngredient = (id,data) => client.patch(`/ingredients/${id}`, data).then((r) => r.data);
 export const deleteIngredient = (id)      => client.delete(`/ingredients/${id}`);
 
+export const getStockAlerts   = ()   => client.get("/ingredients/alerts").then((r) => r.data);
 export const getMarketPrices  = ()   => client.get("/ingredients/market/prices").then((r) => r.data);
 export const fetchMarketPrice = (id) => client.post(`/ingredients/${id}/market/fetch`).then((r) => r.data);
 export const getMarketHealth  = ()   => client.get("/ingredients/market/health").then((r) => r.data);
