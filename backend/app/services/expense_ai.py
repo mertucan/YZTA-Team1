@@ -36,8 +36,49 @@ _SCHEMA = {
 }
 
 
+def material_expense_summary(db) -> dict:
+    """Malzeme (gıda) gideri: fiili satın alımlardan (ingredient_batches) hesaplanır.
+    Tutar = miktar × alım birim fiyatı. Birim fiyatı girilmemiş partiler (maliyeti
+    bilinmeyen) sayılmaz. Sipariş 'teslim alındı' olunca oluşan partiler de buraya düşer."""
+    batches = db.table("ingredient_batches").select(
+        "ingredient_id, quantity, unit_price, purchase_date"
+    ).execute().data
+    ings = {i["id"]: i for i in db.table("ingredients").select("id, name").execute().data}
+
+    by_month = defaultdict(float)
+    by_ing = defaultdict(float)
+    total = 0.0
+    count = 0
+    for b in batches:
+        up, q = b.get("unit_price"), b.get("quantity")
+        if up is None or q is None:
+            continue
+        amt = float(q) * float(up)
+        if amt <= 0:
+            continue
+        total += amt
+        count += 1
+        m = str(b.get("purchase_date") or "")[:7]
+        if m:
+            by_month[m] += amt
+        by_ing[b["ingredient_id"]] += amt
+
+    top = sorted(
+        ({"name": ings.get(k, {}).get("name", f"#{k}"), "amount": round(v, 2)}
+         for k, v in by_ing.items()),
+        key=lambda x: x["amount"], reverse=True,
+    )[:6]
+    return {
+        "total": round(total, 2),
+        "batch_count": count,
+        "by_month": [{"month": k, "amount": round(v, 2)} for k, v in sorted(by_month.items())],
+        "top_ingredients": top,
+    }
+
+
 def _gather_context() -> dict:
-    """Analize girecek özet: kategori dağılımı, aylık trend, gıda maliyeti kıyası."""
+    """Analize girecek tam gider tablosu: manuel işletme giderleri + fiili malzeme
+    (gıda) gideri tek kategori dağılımında birleştirilir, aylık trend çıkarılır."""
     db = get_db()
     rows = db.table("expenses").select("*").execute().data
 
@@ -49,6 +90,13 @@ def _gather_context() -> dict:
         if m:
             by_month[m] += float(r.get("amount") or 0)
 
+    # Malzeme (gıda) giderini gerçek bir kategori olarak ekle — genelde en büyük kalem
+    mat = material_expense_summary(db)
+    if mat["total"] > 0:
+        by_category["Malzeme (Gıda)"] += mat["total"]
+        for mm in mat["by_month"]:
+            by_month[mm["month"]] += mm["amount"]
+
     total = round(sum(by_category.values()), 2)
     cats = sorted(
         ({"category": k, "amount": round(v, 2), "share": round(v / total * 100, 1) if total else 0}
@@ -57,16 +105,14 @@ def _gather_context() -> dict:
     )
     months = [{"month": k, "amount": round(v, 2)} for k, v in sorted(by_month.items())]
 
-    # Gıda maliyeti bağlamı: onaylı/taslak haftalık menülerin toplam gıda maliyeti
-    menus = db.table("weekly_menus").select("total_cost").execute().data
-    food_cost = round(sum(float(m.get("total_cost") or 0) for m in menus), 2)
-
     return {
-        "total_non_food": total,
+        "total": total,
+        "manual_total": round(sum(float(r.get("amount") or 0) for r in rows), 2),
+        "material_total": mat["total"],
         "expense_count": len(rows),
         "by_category": cats,
         "by_month": months,
-        "food_cost_context": food_cost,
+        "top_ingredients": mat["top_ingredients"],
     }
 
 
@@ -76,11 +122,15 @@ def _build_prompt(ctx: dict) -> str:
         for c in ctx["by_category"]
     ) or "- (kayıt yok)"
     month_lines = "\n".join(f"- {m['month']}: {m['amount']} TL" for m in ctx["by_month"]) or "- (kayıt yok)"
-    return f"""Sen bir üniversite yemekhanesinin finans/işletme analistisin. Aşağıda gıda DIŞI
-işletme giderleri (personel, elektrik, su, doğalgaz, tamir-bakım, kira, temizlik vb.) var.
+    top_ing = ", ".join(f"{t['name']} ({t['amount']} TL)" for t in ctx.get("top_ingredients", [])) or "-"
+    return f"""Sen bir üniversite yemekhanesinin finans/işletme analistisin. Aşağıda yemekhanenin
+TÜM işletme giderleri var: hem malzeme (gıda) alımları hem de gıda dışı giderler
+(personel, elektrik, su, doğalgaz, tamir-bakım, kira, temizlik vb.).
 
-Toplam gıda dışı gider: {ctx['total_non_food']} TL ({ctx['expense_count']} kayıt)
-Referans olarak planlanan haftalık menülerin toplam gıda maliyeti: {ctx['food_cost_context']} TL
+Toplam gider: {ctx['total']} TL
+- Malzeme (gıda) gideri: {ctx['material_total']} TL (fiili satın alımlardan)
+- Gıda dışı işletme gideri: {ctx['manual_total']} TL ({ctx['expense_count']} kayıt)
+En çok harcanan malzemeler: {top_ing}
 
 Kategori dağılımı:
 {cat_lines}
@@ -124,7 +174,7 @@ def _gemini_analyze(ctx: dict) -> dict | None:
 def _rule_based(ctx: dict) -> dict:
     """Gemini yoksa: kategori payları ve aylık trendden mantıklı çıkarımlar."""
     cats = ctx["by_category"]
-    total = ctx["total_non_food"]
+    total = ctx["total"]
     observations, suggestions = [], []
 
     if not cats:
@@ -149,14 +199,19 @@ def _rule_based(ctx: dict) -> dict:
             trend = "arttı" if change > 0 else "azaldı"
             observations.append(f"{last['month']} gideri bir önceki aya göre %{abs(change):.0f} {trend}.")
 
-    # Gıda dışı / gıda kıyası
-    food = ctx["food_cost_context"]
-    if food > 0:
-        ratio = total / food
-        observations.append(f"Gıda dışı giderler, planlanan gıda maliyetinin ~{ratio:.1f} katı.")
+    # Malzeme (gıda) payı
+    material = ctx["material_total"]
+    if material > 0 and total > 0:
+        observations.append(f"Malzeme (gıda) gideri {material} TL — toplam giderin %{material / total * 100:.0f}'ı.")
 
     # Öneriler (kategoriye göre)
     labels = {c["category"] for c in cats}
+    if any("Malzeme" in l for l in labels):
+        suggestions.append({
+            "title": "Malzeme alımında tedarikçi ve mevsim avantajı",
+            "detail": "En çok harcanan malzemelerde toplu alım/sözleşme yap, mevsiminde ucuz alternatiflere yönel; Otomatik Sipariş ile fiyat karşılaştır.",
+            "potential_saving": "aylık ~%5-10",
+        })
     if any("Elektrik" in l or "Doğalgaz" in l or "Su" in l for l in labels):
         suggestions.append({
             "title": "Enerji ve su tüketimini optimize et",
@@ -193,7 +248,7 @@ def analyze_expenses() -> dict:
     ctx = _gather_context()
     result = _gemini_analyze(ctx) or _rule_based(ctx)
     result["context"] = {
-        "total": ctx["total_non_food"],
+        "total": ctx["total"],
         "top_categories": ctx["by_category"][:5],
     }
     return result
