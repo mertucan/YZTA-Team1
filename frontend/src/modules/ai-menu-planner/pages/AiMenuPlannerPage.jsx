@@ -4,6 +4,7 @@ import {
   getMenu,
   generateMenu,
   createManualMenu,
+  updateMenuPortions,
   addMealItem,
   removeMenuItem,
   approveMenu,
@@ -161,6 +162,7 @@ function MenuDetailPanel({
   onAddMeal,
   onRemoveItem,
   onApprove,
+  onUpdatePortions,
   onDelete,
   onSeasonalRevisions,
   seasonalRevisions,
@@ -210,6 +212,11 @@ function MenuDetailPanel({
               menu.budget - menu.total_cost < 0 ? "var(--red)" : "var(--green)",
           },
           {
+            label: "Kişi Başı Maliyet",
+            value: `${(menu.total_cost / Math.max(menu.portions || 1, 1)).toFixed(2)} TL`,
+            color: "var(--accent)",
+          },
+          {
             label: "Toplam Kalori",
             value: `${menu.total_calories.toFixed(0)} kcal`,
             color: "var(--purple)",
@@ -256,12 +263,44 @@ function MenuDetailPanel({
       <div
         style={{
           padding: "0 18px 14px",
-          fontSize: 11,
-          fontWeight: 700,
-          color: status.color,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 10,
         }}
       >
-        {status.label}
+        <span style={{ fontSize: 11, fontWeight: 700, color: status.color }}>
+          {status.label}
+        </span>
+        {onUpdatePortions && (
+          <label
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 11,
+              color: "var(--text2)",
+            }}
+          >
+            Kişi Sayısı:
+            <input
+              type="number"
+              min={1}
+              defaultValue={menu.portions || 40}
+              key={menu.portions}
+              onFocus={(e) => e.target.select()}
+              onBlur={(e) => {
+                const v = Math.max(parseInt(e.target.value, 10) || 1, 1);
+                if (v !== menu.portions) onUpdatePortions(v);
+              }}
+              onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }}
+              disabled={menu.status === "approved"}
+              title={menu.status === "approved" ? "Onaylı menü değiştirilemez" : "Kişi sayısını değiştir — maliyet yeniden hesaplanır"}
+              style={{ ...input, width: 90, padding: "5px 8px" }}
+            />
+          </label>
+        )}
       </div>
 
       {(seasonalInsights || []).length > 0 && (
@@ -619,6 +658,7 @@ export default function AiMenuPlannerPage() {
   const [showPast, setShowPast] = useState(false);
   const [weekStartDate, setWeekStartDate] = useState(nextMonday());
   const [budget, setBudget] = useState(1000);
+  const [portions, setPortions] = useState(40);
   const [extraInstructions, setExtraInstructions] = useState("");
   const [seasonalMode, setSeasonalMode] = useState(true);
   const [localPriority, setLocalPriority] = useState(true);
@@ -693,6 +733,7 @@ export default function AiMenuPlannerPage() {
       const menu = await generateMenu({
         week_start_date: weekStartDate,
         budget: parseFloat(budget) || 0,
+        portions: Math.max(parseInt(portions, 10) || 1, 1),
         extra_instructions: combinedInstructions || null,
       });
       setPicker({});
@@ -715,6 +756,7 @@ export default function AiMenuPlannerPage() {
       const menu = await createManualMenu({
         week_start_date: weekStartDate,
         budget: parseFloat(budget) || 0,
+        portions: Math.max(parseInt(portions, 10) || 1, 1),
       });
       setPicker({});
       setExpandedId(menu.id);
@@ -723,6 +765,14 @@ export default function AiMenuPlannerPage() {
     } catch (e) {
       setError(e.response?.data?.detail || "Boş menü oluşturulamadı.");
     }
+  };
+
+  const handleUpdatePortions = async (newPortions) => {
+    if (!expandedDetail) return;
+    const p = Math.max(parseInt(newPortions, 10) || 1, 1);
+    const updated = await updateMenuPortions(expandedDetail.id, p);
+    setExpandedDetail(updated);
+    refreshMenus();
   };
 
   const handleApprove = async () => {
@@ -880,6 +930,7 @@ export default function AiMenuPlannerPage() {
                           onAddMeal={handleAddMeal}
                           onRemoveItem={handleRemoveItem}
                           onApprove={handleApprove}
+                          onUpdatePortions={handleUpdatePortions}
                           onDelete={() => handleDelete(m.id)}
                           onSeasonalRevisions={handleSeasonalRevisions}
                           seasonalRevisions={seasonalRevisions}
@@ -936,6 +987,18 @@ export default function AiMenuPlannerPage() {
                 if (budget === "") setBudget(0);
               }}
               onChange={(e) => setBudget(numericValue(e.target.value))}
+              style={input}
+            />
+          </div>
+          <div>
+            <div style={fieldLabel}>Kişi Sayısı (Porsiyon)</div>
+            <input
+              type="number"
+              min={1}
+              value={portions}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => setPortions(e.target.value)}
+              onBlur={() => { if (!portions || Number(portions) < 1) setPortions(1); }}
               style={input}
             />
           </div>
