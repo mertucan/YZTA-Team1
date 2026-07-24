@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getExpenses, getExpenseSummary, createExpense, deleteExpense } from "../api/expenses";
+import { getExpenses, getExpenseSummary, getExpenseAiInsights, createExpense, deleteExpense } from "../api/expenses";
 import { todayLocal } from "../utils/date";
 
 const CATEGORIES = ["Personel", "Elektrik", "Su", "Doğalgaz", "Tamir-Bakım", "Kira", "Temizlik", "Diğer"];
@@ -14,6 +14,8 @@ export default function Expenses() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
+  const [ai, setAi] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   const refresh = () => {
     getExpenses().then(setItems).catch(() => setError("Harcamalar yüklenemedi (tablo oluşturuldu mu?)")).finally(() => setLoading(false));
@@ -34,6 +36,17 @@ export default function Expenses() {
   };
 
   const handleDelete = async (id) => { await deleteExpense(id); refresh(); };
+
+  const handleAiAnalyze = async () => {
+    setAiLoading(true);
+    try {
+      setAi(await getExpenseAiInsights());
+    } catch {
+      setError("AI analizi alınamadı.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const filtered = useMemo(() => items.filter((e) => {
     const q = search.toLowerCase();
@@ -110,6 +123,58 @@ export default function Expenses() {
           </div>
         </div>
       )}
+
+      {/* AI Gider Analizi */}
+      <div style={card}>
+        <div style={{ ...cardHd, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+          <span>🤖 AI Gider Analizi</span>
+          <button onClick={handleAiAnalyze} disabled={aiLoading} style={{ ...btnPrimary, padding: "6px 14px", fontSize: 12, opacity: aiLoading ? 0.6 : 1 }}>
+            {aiLoading ? "Analiz ediliyor..." : ai ? "Yeniden Analiz Et" : "Analiz Et"}
+          </button>
+        </div>
+        <div style={{ padding: 18 }}>
+          {!ai ? (
+            <div style={{ fontSize: 12, color: "var(--text3)" }}>
+              Giderlerinizi yapay zeka ile analiz edin: en ağır kalemler, aylık trend ve somut tasarruf önerileri.
+            </div>
+          ) : (
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{ai.headline}</div>
+              <div style={{ fontSize: 11, color: "var(--text3)", marginBottom: 14 }}>
+                {ai.generated_by === "gemini" ? "Gemini AI ile üretildi" : "Kural tabanlı analiz (Gemini anahtarı yoksa)"}
+              </div>
+
+              {ai.observations?.length > 0 && (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>Gözlemler</div>
+                  <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 5 }}>
+                    {ai.observations.map((o, i) => <li key={i} style={{ fontSize: 12.5, color: "var(--text2)", lineHeight: 1.45 }}>{o}</li>)}
+                  </ul>
+                </div>
+              )}
+
+              {ai.suggestions?.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>Tasarruf Önerileri</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px,1fr))", gap: 10 }}>
+                    {ai.suggestions.map((s, i) => (
+                      <div key={i} style={{ background: "var(--surface2)", border: "1px solid var(--border2)", borderRadius: 8, padding: "10px 12px" }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 4 }}>💡 {s.title}</div>
+                        <div style={{ fontSize: 12, color: "var(--text2)", lineHeight: 1.45 }}>{s.detail}</div>
+                        {s.potential_saving && (
+                          <div style={{ marginTop: 6, fontSize: 11, fontWeight: 700, color: "var(--green,#16a34a)" }}>
+                            Tahmini kazanım: {s.potential_saving}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Liste */}
       <div style={card}>
