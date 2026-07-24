@@ -90,6 +90,19 @@ def fetch_market_price(ingredient_id: int):
     except Exception as exc:  # ağ hatası vb.
         raise HTTPException(status_code=502, detail=f"Migros'a ulaşılamadı: {exc}") from exc
 
+    # LLM ajanı Migros'ta uygun ham ürün BULAMADIYSA (ör. karnabahar/mandalina taze yok):
+    # kayıt yazma, malzeme verisine dokunma; frontend'e 'manuel giriş' durumu döndür.
+    if info.get("needs_manual_entry"):
+        # varsa eski eşleşme kaydını temizle ki yanlış ürün görünmesin
+        db.table("ingredient_market_prices").delete().eq("ingredient_id", ingredient_id).eq("source", "migros").execute()
+        return {
+            "ingredient_id": ingredient_id, "source": "migros",
+            "product_url": None, "product_name": None, "unit_price": None,
+            "reliable": False, "needs_verification": True, "needs_manual_entry": True,
+            "verified_by_llm": info.get("verified_by_llm", False),
+            "confidence": 0.0, "warning": info.get("warning"),
+        }
+
     # Güvenilmez eşleşme (ör. "Tavuk Göğsü" → "Tavuk Baget") malzemenin kendi
     # verisini (birim/fiyat) BOZMAMALI: kayıt tutulur ama malzeme güncellenmez,
     # menü planlayıcı bu şüpheli fiyatı kullanmaz. UI 'doğrulama gerekli' gösterir.
@@ -137,6 +150,8 @@ def fetch_market_price(ingredient_id: int):
     result["new_unit"] = new_unit
     result["reliable"] = reliable
     result["needs_verification"] = not reliable
+    result["needs_manual_entry"] = False
+    result["verified_by_llm"] = info.get("verified_by_llm", False)
     result["confidence"] = info.get("confidence")
     result["warning"] = info.get("warning")
     return result
