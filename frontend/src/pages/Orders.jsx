@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  getOrders, generateOrder, updateOrder, receiveOrder, deleteOrder,
+  getOrders, generateOrder, aiPurchasePlan, updateOrder, receiveOrder, deleteOrder,
   getSuppliers, createSupplier, deleteSupplier,
 } from "../api/orders";
 
@@ -50,6 +50,26 @@ export default function Orders() {
     } finally { setBusy(false); }
   };
 
+  // AI Satın Alma Ajanı: eksikleri türüne göre doğru tedarikçilere bölüştürür,
+  // her kaleme gerekçe yazar (tükeniş tahmini + kritik stok verisiyle)
+  const [aiBusy, setAiBusy] = useState(false);
+  const handleAiPlan = async () => {
+    setAiBusy(true); setMsg(""); setError("");
+    try {
+      const res = await aiPurchasePlan();
+      if (res?.created === false) {
+        setMsg(res.message || "Sipariş gerektiren malzeme yok.");
+      } else {
+        const src = res.generated_by === "gemini" ? "Gemini" : "kural tabanlı";
+        setMsg(`🧠 AI Plan (${src}): ${res.summary} — ${res.orders.length} taslak sipariş oluşturuldu.`);
+        if (res.orders[0]) setExpanded(res.orders[0].id);
+        refresh();
+      }
+    } catch {
+      setError("AI sipariş planı oluşturulamadı.");
+    } finally { setAiBusy(false); }
+  };
+
   const changeStatus = async (id, status) => { await updateOrder(id, { status }); refresh(); };
   const assignSupplier = async (id, supplier_id) => { await updateOrder(id, { supplier_id: supplier_id ? Number(supplier_id) : null }); refresh(); };
   const handleReceive = async (id) => {
@@ -85,9 +105,19 @@ export default function Orders() {
             otomatik sipariş taslağı üretir. Tedarikçi seçip gönderin; teslim alınca stok kendiliğinden güncellenir.
           </div>
         </div>
-        <button onClick={handleGenerate} disabled={busy} style={{ ...btnPrimary, opacity: busy ? 0.6 : 1 }}>
-          {busy ? "Oluşturuluyor..." : "🤖 Otomatik Sipariş Oluştur"}
-        </button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button
+            onClick={handleAiPlan}
+            disabled={aiBusy}
+            style={{ ...btnPrimary, background: "var(--purple, #7c3aed)", opacity: aiBusy ? 0.6 : 1 }}
+            title="AI eksikleri türüne göre doğru tedarikçilere bölüştürür ve her kaleme gerekçe yazar"
+          >
+            {aiBusy ? "AI planlıyor..." : "🧠 AI Sipariş Planı"}
+          </button>
+          <button onClick={handleGenerate} disabled={busy} style={{ ...btnPrimary, opacity: busy ? 0.6 : 1 }}>
+            {busy ? "Oluşturuluyor..." : "🤖 Hızlı Taslak"}
+          </button>
+        </div>
       </div>
 
       {msg && <div style={banner("ok")}>{msg}</div>}
@@ -165,6 +195,12 @@ export default function Orders() {
                 <span style={{ marginLeft: "auto", fontSize: 12, color: "var(--text2)" }}>{items.length} kalem</span>
                 <span style={{ fontFamily: "var(--mono)", fontWeight: 700, fontSize: 15 }}>{fmt(o.total_estimated)} TL</span>
               </div>
+
+              {o.note && (
+                <div style={{ padding: "0 18px 10px", fontSize: 12, color: "var(--text2)", fontStyle: "italic" }}>
+                  🧠 {o.note}
+                </div>
+              )}
 
               <div style={{ padding: "0 18px 14px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 {/* Tedarikçi seçimi (taslak/gönderildi) */}

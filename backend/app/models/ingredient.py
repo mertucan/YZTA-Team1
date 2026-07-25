@@ -16,6 +16,7 @@ class IngredientBase(BaseModel):
     season_end_month: Optional[int] = None
     market_price: Optional[float] = None
     last_price_checked_at: Optional[date] = None
+    min_stock: Optional[float] = None  # malzeme bazlı kritik eşik (birime göre anlamlı)
 
 
 class IngredientCreate(IngredientBase):
@@ -35,6 +36,7 @@ class IngredientUpdate(BaseModel):
     season_end_month: Optional[int] = None
     market_price: Optional[float] = None
     last_price_checked_at: Optional[date] = None
+    min_stock: Optional[float] = None
 
 
 class Ingredient(IngredientBase):
@@ -66,6 +68,7 @@ class IngredientBatchUpdate(BaseModel):
 class IngredientBatch(IngredientBatchBase):
     id: int
     ingredient_id: int
+    initial_quantity: Optional[float] = None  # satın alınan miktar (quantity = kalan)
 
     class Config:
         from_attributes = True

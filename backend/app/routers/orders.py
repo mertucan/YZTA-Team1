@@ -7,6 +7,7 @@ from app.models.order import (
     GenerateOrderRequest, OrderUpdate,
 )
 from app.services.stock import compute_alerts
+from app.services.order_ai import generate_ai_plan
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -99,6 +100,14 @@ def generate_order(payload: GenerateOrderRequest):
     return order
 
 
+@router.post("/ai-plan")
+def ai_purchase_plan():
+    """AI Satın Alma Ajanı: eksikleri + tükeniş tahminini + tedarikçi kataloğunu okur,
+    malzemeleri türüne göre doğru tedarikçiye bölüştürür ve HER kalem için gerekçe yazar.
+    Sonuç: tedarikçi başına gerekçeli taslak siparişler."""
+    return generate_ai_plan(get_db())
+
+
 @router.get("/")
 def list_orders():
     return get_db().table("purchase_orders").select("*").order("created_at", desc=True).execute().data
@@ -171,6 +180,7 @@ def receive_order(order_id: int):
         db.table("ingredient_batches").insert({
             "ingredient_id": it["ingredient_id"],
             "quantity": qty,
+            "initial_quantity": qty,  # satın alınan miktar (malzeme gideri buradan hesaplanır)
             "purchase_date": today,
             "unit_price": it.get("unit_price"),
         }).execute()

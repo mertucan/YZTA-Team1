@@ -55,10 +55,25 @@ def expense_ai_insights():
     return analyze_expenses()
 
 
-@router.post("/", response_model=Expense, status_code=201)
+@router.post("/", status_code=201)
 def create_expense(payload: ExpenseCreate):
-    res = get_db().table("expenses").insert(payload.model_dump(mode="json")).execute()
-    return res.data[0]
+    """Gider ekler. Veri Bekçisi: tutar, kategorinin geçmiş ortalamasından aşırı sapıyorsa
+    uyarı döner (kayıt yine de yapılır — amaç sessiz veri hatasını önlemek)."""
+    db = get_db()
+    warnings: list[str] = []
+    history = db.table("expenses").select("amount").eq("category", payload.category).execute().data
+    amounts = sorted(float(h["amount"]) for h in history if h.get("amount"))
+    if len(amounts) >= 3:
+        median = amounts[len(amounts) // 2]
+        if median > 0 and payload.amount > median * 3:
+            warnings.append(
+                f"Tutar ({payload.amount} TL), '{payload.category}' kategorisinin tipik değerinin "
+                f"(~{round(median)} TL) 3 katından fazla — girişi kontrol edin.")
+        elif median > 0 and 0 < payload.amount < median * 0.1:
+            warnings.append(
+                f"Tutar ({payload.amount} TL), '{payload.category}' için alışılmadık derecede düşük.")
+    res = db.table("expenses").insert(payload.model_dump(mode="json")).execute()
+    return {**res.data[0], "warnings": warnings}
 
 
 @router.patch("/{expense_id}", response_model=Expense)
