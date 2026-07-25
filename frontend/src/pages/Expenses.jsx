@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getExpenses, getExpenseSummary, getExpenseAiInsights, getMaterialExpenses, createExpense, deleteExpense } from "../api/expenses";
+import { getExpenses, getExpenseSummary, getExpenseAiInsights, getMaterialExpenses, getBudgetCheck, createExpense, deleteExpense } from "../api/expenses";
 import { todayLocal } from "../utils/date";
 
 const CATEGORIES = ["Personel", "Elektrik", "Su", "Doğalgaz", "Tamir-Bakım", "Kira", "Temizlik", "Diğer"];
@@ -18,6 +18,7 @@ export default function Expenses() {
   const [aiLoading, setAiLoading] = useState(false);
   const [materials, setMaterials] = useState(null);
   const [matOpen, setMatOpen] = useState(false);
+  const [budget, setBudget] = useState(null); // menü bütçesi ↔ fiili malzeme harcaması
   const [selectedMonth, setSelectedMonth] = useState(todayLocal().slice(0, 7)); // "" = Tümü
 
   const refresh = () => {
@@ -26,8 +27,12 @@ export default function Expenses() {
     getMaterialExpenses(selectedMonth || undefined).then(setMaterials).catch(() => {});
   };
   useEffect(() => { refresh(); }, []);
-  // Ay değişince malzeme özetini o aya göre yeniden çek (top/total aya göre süzülür)
-  useEffect(() => { getMaterialExpenses(selectedMonth || undefined).then(setMaterials).catch(() => {}); }, [selectedMonth]);
+  // Ay değişince malzeme özetini ve bütçe kontrolünü o aya göre yeniden çek
+  useEffect(() => {
+    getMaterialExpenses(selectedMonth || undefined).then(setMaterials).catch(() => {});
+    if (selectedMonth) getBudgetCheck(selectedMonth).then(setBudget).catch(() => setBudget(null));
+    else setBudget(null);
+  }, [selectedMonth]);
 
   const [guardWarning, setGuardWarning] = useState("");
 
@@ -116,6 +121,23 @@ export default function Expenses() {
           </select>
         </div>
       </div>
+
+      {/* Menü bütçesi ↔ fiili harcama: 'gıda bütçesi aşılıyor' bağlantısı */}
+      {budget && budget.status !== "no_budget" && (
+        <div style={{
+          padding: "10px 14px", borderRadius: 8, marginBottom: 14, fontSize: 13,
+          display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+          background: budget.status === "over" ? "rgba(220,38,38,0.10)" : budget.status === "near" ? "rgba(217,161,32,0.12)" : "rgba(22,163,74,0.10)",
+          border: `1px solid ${budget.status === "over" ? "rgba(220,38,38,0.35)" : budget.status === "near" ? "rgba(217,161,32,0.4)" : "rgba(22,163,74,0.3)"}`,
+          color: budget.status === "over" ? "var(--red)" : budget.status === "near" ? "var(--amber)" : "var(--green,#16a34a)",
+        }}>
+          <span>{budget.status === "over" ? "🚨" : budget.status === "near" ? "⚠️" : "✅"}</span>
+          <strong>{budget.message}</strong>
+          <span style={{ fontSize: 11, opacity: 0.85 }}>
+            (Planlanan menü bütçesi {fmt(budget.food_budget)} TL · fiili malzeme alımı {fmt(budget.material_spent)} TL · {budget.menu_count} haftalık menü)
+          </span>
+        </div>
+      )}
 
       {/* Özet kartlar (seçili ay) */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px,1fr))", gap: 12, marginBottom: 16 }}>
