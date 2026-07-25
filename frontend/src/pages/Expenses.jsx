@@ -35,15 +35,23 @@ export default function Expenses() {
   }, [selectedMonth]);
 
   const [guardWarning, setGuardWarning] = useState("");
+  const [customCategory, setCustomCategory] = useState(""); // "Diğer" seçilince gider türü adı
 
   const handleAdd = async () => {
     if (!form.category || form.amount === "") return;
     setError("");
     setGuardWarning("");
+    // "Diğer" seçildiyse kullanıcının yazdığı ad kategori olur (ör. "İlaçlama") —
+    // böylece kategori dağılımında kendi barıyla görünür, "Diğer" yığını oluşmaz.
+    const category =
+      form.category === "Diğer" && customCategory.trim()
+        ? customCategory.trim().slice(0, 40)
+        : form.category;
     try {
-      const saved = await createExpense({ ...form, amount: Number(form.amount) || 0 });
+      const saved = await createExpense({ ...form, category, amount: Number(form.amount) || 0 });
       if (saved?.warnings?.length) setGuardWarning(saved.warnings.join(" "));
       setForm({ ...emptyForm, expense_date: form.expense_date });
+      setCustomCategory("");
       refresh();
     } catch {
       setError("Harcama eklenemedi. Supabase'de 'expenses' tablosu oluşturuldu mu?");
@@ -157,13 +165,25 @@ export default function Expenses() {
       {/* Ekleme formu */}
       <div style={card}>
         <div style={cardHd}>➕ Yeni Harcama Ekle</div>
-        <div style={{ padding: 18, display: "grid", gridTemplateColumns: "1fr 1.6fr 1fr 1fr auto", gap: 10, alignItems: "end" }}>
+        <div style={{ padding: 18, display: "grid", gridTemplateColumns: form.category === "Diğer" ? "1fr 1.2fr 1.6fr 1fr 1fr auto" : "1fr 1.6fr 1fr 1fr auto", gap: 10, alignItems: "end" }}>
           <div>
             <div style={fieldLabel}>Kategori</div>
             <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} style={input}>
               {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
             </select>
           </div>
+          {form.category === "Diğer" && (
+            <div>
+              <div style={fieldLabel}>Gider Türü (belirtin)</div>
+              <input
+                value={customCategory}
+                maxLength={40}
+                placeholder="Örn: İlaçlama, Baca Temizliği"
+                onChange={(e) => setCustomCategory(e.target.value)}
+                style={{ ...input, borderColor: "var(--accent)" }}
+              />
+            </div>
+          )}
           <div>
             <div style={fieldLabel}>Açıklama</div>
             <input value={form.description} placeholder="Örn: Temmuz aşçı maaşı" onChange={(e) => setForm({ ...form, description: e.target.value })} style={input} />
