@@ -48,6 +48,39 @@ def material_expenses(month: str | None = None):
     return material_expense_summary(get_db(), month)
 
 
+@router.get("/budget-check")
+def budget_check(month: str | None = None):
+    """Menü bütçesi ↔ fiili malzeme harcaması bağlantısı: seçili ayda planlanan
+    gıda bütçesi (o ay başlayan haftalık menülerin bütçeleri) ile gerçekte yapılan
+    malzeme alımı karşılaştırılır — 'gıda bütçesi aşılıyor' uyarısının kaynağı."""
+    db = get_db()
+    month = month or date.today().isoformat()[:7]
+
+    menus = db.table("weekly_menus").select("id, week_start_date, budget").execute().data
+    month_menus = [m for m in menus if str(m.get("week_start_date") or "").startswith(month)]
+    food_budget = round(sum(float(m.get("budget") or 0) for m in month_menus), 2)
+
+    from app.services.expense_ai import material_expense_summary
+    spent = material_expense_summary(db, month)["total"]
+
+    if food_budget <= 0:
+        return {"month": month, "status": "no_budget", "food_budget": 0, "material_spent": spent,
+                "message": "Bu ay için menü bütçesi tanımlı değil."}
+    ratio = round(spent / food_budget * 100, 1)
+    status = "over" if ratio > 100 else "near" if ratio > 85 else "ok"
+    return {
+        "month": month, "status": status, "food_budget": food_budget,
+        "material_spent": spent, "ratio": ratio, "menu_count": len(month_menus),
+        "message": (
+            f"Gıda bütçesi AŞILDI: planlanan {food_budget:,.0f} TL, harcanan {spent:,.0f} TL (%{ratio})."
+            if status == "over" else
+            f"Gıda bütçesine yaklaşıldı: %{ratio} kullanıldı."
+            if status == "near" else
+            f"Gıda bütçesi kontrol altında: %{ratio} kullanıldı."
+        ),
+    }
+
+
 @router.get("/ai-insights")
 def expense_ai_insights():
     """Yapay zeka gider analizi: kategori/aylık trendden gözlem + tasarruf önerileri.

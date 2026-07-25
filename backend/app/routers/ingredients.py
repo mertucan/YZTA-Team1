@@ -148,7 +148,12 @@ def fetch_market_price(ingredient_id: int):
     # LLM ajanı Migros'ta uygun ham ürün BULAMADIYSA (ör. karnabahar/mandalina taze yok):
     # kayıt yazma, malzeme verisine dokunma; frontend'e 'manuel giriş' durumu döndür.
     if info.get("needs_manual_entry"):
-        # varsa eski eşleşme kaydını temizle ki yanlış ürün görünmesin
+        # eski eşleşme kaydını VE ondan yazılmış market_price kalıntısını temizle —
+        # yoksa 'Uludağ Mandalina içeceği'nin 556 TL/kg'ı malzemede yaşamaya devam eder
+        if existing.data:
+            db.table("ingredients").update({
+                "market_price": None, "last_price_checked_at": None,
+            }).eq("id", ingredient_id).execute()
         db.table("ingredient_market_prices").delete().eq("ingredient_id", ingredient_id).eq("source", "migros").execute()
         return {
             "ingredient_id": ingredient_id, "source": "migros",

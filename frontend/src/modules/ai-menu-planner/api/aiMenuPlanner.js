@@ -39,3 +39,9 @@ export const deleteMenu = (id) =>
 
 export const getSeasonalRevisions = (menuId) =>
   client.get(`/menus/${menuId}/seasonal-revisions`).then((r) => r.data);
+
+export const getAttendanceSuggestion = (menuId) =>
+  client.get(`/menus/${menuId}/attendance`).then((r) => r.data);
+
+export const applyAttendanceSuggestion = (menuId) =>
+  client.post(`/menus/${menuId}/apply-attendance`).then((r) => r.data);
