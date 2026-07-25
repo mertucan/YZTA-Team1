@@ -44,7 +44,7 @@ def material_expense_summary(db, month: str | None = None) -> dict:
     month verilirse (YYYY-MM) total/top_ingredients/batch_count o ayı yansıtır; aylık
     trend (by_month) her zaman tüm aylardır (ay seçici + grafik için)."""
     batches = db.table("ingredient_batches").select(
-        "ingredient_id, quantity, unit_price, purchase_date"
+        "ingredient_id, quantity, initial_quantity, unit_price, purchase_date"
     ).execute().data
     ings = {i["id"]: i for i in db.table("ingredients").select("id, name").execute().data}
 
@@ -53,7 +53,10 @@ def material_expense_summary(db, month: str | None = None) -> dict:
     total = 0.0
     count = 0
     for b in batches:
-        up, q = b.get("unit_price"), b.get("quantity")
+        # Gider = SATIN ALINAN miktar (initial_quantity) × fiyat. `quantity` kalan
+        # stok olduğundan tüketim gideri geriye dönük küçültmemeli.
+        up = b.get("unit_price")
+        q = b.get("initial_quantity") if b.get("initial_quantity") is not None else b.get("quantity")
         if up is None or q is None:
             continue
         amt = float(q) * float(up)

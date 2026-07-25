@@ -29,11 +29,15 @@ export default function Expenses() {
   // Ay değişince malzeme özetini o aya göre yeniden çek (top/total aya göre süzülür)
   useEffect(() => { getMaterialExpenses(selectedMonth || undefined).then(setMaterials).catch(() => {}); }, [selectedMonth]);
 
+  const [guardWarning, setGuardWarning] = useState("");
+
   const handleAdd = async () => {
     if (!form.category || form.amount === "") return;
     setError("");
+    setGuardWarning("");
     try {
-      await createExpense({ ...form, amount: Number(form.amount) || 0 });
+      const saved = await createExpense({ ...form, amount: Number(form.amount) || 0 });
+      if (saved?.warnings?.length) setGuardWarning(saved.warnings.join(" "));
       setForm({ ...emptyForm, expense_date: form.expense_date });
       refresh();
     } catch {
@@ -153,6 +157,11 @@ export default function Expenses() {
           <button onClick={handleAdd} style={btnPrimary}>Ekle</button>
         </div>
         {error && <div style={{ padding: "0 18px 14px", fontSize: 12, color: "var(--red)" }}>{error}</div>}
+        {guardWarning && (
+          <div style={{ margin: "0 18px 14px", padding: "8px 12px", borderRadius: 8, fontSize: 12, background: "rgba(217,161,32,0.12)", border: "1px solid rgba(217,161,32,0.4)", color: "var(--amber)" }}>
+            🛡️ <strong>Veri Bekçisi:</strong> {guardWarning}
+          </div>
+        )}
       </div>
 
       {/* Malzeme Giderleri — konsolide (yer kaplamasın diye tek kart, açılır) */}

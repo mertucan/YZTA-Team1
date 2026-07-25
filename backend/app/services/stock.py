@@ -5,9 +5,19 @@ aynı hesabı kullanır; tek kaynak burasıdır."""
 
 from datetime import date
 
-# Stok bir malzemenin bu eşiğin altına inince "kritik" sayılır (menü ihtiyacı yoksa geçerli)
-LOW_STOCK_THRESHOLD = 20
+# min_stock girilmemiş malzemeler için birime göre yedek eşik
+# (20 kg pirinç ile 20 adet yumurta aynı şey değildir — asıl eşik malzeme bazlıdır)
+FALLBACK_MIN_STOCK = {"adet": 30, "lt": 10}
+FALLBACK_MIN_STOCK_DEFAULT = 15
 EXPIRING_SOON_DAYS = 7
+
+
+def min_stock_of(ing: dict) -> float:
+    """Malzemenin kritik eşiği: kendi min_stock'u; yoksa birime göre yedek değer."""
+    ms = ing.get("min_stock")
+    if ms is not None:
+        return float(ms)
+    return float(FALLBACK_MIN_STOCK.get(ing.get("unit"), FALLBACK_MIN_STOCK_DEFAULT))
 
 
 def compute_alerts(db) -> dict:
@@ -19,7 +29,7 @@ def compute_alerts(db) -> dict:
     """
     today = date.today()
 
-    ingredients = db.table("ingredients").select("id, name, unit, stock").execute().data
+    ingredients = db.table("ingredients").select("id, name, unit, stock, min_stock").execute().data
     ing_by_id = {i["id"]: i for i in ingredients}
 
     # ── SKT durumu (partiler) ──
@@ -82,15 +92,16 @@ def compute_alerts(db) -> dict:
                               "stock": stock, "required": round(req, 2), "shortage": shortage,
                               "reason": "menu"})
             seen.add(ing_id)
-    # Menü ihtiyacı olmayan ama stok eşik altı olanlar
+    # Menü ihtiyacı olmayan ama kendi kritik eşiğinin (min_stock) altına inenler
     for ing in ingredients:
         if ing["id"] in seen:
             continue
         stock = float(ing.get("stock") or 0)
-        if stock < LOW_STOCK_THRESHOLD:
+        threshold = min_stock_of(ing)
+        if stock < threshold:
             shortages.append({"ingredient_id": ing["id"], "name": ing["name"], "unit": ing["unit"],
-                              "stock": stock, "required": LOW_STOCK_THRESHOLD,
-                              "shortage": round(LOW_STOCK_THRESHOLD - stock, 2), "reason": "threshold"})
+                              "stock": stock, "required": threshold,
+                              "shortage": round(threshold - stock, 2), "reason": "threshold"})
     shortages.sort(key=lambda r: r["shortage"], reverse=True)
 
     return {

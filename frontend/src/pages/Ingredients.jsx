@@ -14,6 +14,9 @@ import {
   getMarketHealth,
   selfHealMarket,
   getStockAlerts,
+  closeServiceDay,
+  getForecast,
+  applyAiMinStock,
 } from "../api/ingredients";
 import { todayLocal } from "../utils/date";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -47,6 +50,7 @@ const emptyForm = {
   season_end_month: "",
   market_price: "",
   last_price_checked_at: "",
+  min_stock: "",
 };
 
 const emptyBatchForm = {
@@ -220,6 +224,7 @@ function BatchPanel({ ingredient, onStockChanged }) {
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(emptyBatchForm);
+  const [entryWarnings, setEntryWarnings] = useState([]); // Veri Bekçisi uyarıları
 
   const refresh = () =>
     getBatches(ingredient.id)
@@ -232,12 +237,13 @@ function BatchPanel({ ingredient, onStockChanged }) {
 
   const handleAdd = async () => {
     if (!form.quantity || !form.purchase_date) return;
-    await createBatch(ingredient.id, {
+    const saved = await createBatch(ingredient.id, {
       quantity: numericPayloadValue(form.quantity),
       unit_price: form.unit_price !== "" ? Number(form.unit_price) : null,
       purchase_date: form.purchase_date,
       expiry_date: form.expiry_date || null,
     });
+    setEntryWarnings(saved?.warnings || []);
     setForm(emptyBatchForm);
     await refresh();
     onStockChanged();
@@ -251,6 +257,18 @@ function BatchPanel({ ingredient, onStockChanged }) {
 
   return (
     <div style={{ padding: "12px 18px 18px", background: "var(--surface2)" }}>
+      {/* Veri Bekçisi: şüpheli giriş uyarısı (kayıt yapıldı ama kontrol önerilir) */}
+      {entryWarnings.length > 0 && (
+        <div
+          style={{
+            marginBottom: 10, padding: "8px 12px", borderRadius: 8, fontSize: 12,
+            background: "rgba(217,161,32,0.12)", border: "1px solid rgba(217,161,32,0.4)",
+            color: "var(--amber)",
+          }}
+        >
+          🛡️ <strong>Veri Bekçisi:</strong> {entryWarnings.join(" ")}
+        </div>
+      )}
       {/* Mevsim / Yerellik bilgisi */}
       {(ingredient.origin_region || ingredient.season_start_month) && (
         <div
@@ -474,6 +492,11 @@ export default function Ingredients() {
   const [alertsOpen, setAlertsOpen] = useState(true);
   const [alertBusy, setAlertBusy] = useState(null);
   const [orderBusy, setOrderBusy] = useState(false);
+  const [forecast, setForecast] = useState([]);
+  const [forecastOpen, setForecastOpen] = useState(false);
+  const [dayBusy, setDayBusy] = useState(false);
+  const [dayResult, setDayResult] = useState(null); // {ok, message}
+  const [minStockBusy, setMinStockBusy] = useState(false);
   const navigate = useNavigate();
 
   const refresh = () =>
@@ -485,11 +508,51 @@ export default function Ingredients() {
       .then((list) => setA101(Object.fromEntries(list.map((r) => [r.ingredient_id, r]))))
       .catch(() => {});
   const refreshAlerts = () => getStockAlerts().then(setAlerts).catch(() => {});
+  const refreshForecast = () => getForecast().then(setForecast).catch(() => {});
   useEffect(() => {
     refresh();
     refreshA101();
     refreshAlerts();
+    refreshForecast();
   }, []);
+
+  // Günü Kapat: bugünün menüsü servis edildi → stok partilerden FEFO düşülür (DB)
+  const handleCloseDay = async () => {
+    setDayBusy(true);
+    setDayResult(null);
+    try {
+      const r = await closeServiceDay();
+      const short = r.shortfall_count
+        ? ` ⚠ ${r.shortfall_count} malzemede stok ihtiyacı tam karşılayamadı.`
+        : "";
+      setDayResult({
+        ok: true,
+        message: `📉 ${r.service_date} (${r.day_of_week}) kapatıldı — ${r.consumed_count} malzeme, ${r.total_portions} porsiyon servis tüketimi stoktan düşüldü.${short}`,
+      });
+      await Promise.all([refresh(), refreshAlerts(), refreshForecast()]);
+    } catch (err) {
+      setDayResult({ ok: false, message: err?.response?.data?.detail || "Gün kapatılamadı." });
+    } finally {
+      setDayBusy(false);
+    }
+  };
+
+  // AI Min-Stok: tüketim hızından malzeme bazlı kritik eşik hesaplar ve DB'ye uygular
+  const handleAiMinStock = async () => {
+    setMinStockBusy(true);
+    try {
+      const r = await applyAiMinStock();
+      setDayResult({
+        ok: true,
+        message: `🎯 AI, ${r.updated} malzemenin kritik eşiğini tüketim hızına göre güncelledi (eşik = günlük tüketim × 5 gün).`,
+      });
+      await Promise.all([refresh(), refreshAlerts(), refreshForecast()]);
+    } catch {
+      setDayResult({ ok: false, message: "Min-stok önerisi uygulanamadı." });
+    } finally {
+      setMinStockBusy(false);
+    }
+  };
 
   // SKT'si geçmiş partiyi imha et (DB'den sil → stok otomatik düşer)
   const handleDiscardBatch = async (ingredientId, batchId) => {
@@ -635,6 +698,7 @@ export default function Ingredients() {
         form.season_end_month !== "" ? Number(form.season_end_month) : null,
       market_price: form.market_price !== "" ? Number(form.market_price) : null,
       last_price_checked_at: form.last_price_checked_at || null,
+      min_stock: form.min_stock !== "" ? Number(form.min_stock) : null,
     };
     if (editingId) {
       await updateIngredient(editingId, payload);
@@ -662,6 +726,7 @@ export default function Ingredients() {
       season_end_month: item.season_end_month ?? "",
       market_price: item.market_price ?? "",
       last_price_checked_at: item.last_price_checked_at ?? "",
+      min_stock: item.min_stock ?? "",
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -678,7 +743,9 @@ export default function Ingredients() {
   const pricedCount = items.filter((i) => a101[i.id]).length;
   const expiredCount = alerts?.counts?.expired ?? 0;
   const expiringCount = alerts?.counts?.expiring_soon ?? 0;
-  const shortageCount = alerts?.counts?.shortages ?? items.filter((i) => Number(i.stock || 0) < 20).length;
+  const shortageCount =
+    alerts?.counts?.shortages ??
+    items.filter((i) => Number(i.stock || 0) < Number(i.min_stock ?? 15)).length;
   const stockSummary = [
     { label: "Toplam malzeme", value: items.length },
     { label: "SKT'si geçen", value: expiredCount, tone: expiredCount ? "var(--red)" : "var(--ingredients-muted-strong)" },
@@ -689,20 +756,42 @@ export default function Ingredients() {
 
   return (
     <div className="ingredients-page" style={page}>
-      <div style={{ ...pageHeader, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ ...pageHeader, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
         <div style={pageTitle}>Malzeme Deposu</div>
-        {(expiredCount + expiringCount + shortageCount) > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <button
             type="button"
-            onClick={scrollToAlerts}
-            title={`${expiredCount} SKT geçen · ${expiringCount} yaklaşan · ${shortageCount} eksik malzeme`}
-            style={bellBtn}
+            onClick={handleCloseDay}
+            disabled={dayBusy}
+            title="Bugünün menüsü servis edildi: gereken malzemeler partilerden (önce SKT'si yakın) stoktan düşülür"
+            style={{ ...alertActionBtn, padding: "8px 14px", fontSize: 12, opacity: dayBusy ? 0.6 : 1 }}
           >
-            <span style={{ fontSize: 18 }}>🔔</span>
-            <span style={bellBadge}>{expiredCount + expiringCount + shortageCount}</span>
+            {dayBusy ? "Kapatılıyor..." : "📉 Günü Kapat (Servis Tüketimi)"}
           </button>
-        )}
+          {(expiredCount + expiringCount + shortageCount) > 0 && (
+            <button
+              type="button"
+              onClick={scrollToAlerts}
+              title={`${expiredCount} SKT geçen · ${expiringCount} yaklaşan · ${shortageCount} eksik malzeme`}
+              style={bellBtn}
+            >
+              <span style={{ fontSize: 18 }}>🔔</span>
+              <span style={bellBadge}>{expiredCount + expiringCount + shortageCount}</span>
+            </button>
+          )}
+        </div>
       </div>
+
+      {dayResult && (
+        <div style={{
+          padding: "10px 14px", borderRadius: 8, marginBottom: 14, fontSize: 13,
+          background: dayResult.ok ? "rgba(22,163,74,0.10)" : "rgba(220,38,38,0.10)",
+          border: `1px solid ${dayResult.ok ? "rgba(22,163,74,0.3)" : "rgba(220,38,38,0.3)"}`,
+          color: dayResult.ok ? "var(--green, #16a34a)" : "var(--red)",
+        }}>
+          {dayResult.message}
+        </div>
+      )}
 
       <div style={summaryGrid}>
         {stockSummary.map((item) => (
@@ -809,6 +898,58 @@ export default function Ingredients() {
                   </table>
                 )}
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── AI Tükeniş Tahmini: tüketim hızından her malzemenin bitiş tarihi ── */}
+      {forecast.length > 0 && (
+        <div style={card}>
+          <button type="button" style={accordionHeader} onClick={() => setForecastOpen((v) => !v)} aria-expanded={forecastOpen}>
+            <div>
+              <div style={cardTitle}>📈 AI Tükeniş Tahmini</div>
+              <div style={cardHint}>
+                Son günlerin servis tüketimi + gelecek menülerden hesaplanır — {forecast.filter((f) => f.urgent).length} malzeme için sipariş günü geldi
+              </div>
+            </div>
+            <span style={{ fontSize: 12, color: "var(--ingredients-muted)" }}>{forecastOpen ? "Gizle ▲" : "Göster ▼"}</span>
+          </button>
+          {forecastOpen && (
+            <div style={{ padding: "0 16px 16px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+                <button
+                  onClick={handleAiMinStock}
+                  disabled={minStockBusy}
+                  style={{ ...alertActionBtn, opacity: minStockBusy ? 0.6 : 1 }}
+                  title="Kritik eşikleri tüketim hızına göre yeniden hesapla ve uygula (eşik = günlük tüketim × 5 gün)"
+                >
+                  {minStockBusy ? "Hesaplanıyor..." : "🎯 AI ile Kritik Eşikleri Güncelle"}
+                </button>
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                <thead>
+                  <tr>{["Malzeme", "Stok", "Günlük Tüketim", "Kaç Gün Yeter", "Tükeniş", "Son Sipariş Günü"].map((h) => (
+                    <th key={h} style={alertTh}>{h}</th>
+                  ))}</tr>
+                </thead>
+                <tbody>
+                  {forecast.slice(0, 12).map((f) => (
+                    <tr key={f.ingredient_id}>
+                      <td style={alertTd}>{f.name}</td>
+                      <td style={alertTd}>{f.stock} {f.unit}</td>
+                      <td style={alertTd}>{f.daily_rate} {f.unit}/gün</td>
+                      <td style={{ ...alertTd, fontWeight: 700, color: f.days_left <= 5 ? "var(--red)" : f.days_left <= 10 ? "var(--amber)" : "var(--ingredients-text)" }}>
+                        {f.days_left} gün
+                      </td>
+                      <td style={alertTd}>{f.depletion_date}</td>
+                      <td style={{ ...alertTd, fontWeight: f.urgent ? 700 : 400, color: f.urgent ? "var(--red)" : "var(--ingredients-muted)" }}>
+                        {f.urgent ? "BUGÜN sipariş ver" : f.order_by_date}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -967,6 +1108,18 @@ export default function Ingredients() {
                 onChange={(e) =>
                   setField("last_price_checked_at", e.target.value)
                 }
+                style={input}
+              />
+            </div>
+
+            <div>
+              <div style={fieldLabel}>Kritik Eşik (Min Stok)</div>
+              <input
+                inputMode="decimal"
+                placeholder="Örn: 25 — altına inince uyarı"
+                value={form.min_stock}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => setField("min_stock", numericValue(e.target.value))}
                 style={input}
               />
             </div>

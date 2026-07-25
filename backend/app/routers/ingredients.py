@@ -10,8 +10,18 @@ from app.models.ingredient import (
     IngredientBatchCreate,
     IngredientBatchUpdate,
 )
+from typing import Optional
+
+from pydantic import BaseModel
+
 from app.services.migros import MigrosError, fetch_ingredient_market_price, diagnose
 from app.services.stock import compute_alerts
+from app.services.consumption import (
+    ConsumptionError,
+    close_day,
+    forecast_depletion,
+    suggest_min_stock,
+)
 
 router = APIRouter(prefix="/ingredients", tags=["ingredients"])
 
@@ -21,6 +31,43 @@ def stock_alerts():
     """Akıllı stok uyarıları — expired/expiring_soon/shortages.
     'Neye ne kadar ihtiyaç var' müdüre tek bakışta çıkar (otomatik siparişin temeli)."""
     return compute_alerts(get_db())
+
+
+class CloseDayRequest(BaseModel):
+    service_date: Optional[date] = None  # verilmezse bugün
+
+
+@router.post("/close-day")
+def close_service_day(payload: CloseDayRequest):
+    """Günü Kapat: o günün menüsü servis edildi — gereken malzemeler partilerden
+    FEFO (önce SKT'si yakın) düşülür, tüketim loglanır. Stok fiili tüketimle iner."""
+    try:
+        return close_day(get_db(), payload.service_date)
+    except ConsumptionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.get("/consumption-logs")
+def consumption_logs(limit: int = 14):
+    """Son servis tüketim kayıtları (Günü Kapat geçmişi)."""
+    return get_db().table("consumption_logs").select("*").order(
+        "service_date", desc=True
+    ).limit(limit).execute().data
+
+
+@router.get("/forecast")
+def depletion_forecast():
+    """AI Tükeniş Tahmini: tüketim hızı + gelecek menülerden her malzemenin
+    tükeniş tarihi ve 'en geç şu gün sipariş ver' önerisi."""
+    return forecast_depletion(get_db())
+
+
+@router.post("/ai-min-stock")
+def apply_ai_min_stock():
+    """AI Min-Stok: tüketim hızından malzeme bazlı kritik eşik hesaplar ve uygular
+    (eşik = günlük tüketim × (teslim süresi + güvenlik payı))."""
+    changes = suggest_min_stock(get_db(), apply=True)
+    return {"updated": len(changes), "changes": changes}
 
 
 def _recompute_stock(ingredient_id: int) -> None:
@@ -208,16 +255,46 @@ def list_batches(ingredient_id: int):
     return res.data
 
 
-@router.post("/{ingredient_id}/batches", response_model=IngredientBatch, status_code=201)
+def _entry_warnings(db, ingredient_id: int, quantity: float, unit_price: float | None) -> list[str]:
+    """Veri Bekçisi: şüpheli girişleri (yanlış fiyat/aşırı miktar) kayıt anında yakalar.
+    Engellemez, uyarır — '2000 kg mercimek' gibi hatalar sisteme sessizce girmesin."""
+    warnings: list[str] = []
+    ing = db.table("ingredients").select(
+        "name, unit, price, market_price, min_stock"
+    ).eq("id", ingredient_id).execute().data
+    if not ing:
+        return warnings
+    ing = ing[0]
+    ref = float(ing.get("market_price") or ing.get("price") or 0)
+    if unit_price and ref > 0:
+        if unit_price > ref * 2.5:
+            warnings.append(
+                f"Birim fiyat ({unit_price} TL) referans fiyatın ({ref} TL) 2.5 katından fazla — girişi kontrol edin.")
+        elif unit_price < ref * 0.4:
+            warnings.append(
+                f"Birim fiyat ({unit_price} TL) referans fiyatın ({ref} TL) yarısından çok düşük — girişi kontrol edin.")
+    min_stock = float(ing.get("min_stock") or 0)
+    if min_stock > 0 and quantity > min_stock * 20:
+        warnings.append(
+            f"Miktar ({quantity} {ing.get('unit')}) kritik eşiğin ({min_stock}) 20 katından fazla — sıfır hatası olabilir.")
+    if unit_price and quantity * unit_price > 100_000:
+        warnings.append(f"Parti tutarı {round(quantity * unit_price, 2)} TL — olağan dışı büyüklükte.")
+    return warnings
+
+
+@router.post("/{ingredient_id}/batches", status_code=201)
 def create_batch(ingredient_id: int, payload: IngredientBatchCreate):
-    res = (
-        get_db()
-        .table("ingredient_batches")
-        .insert({**payload.model_dump(mode="json"), "ingredient_id": ingredient_id})
-        .execute()
-    )
+    db = get_db()
+    data = payload.model_dump(mode="json")
+    warnings = _entry_warnings(db, ingredient_id, float(data.get("quantity") or 0),
+                               data.get("unit_price"))
+    res = db.table("ingredient_batches").insert({
+        **data,
+        "ingredient_id": ingredient_id,
+        "initial_quantity": data.get("quantity"),  # satın alınan miktar (gider hesabının kaynağı)
+    }).execute()
     _recompute_stock(ingredient_id)
-    return res.data[0]
+    return {**res.data[0], "warnings": warnings}
 
 
 @router.patch("/{ingredient_id}/batches/{batch_id}", response_model=IngredientBatch)
