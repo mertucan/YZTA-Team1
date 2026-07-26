@@ -258,7 +258,7 @@ def remove_menu_item(menu_id: int, item_id: int):
     return {**final.data, "items": items_res.data}
 
 
-@router.patch("/{menu_id}/status", response_model=WeeklyMenu)
+@router.patch("/{menu_id}/status")
 def update_menu_status(menu_id: int, payload: WeeklyMenuStatusUpdate):
     if payload.status not in ("draft", "approved"):
         raise HTTPException(status_code=400, detail="status must be 'draft' or 'approved'")
@@ -277,7 +277,100 @@ def update_menu_status(menu_id: int, payload: WeeklyMenuStatusUpdate):
         ).eq("status", "approved").neq("id", menu_id).execute()
 
     res = db.table("weekly_menus").update({"status": payload.status}).eq("id", menu_id).execute()
-    return res.data[0]
+    result = dict(res.data[0])
+
+    # Onay → tedarik bağlantısı: menü onaylanınca eksikler hesaplanır; frontend
+    # "AI sipariş planı oluşturulsun mu?" diye sorar (modüller arası kapalı döngü).
+    if payload.status == "approved":
+        from app.services.stock import compute_alerts
+        shortages = compute_alerts(db)["shortages"]
+        result["shortage_count"] = len(shortages)
+        result["shortage_preview"] = [
+            {"name": s["name"], "shortage": s["shortage"], "unit": s["unit"]}
+            for s in shortages[:5]
+        ]
+    return result
+
+
+@router.get("/{menu_id}/attendance")
+def attendance_suggestion(menu_id: int):
+    """Devamsızlık → porsiyon bağlantısı: menü haftasının her günü için kayıtlı
+    devamsızlığa göre beklenen kişi sayısını ve porsiyon önerisini hesaplar.
+    (Ör: '29 Tem: 40 öğrenci devamsız → porsiyonu 150'den 110'a düşür')"""
+    db = get_db()
+    menu = db.table("weekly_menus").select("id, week_start_date, portions").eq("id", menu_id).single().execute()
+    if not menu.data:
+        raise HTTPException(status_code=404, detail="Menu not found")
+    monday = date.fromisoformat(menu.data["week_start_date"])
+    base_portions = int(menu.data.get("portions") or 0)
+
+    total_students = len(db.table("students").select("id").execute().data)
+    days_tr = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
+
+    absences = db.table("student_absences").select("absence_date").gte(
+        "absence_date", monday.isoformat()
+    ).lte("absence_date", (monday + timedelta(days=6)).isoformat()).execute().data
+    absent_by_date: dict[str, int] = {}
+    for a in absences:
+        absent_by_date[a["absence_date"]] = absent_by_date.get(a["absence_date"], 0) + 1
+
+    items = db.table("weekly_menu_items").select("day_of_week, portions").eq(
+        "weekly_menu_id", menu_id
+    ).execute().data
+    current_by_day = {}
+    for it in items:
+        current_by_day[it["day_of_week"]] = max(
+            current_by_day.get(it["day_of_week"], 0), int(it.get("portions") or 0))
+
+    rows, potential_savings = [], 0.0
+    per_portion_cost = 0.0
+    menu_row = db.table("weekly_menus").select("total_cost, portions").eq("id", menu_id).single().execute().data
+    if menu_row and menu_row.get("portions"):
+        per_portion_cost = float(menu_row.get("total_cost") or 0) / (7 * max(int(menu_row["portions"]), 1))
+
+    for offset in range(7):
+        d = monday + timedelta(days=offset)
+        day_name = days_tr[offset]
+        if day_name not in current_by_day:
+            continue  # o gün menüde yemek yok
+        absent = absent_by_date.get(d.isoformat(), 0)
+        current = current_by_day[day_name]
+        suggested = max(current - absent, 1)
+        saving = round((current - suggested) * per_portion_cost, 2) if suggested < current else 0.0
+        potential_savings += saving
+        rows.append({
+            "date": d.isoformat(), "day_of_week": day_name,
+            "absent": absent, "current_portions": current,
+            "suggested_portions": suggested, "change": suggested - current,
+            "estimated_saving": saving,
+        })
+    return {
+        "menu_id": menu_id, "total_students": total_students,
+        "base_portions": base_portions, "days": rows,
+        "total_estimated_saving": round(potential_savings, 2),
+        "has_changes": any(r["change"] != 0 for r in rows),
+    }
+
+
+@router.post("/{menu_id}/apply-attendance", response_model=WeeklyMenuDetail)
+def apply_attendance(menu_id: int):
+    """Devamsızlık önerisini uygular: her günün kalem porsiyonları beklenen kişi
+    sayısına çekilir, menü maliyeti yeniden hesaplanır."""
+    db = get_db()
+    suggestion = attendance_suggestion(menu_id)
+    changed = 0
+    for day in suggestion["days"]:
+        if day["change"] == 0:
+            continue
+        db.table("weekly_menu_items").update(
+            {"portions": day["suggested_portions"]}
+        ).eq("weekly_menu_id", menu_id).eq("day_of_week", day["day_of_week"]).execute()
+        changed += 1
+    if changed:
+        _recompute_menu_totals(menu_id)
+    final = db.table("weekly_menus").select("*").eq("id", menu_id).single().execute()
+    items_res = db.table("weekly_menu_items").select("*").eq("weekly_menu_id", menu_id).execute()
+    return {**final.data, "items": items_res.data}
 
 
 @router.get("/{menu_id}/seasonal-revisions", response_model=SeasonalMenuRevisionResponse)

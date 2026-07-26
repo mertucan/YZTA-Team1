@@ -6,6 +6,8 @@ import Ingredients from "./pages/Ingredients";
 import Meals from "./pages/Meals";
 import Students from "./pages/Students";
 import Absences from "./pages/Absences";
+import Expenses from "./pages/Expenses";
+import Orders from "./pages/Orders";
 import { modules } from "./modules";
 import tabloDotLogo from "./assets/tablo-dot-logo.png";
 
@@ -317,6 +319,8 @@ function AppShell() {
             <Route path="/meals" element={<Meals />} />
             <Route path="/students" element={<Students />} />
             <Route path="/absences" element={<Absences />} />
+            <Route path="/expenses" element={<Expenses />} />
+            <Route path="/orders" element={<Orders />} />
 
             {modules.map((mod) => (
               <Route key={mod.id} path={`${mod.route}/*`} element={<mod.component />} />
