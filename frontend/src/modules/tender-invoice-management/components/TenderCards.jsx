@@ -1,5 +1,53 @@
 import React from "react";
 
+function CardIcon({ name }) {
+  const common = {
+    width: 24,
+    height: 24,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": true,
+  };
+  const icons = {
+    clipboard: (
+      <svg {...common}>
+        <path d="M9 4h6" />
+        <path d="M9 2h6v4H9z" />
+        <path d="M6 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1" />
+        <path d="M8 13h8" />
+        <path d="M8 17h5" />
+      </svg>
+    ),
+    money: (
+      <svg {...common}>
+        <rect x="3" y="6" width="18" height="12" rx="2" />
+        <circle cx="12" cy="12" r="3" />
+        <path d="M6 9h.01" />
+        <path d="M18 15h.01" />
+      </svg>
+    ),
+    trend: (
+      <svg {...common}>
+        <path d="m3 17 6-6 4 4 8-8" />
+        <path d="M14 7h7v7" />
+      </svg>
+    ),
+    receipt: (
+      <svg {...common}>
+        <path d="M6 3h12v18l-2-1-2 1-2-1-2 1-2-1-2 1V3Z" />
+        <path d="M9 8h6" />
+        <path d="M9 12h6" />
+        <path d="M9 16h4" />
+      </svg>
+    ),
+  };
+  return icons[name] || icons.clipboard;
+}
+
 export default function TenderCards({ tenders = [], invoices = [] }) {
   const activeTendersCount = tenders.filter(t => t.status === "DRAFT" || t.status === "SUBMITTED").length;
   
@@ -21,7 +69,7 @@ export default function TenderCards({ tenders = [], invoices = [] }) {
   return (
     <div className="tender-metric-grid" style={gridStyle}>
       <div className="tender-card" style={cardStyle}>
-        <div style={iconBadgeStyle("#3b82f6")}>📋</div>
+        <div style={iconBadgeStyle("#3b82f6")}><CardIcon name="clipboard" /></div>
         <div>
           <span style={labelStyle}>Aktif İhaleler</span>
           <h3 style={valueStyle}>{activeTendersCount} Teklif</h3>
@@ -29,7 +77,7 @@ export default function TenderCards({ tenders = [], invoices = [] }) {
       </div>
 
       <div className="tender-card" style={cardStyle}>
-        <div style={iconBadgeStyle("#10b981")}>💰</div>
+        <div style={iconBadgeStyle("#10b981")}><CardIcon name="money" /></div>
         <div>
           <span style={labelStyle}>Toplam İhale Hacmi</span>
           <h3 style={valueStyle}>{formatTL(totalProposalValue)}</h3>
@@ -37,7 +85,7 @@ export default function TenderCards({ tenders = [], invoices = [] }) {
       </div>
 
       <div className="tender-card" style={cardStyle}>
-        <div style={iconBadgeStyle("#8b5cf6")}>📈</div>
+        <div style={iconBadgeStyle("#8b5cf6")}><CardIcon name="trend" /></div>
         <div>
           <span style={labelStyle}>Ortalama Kâr Marjı</span>
           <h3 style={valueStyle}>%{avgProfitMargin}</h3>
@@ -45,7 +93,7 @@ export default function TenderCards({ tenders = [], invoices = [] }) {
       </div>
 
       <div className="tender-card" style={cardStyle}>
-        <div style={iconBadgeStyle("#f59e0b")}>🧾</div>
+        <div style={iconBadgeStyle("#f59e0b")}><CardIcon name="receipt" /></div>
         <div>
           <span style={labelStyle}>Kesilen Fatura Toplamı</span>
           <h3 style={valueStyle}>{formatTL(totalInvoiceVolume)}</h3>
@@ -65,7 +113,7 @@ const gridStyle = {
 const cardStyle = {
   background: "var(--surface, #1e293b)",
   border: "1px solid var(--border, #334155)",
-  borderRadius: "12px",
+  borderRadius: "8px",
   padding: "20px",
   display: "flex",
   alignItems: "center",
@@ -82,12 +130,12 @@ const iconBadgeStyle = (bg) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  fontSize: "24px",
+  color: bg,
 });
 
 const labelStyle = {
   fontSize: "13px",
-  color: "#94a3b8",
+  color: "var(--text2)",
   display: "block",
   marginBottom: "4px",
 };
@@ -95,6 +143,6 @@ const labelStyle = {
 const valueStyle = {
   fontSize: "20px",
   fontWeight: "700",
-  color: "#f8fafc",
+  color: "var(--text)",
   margin: 0,
 };

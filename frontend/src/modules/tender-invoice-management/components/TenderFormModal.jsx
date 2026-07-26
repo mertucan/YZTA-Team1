@@ -88,7 +88,7 @@ export default function TenderFormModal({ isOpen, onClose, onSubmit }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
             {/* Sol Taraf: İhale Bilgileri */}
             <div>
-              <h4 style={sectionTitleStyle}>📋 İhale Başlık Bilgileri</h4>
+              <h4 style={sectionTitleStyle}>İhale Başlık Bilgileri</h4>
               
               <label style={labelStyle}>İhale / Proje Adı *</label>
               <input
@@ -177,7 +177,7 @@ export default function TenderFormModal({ isOpen, onClose, onSubmit }) {
 
             {/* Sağ Taraf: Canlı Maliyet & Kâr Marjı Simülatörü */}
             <div style={simBoxStyle}>
-              <h4 style={sectionTitleStyle}>💡 Canlı Maliyet & Kâr Marjı Simülatörü</h4>
+              <h4 style={sectionTitleStyle}>Canlı Maliyet & Kâr Marjı Simülatörü</h4>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                 <div>
@@ -270,12 +270,12 @@ const overlayStyle = {
 };
 
 const modalStyle = {
-  background: "var(--surface, #1e293b)",
+  background: "var(--bg, #ffffff)",
   border: "1px solid var(--border, #334155)",
   borderRadius: "16px",
   width: "100%",
   maxWidth: "900px",
-  color: "#f8fafc",
+  color: "var(--text)",
   boxShadow: "0 20px 40px rgba(0, 0, 0, 0.4)",
   overflow: "hidden",
 };
@@ -298,6 +298,7 @@ const closeBtnStyle = {
 
 const formContentStyle = {
   padding: "24px",
+  background: "var(--bg, #ffffff)",
 };
 
 const sectionTitleStyle = {
@@ -317,26 +318,26 @@ const labelStyle = {
 const inputStyle = {
   width: "100%",
   padding: "10px 12px",
-  background: "#0f172a",
-  border: "1px solid #334155",
+  background: "var(--surface2, #f8fafc)",
+  border: "1px solid var(--border2)",
   borderRadius: "8px",
-  color: "#f8fafc",
+  color: "var(--text)",
   fontSize: "14px",
   marginBottom: "12px",
   boxSizing: "border-box",
 };
 
 const simBoxStyle = {
-  background: "#0f172a",
+  background: "var(--surface2, #f8fafc)",
   padding: "16px",
   borderRadius: "12px",
-  border: "1px solid #334155",
+  border: "1px solid var(--border)",
 };
 
 const simResultCardStyle = {
   marginTop: "16px",
   padding: "14px",
-  background: "#1e293b",
+  background: "var(--surface, #ffffff)",
   borderRadius: "8px",
   border: "1px solid #3b82f644",
 };

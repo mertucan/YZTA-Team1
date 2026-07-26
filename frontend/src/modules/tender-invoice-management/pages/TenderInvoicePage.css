@@ -1,6 +1,5 @@
 .tender-page-container {
-  padding: 24px;
-  color: var(--text, #f8fafc);
+  color: var(--text);
 }
 
 .tender-header-bar {
@@ -13,16 +12,33 @@
 }
 
 .tender-title {
-  font-size: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 34px;
+  line-height: 1.05;
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--ingredients-text, var(--text));
   margin: 0;
+}
+
+.tender-title-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  display: inline-grid;
+  place-items: center;
+  color: var(--accent);
+  background: var(--accent-bg, rgba(232, 128, 0, 0.12));
+  border: 1px solid rgba(232, 128, 0, 0.28);
+  flex-shrink: 0;
 }
 
 .tender-subtitle {
   font-size: 14px;
-  color: #94a3b8;
-  margin-top: 4px;
+  color: var(--text2);
+  margin: 8px 0 0;
 }
 
 .tender-action-buttons {
@@ -31,7 +47,7 @@
 }
 
 .btn-primary {
-  background: #3b82f6;
+  background: var(--accent, #e88000);
   color: #ffffff;
   border: none;
   padding: 10px 18px;
@@ -45,11 +61,11 @@
 }
 
 .btn-primary:hover {
-  background: #2563eb;
+  background: var(--accent2, #c96f00);
 }
 
 .btn-success {
-  background: #10b981;
+  background: var(--green, #16a34a);
   color: #ffffff;
   border: none;
   padding: 10px 18px;
@@ -63,7 +79,7 @@
 }
 
 .btn-success:hover {
-  background: #059669;
+  filter: brightness(0.94);
 }
 
 /* Tabs */
@@ -75,11 +91,14 @@
 }
 
 .tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   padding: 12px 20px;
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
-  color: #94a3b8;
+  color: var(--text2);
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
@@ -87,15 +106,15 @@
 }
 
 .tab-btn.active {
-  color: #38bdf8;
-  border-bottom-color: #38bdf8;
+  color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 
 /* Table styles */
 .tender-table-container {
   background: var(--surface, #1e293b);
   border: 1px solid var(--border, #334155);
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
@@ -107,18 +126,18 @@
 }
 
 .tender-table th {
-  background: #0f172a;
-  color: #94a3b8;
+  background: var(--surface3, #f3f4f6);
+  color: var(--text2);
   text-align: left;
   padding: 14px 18px;
   font-weight: 600;
-  border-bottom: 1px solid #334155;
+  border-bottom: 1px solid var(--border);
 }
 
 .tender-table td {
   padding: 14px 18px;
-  border-bottom: 1px solid #334155;
-  color: #cbd5e1;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
 }
 
 .tender-table tr:last-child td {
@@ -133,7 +152,7 @@
   display: inline-block;
 }
 
-.status-DRAFT { background: #334155; color: #cbd5e1; }
+.status-DRAFT { background: var(--surface3); color: var(--text2); }
 .status-SUBMITTED { background: #3b82f622; color: #60a5fa; border: 1px solid #3b82f644; }
 .status-WON { background: #10b98122; color: #34d399; border: 1px solid #10b98144; }
 .status-LOST { background: #ef444422; color: #f87171; border: 1px solid #ef444444; }
@@ -142,6 +161,9 @@
 .status-CANCELLED { background: #ef444422; color: #f87171; border: 1px solid #ef444444; }
 
 .action-btn-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 6px 12px;
   background: #334155;
   color: #f8fafc;
@@ -154,4 +176,12 @@
 
 .action-btn-sm:hover {
   background: #475569;
+}
+.tender-row-title {
+  color: var(--text);
+}
+
+.tender-row-muted {
+  font-size: 12px;
+  color: var(--text3);
 }

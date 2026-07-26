@@ -73,7 +73,7 @@ export default function InvoiceGeneratorModal({ isOpen, onClose, onGenerated }) 
     <div style={overlayStyle}>
       <div style={modalStyle}>
         <div style={headerStyle}>
-          <h3>🧾 Otomatik Hakediş & Fatura Oluşturucu</h3>
+          <h3>Otomatik Hakediş & Fatura Oluşturucu</h3>
           <button style={closeBtnStyle} onClick={onClose}>✕</button>
         </div>
 
@@ -161,7 +161,7 @@ export default function InvoiceGeneratorModal({ isOpen, onClose, onGenerated }) 
               onChange={(e) => setFormData({ ...formData, custom_meal_count: e.target.value })}
             />
             <span style={{ fontSize: "11px", color: "#94a3b8" }}>
-              💡 Boş bırakırsanız sistem o aya ait veritabanı verilerini otomatik sayıp matrah ve KDV hesabını yapar.
+              Boş bırakırsanız sistem o aya ait veritabanı verilerini otomatik sayıp matrah ve KDV hesabını yapar.
             </span>
           </div>
 
@@ -192,12 +192,12 @@ const overlayStyle = {
 };
 
 const modalStyle = {
-  background: "var(--surface, #1e293b)",
+  background: "var(--bg, #ffffff)",
   border: "1px solid var(--border, #334155)",
   borderRadius: "16px",
   width: "100%",
   maxWidth: "540px",
-  color: "#f8fafc",
+  color: "var(--text)",
   boxShadow: "0 20px 40px rgba(0, 0, 0, 0.4)",
 };
 
@@ -219,6 +219,7 @@ const closeBtnStyle = {
 
 const formStyle = {
   padding: "24px",
+  background: "var(--bg, #ffffff)",
 };
 
 const labelStyle = {
@@ -231,10 +232,10 @@ const labelStyle = {
 const inputStyle = {
   width: "100%",
   padding: "10px 12px",
-  background: "#0f172a",
-  border: "1px solid #334155",
+  background: "var(--surface2, #f8fafc)",
+  border: "1px solid var(--border2)",
   borderRadius: "8px",
-  color: "#f8fafc",
+  color: "var(--text)",
   fontSize: "14px",
   marginBottom: "12px",
   boxSizing: "border-box",

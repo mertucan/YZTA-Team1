@@ -13,9 +13,9 @@ export default function InvoicePdfPreviewModal({ isOpen, onClose, data, type = "
     <div style={overlayStyle} className="no-print-overlay">
       <div style={modalStyle}>
         <div style={headerStyle} className="no-print">
-          <h3>{type === "invoice" ? "🧾 Fatura & Hakediş Belgesi Önizleme" : "📋 İhale Teklif Dosyası Önizleme"}</h3>
+          <h3>{type === "invoice" ? "Fatura & Hakediş Belgesi Önizleme" : "İhale Teklif Dosyası Önizleme"}</h3>
           <div style={{ display: "flex", gap: "10px" }}>
-            <button style={printBtnStyle} onClick={handlePrint}>🖨️ Yazdır / PDF İndir</button>
+            <button style={printBtnStyle} onClick={handlePrint}>Yazdır / PDF İndir</button>
             <button style={closeBtnStyle} onClick={onClose}>✕</button>
           </div>
         </div>

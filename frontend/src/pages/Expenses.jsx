@@ -7,6 +7,73 @@ const emptyForm = { category: "Personel", description: "", amount: "", expense_d
 
 const fmt = (n) => Number(n || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+function PageIcon({ name, size = 20 }) {
+  const common = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": true,
+  };
+  const icons = {
+    wallet: (
+      <svg {...common}>
+        <path d="M3 7a3 3 0 0 1 3-3h13v4H6a3 3 0 0 0 0 6h15v6H6a3 3 0 0 1-3-3Z" />
+        <path d="M16 12h.01" />
+      </svg>
+    ),
+    plus: (
+      <svg {...common}>
+        <path d="M12 5v14" />
+        <path d="M5 12h14" />
+      </svg>
+    ),
+    shield: (
+      <svg {...common}>
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+      </svg>
+    ),
+    carrot: (
+      <svg {...common}>
+        <path d="M4 20c5-1 11-7 13-13" />
+        <path d="M8 18c-2-2-3-5-2-8 3-1 6 0 8 2" />
+        <path d="M17 7c1-2 2-3 4-3" />
+        <path d="M17 7c2 0 3 1 4 3" />
+      </svg>
+    ),
+    chart: (
+      <svg {...common}>
+        <path d="M4 19V5" />
+        <path d="M4 19h16" />
+        <path d="M8 16v-5" />
+        <path d="M12 16V8" />
+        <path d="M16 16v-3" />
+      </svg>
+    ),
+    brain: (
+      <svg {...common}>
+        <path d="M9 4a3 3 0 0 0-3 3v.5A3.5 3.5 0 0 0 4 14a3 3 0 0 0 3 3h1" />
+        <path d="M15 4a3 3 0 0 1 3 3v.5A3.5 3.5 0 0 1 20 14a3 3 0 0 1-3 3h-1" />
+        <path d="M9 4v16" />
+        <path d="M15 4v16" />
+      </svg>
+    ),
+    receipt: (
+      <svg {...common}>
+        <path d="M6 3h12v18l-2-1-2 1-2-1-2 1-2-1-2 1V3Z" />
+        <path d="M9 8h6" />
+        <path d="M9 12h6" />
+        <path d="M9 16h4" />
+      </svg>
+    ),
+  };
+  return icons[name] || icons.wallet;
+}
+
 export default function Expenses() {
   const [items, setItems] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -116,7 +183,10 @@ export default function Expenses() {
     <div>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
         <div>
-          <div style={{ fontSize: 20, fontWeight: 600 }}>💸 Harcamalar</div>
+          <div style={pageTitle}>
+            <span style={titleIcon}><PageIcon name="wallet" size={22} /></span>
+            Harcamalar
+          </div>
           <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 3 }}>
             Personel, elektrik, su, tamir ve malzeme giderleri — ay bazında takip ve analiz
           </div>
@@ -139,7 +209,6 @@ export default function Expenses() {
           border: `1px solid ${budget.status === "over" ? "rgba(220,38,38,0.35)" : budget.status === "near" ? "rgba(217,161,32,0.4)" : "rgba(22,163,74,0.3)"}`,
           color: budget.status === "over" ? "var(--red)" : budget.status === "near" ? "var(--amber)" : "var(--green,#16a34a)",
         }}>
-          <span>{budget.status === "over" ? "🚨" : budget.status === "near" ? "⚠️" : "✅"}</span>
           <strong>{budget.message}</strong>
           <span style={{ fontSize: 11, opacity: 0.85 }}>
             (Planlanan menü bütçesi {fmt(budget.food_budget)} TL · fiili malzeme alımı {fmt(budget.material_spent)} TL · {budget.menu_count} haftalık menü)
@@ -164,7 +233,7 @@ export default function Expenses() {
 
       {/* Ekleme formu */}
       <div style={card}>
-        <div style={cardHd}>➕ Yeni Harcama Ekle</div>
+        <div style={cardHd}><span style={inlineIcon}><PageIcon name="plus" size={15} /></span>Yeni Harcama Ekle</div>
         <div style={{ padding: 18, display: "grid", gridTemplateColumns: form.category === "Diğer" ? "1fr 1.2fr 1.6fr 1fr 1fr auto" : "1fr 1.6fr 1fr 1fr auto", gap: 10, alignItems: "end" }}>
           <div>
             <div style={fieldLabel}>Kategori</div>
@@ -201,7 +270,7 @@ export default function Expenses() {
         {error && <div style={{ padding: "0 18px 14px", fontSize: 12, color: "var(--red)" }}>{error}</div>}
         {guardWarning && (
           <div style={{ margin: "0 18px 14px", padding: "8px 12px", borderRadius: 8, fontSize: 12, background: "rgba(217,161,32,0.12)", border: "1px solid rgba(217,161,32,0.4)", color: "var(--amber)" }}>
-            🛡️ <strong>Veri Bekçisi:</strong> {guardWarning}
+            <span style={inlineIcon}><PageIcon name="shield" size={15} /></span><strong>Veri Bekçisi:</strong> {guardWarning}
           </div>
         )}
       </div>
@@ -213,7 +282,7 @@ export default function Expenses() {
             onClick={() => setMatOpen((o) => !o)}
             style={{ ...cardHd, width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: matOpen ? "1px solid var(--border)" : "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}
           >
-            <span>🥕 Malzeme Giderleri <span style={{ fontWeight: 400, color: "var(--text3)" }}>· {monthLabel(selectedMonth)} (fiili alımlardan · {materials.batch_count} parti)</span></span>
+            <span><span style={inlineIcon}><PageIcon name="carrot" size={15} /></span>Malzeme Giderleri <span style={{ fontWeight: 400, color: "var(--text3)" }}>· {monthLabel(selectedMonth)} (fiili alımlardan · {materials.batch_count} parti)</span></span>
             <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <b style={{ fontFamily: "var(--mono)", color: "var(--amber)" }}>{fmt(matTotal)} TL</b>
               <span style={{ color: "var(--text3)" }}>{matOpen ? "▾" : "▸"}</span>
@@ -252,7 +321,7 @@ export default function Expenses() {
             </div>
           )}
           <div style={{ padding: "0 18px 12px", fontSize: 11, color: "var(--text3)" }}>
-            ℹ Sipariş "teslim alındı" olunca veya Malzeme Deposu'nda birim fiyatlı parti eklenince buraya otomatik yansır.
+            Sipariş "teslim alındı" olunca veya Malzeme Deposu'nda birim fiyatlı parti eklenince buraya otomatik yansır.
           </div>
         </div>
       )}
@@ -260,7 +329,7 @@ export default function Expenses() {
       {/* Kategori dağılımı (seçili ay · malzeme dahil) */}
       {catDist.length > 0 && (
         <div style={card}>
-          <div style={cardHd}>📊 Kategori Dağılımı · {monthLabel(selectedMonth)}</div>
+          <div style={cardHd}><span style={inlineIcon}><PageIcon name="chart" size={15} /></span>Kategori Dağılımı · {monthLabel(selectedMonth)}</div>
           <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 8 }}>
             {catDist.map((c) => (
               <div key={c.category} style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -278,7 +347,7 @@ export default function Expenses() {
       {/* AI Gider Analizi */}
       <div style={card}>
         <div style={{ ...cardHd, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-          <span>🤖 AI Gider Analizi</span>
+          <span><span style={inlineIcon}><PageIcon name="brain" size={15} /></span>AI Gider Analizi</span>
           <button onClick={handleAiAnalyze} disabled={aiLoading} style={{ ...btnPrimary, padding: "6px 14px", fontSize: 12, opacity: aiLoading ? 0.6 : 1 }}>
             {aiLoading ? "Analiz ediliyor..." : ai ? "Yeniden Analiz Et" : "Analiz Et"}
           </button>
@@ -310,7 +379,7 @@ export default function Expenses() {
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px,1fr))", gap: 10 }}>
                     {ai.suggestions.map((s, i) => (
                       <div key={i} style={{ background: "var(--surface2)", border: "1px solid var(--border2)", borderRadius: 8, padding: "10px 12px" }}>
-                        <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 4 }}>💡 {s.title}</div>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 4 }}>{s.title}</div>
                         <div style={{ fontSize: 12, color: "var(--text2)", lineHeight: 1.45 }}>{s.detail}</div>
                         {s.potential_saving && (
                           <div style={{ marginTop: 6, fontSize: 11, fontWeight: 700, color: "var(--green,#16a34a)" }}>
@@ -329,9 +398,9 @@ export default function Expenses() {
 
       {/* Liste */}
       <div style={card}>
-        <div style={cardHd}>🧾 Harcama Listesi · {monthLabel(selectedMonth)}</div>
+        <div style={cardHd}><span style={inlineIcon}><PageIcon name="receipt" size={15} /></span>Harcama Listesi · {monthLabel(selectedMonth)}</div>
         <div style={{ padding: "12px 18px" }}>
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 Kategori veya açıklama ara..." style={input} />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Kategori veya açıklama ara..." style={input} />
         </div>
         {loading ? <div style={{ padding: 24, color: "var(--text3)" }}>Yükleniyor...</div> : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -356,6 +425,9 @@ export default function Expenses() {
 }
 
 const card = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow)", marginBottom: 16 };
+const pageTitle = { display: "flex", alignItems: "center", gap: 10, color: "var(--ingredients-text)", fontFamily: "Georgia, 'Times New Roman', serif", fontSize: 34, lineHeight: 1.05, fontWeight: 700 };
+const titleIcon = { width: 38, height: 38, borderRadius: 8, display: "inline-grid", placeItems: "center", color: "var(--accent)", background: "var(--accent-bg, rgba(232,128,0,.12))", border: "1px solid rgba(232,128,0,.28)", flexShrink: 0 };
+const inlineIcon = { display: "inline-flex", alignItems: "center", marginRight: 7, verticalAlign: "-2px", color: "var(--accent)" };
 const cardHd = { padding: "14px 18px 12px", borderBottom: "1px solid var(--border)", fontSize: 13, fontWeight: 600 };
 const fieldLabel = { fontSize: 11, color: "var(--text2)", marginBottom: 5, fontWeight: 500 };
 const input = { width: "100%", background: "var(--surface2)", border: "1px solid var(--border2)", borderRadius: 7, padding: "7px 12px", fontSize: 13, color: "var(--text)", outline: "none" };
