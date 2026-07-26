@@ -43,6 +43,8 @@ const moduleRoles = {
   "research-export": ["RESEARCHER", "UNIVERSITY_ADMIN"],
   "university-quality-integration": ["UNIVERSITY_ADMIN", "SUPER_ADMIN"],
   "partner-products": ["PARTNER_COMPANY", "DIETITIAN", "CHEF", "CATERING_ADMIN", "SUPER_ADMIN"],
+  "sustainabilityscore": ["DIETITIAN", "CHEF", "OPERATIONS_MANAGER", "FINANCE_MANAGER", "CATERING_ADMIN", "UNIVERSITY_ADMIN", "SUPER_ADMIN", "RESEARCHER"],
+  "tender-invoice-management": ["FINANCE_MANAGER", "OPERATIONS_MANAGER", "CATERING_ADMIN", "UNIVERSITY_ADMIN", "SUPER_ADMIN", "DIETITIAN"],
 };
 
 const recordRoles = {
