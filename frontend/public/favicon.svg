@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="TabloDot">
+  <rect width="64" height="64" rx="14" fill="#151922"/>
+  <circle cx="48" cy="16" r="7" fill="#e88000"/>
+  <path
+    d="M15 18h31v8H34v24h-8V26H15z"
+    fill="#ffffff"
+  />
+  <path
+    d="M41 39c4.8 0 7.8 2.2 7.8 5.5S45.8 50 41 50s-7.8-2.2-7.8-5.5S36.2 39 41 39Z"
+    fill="none"
+    stroke="#e88000"
+    stroke-width="4"
+  />
+</svg>

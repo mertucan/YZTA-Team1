@@ -9,7 +9,14 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=ROOT_DIR / ".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=(
+            ROOT_DIR / ".env",
+            Path(__file__).resolve().parents[1] / ".env",
+            ".env",
+        ),
+        extra="ignore",
+    )
 
     supabase_url: str
     supabase_anon_key: str = Field(

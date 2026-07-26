@@ -38,7 +38,6 @@ PUBLIC_REGISTER_ROLES = {
     Role.finance_manager.value,
     Role.operations_manager.value,
     Role.student.value,
-    Role.system_support.value,
     Role.warehouse_staff.value,
     Role.purchasing_staff.value,
     Role.researcher.value,
