@@ -1,9 +1,10 @@
 import axios from "axios";
 
 const CATERING_SESSION_KEY = "catering_mock_session";
+const configuredApiUrl = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 
 const client = axios.create({
-  baseURL: "/api",
+  baseURL: configuredApiUrl || "/api",
   headers: { "Content-Type": "application/json" },
 });
 

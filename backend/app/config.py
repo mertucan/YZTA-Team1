@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     brevo_api_key: Optional[str] = None
     brevo_sender_email: Optional[str] = None
     brevo_sender_name: str = "TabloDot"
+    allowed_origins: list[str] = Field(
+        default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"],
+        validation_alias=AliasChoices("ALLOWED_ORIGINS", "CORS_ORIGINS"),
+    )
 
     @field_validator(
         "gemini_api_key",
@@ -57,6 +61,14 @@ class Settings(BaseSettings):
         }
         if isinstance(value, str) and not value.strip():
             return defaults[info.field_name]
+        return value
+
+    @field_validator("allowed_origins", mode="before")
+    @classmethod
+    def _parse_allowed_origins(cls, value: object) -> object:
+        if isinstance(value, str):
+            origins = [origin.strip() for origin in value.split(",") if origin.strip()]
+            return origins or ["http://localhost:5173", "http://127.0.0.1:5173"]
         return value
 
     @field_validator(
