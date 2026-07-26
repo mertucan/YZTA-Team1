@@ -31,7 +31,7 @@ function WelcomePage() {
   const metrics = [
     ["Rol", "12"],
     ["Modül", "7"],
-    ["Erişim", "Kontrollü"],
+    ["Erişim", "Düzenli"],
     ["Durum", "Hazır"],
   ];
 
