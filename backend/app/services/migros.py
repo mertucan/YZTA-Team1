@@ -167,6 +167,53 @@ def _heal_with_llm(payload: dict) -> bool:
     return False
 
 
+# ───────── LLM EŞLEŞME DENETİM AJANI (yalnızca kural şüpheliyken) ─────────
+def verify_match_with_llm(ingredient_name: str, candidates: list[dict]) -> dict | None:
+    """Kural-tabanlı eşleşme güvenilir olmadığında devreye girer. Migros aday ürünlerini
+    (ad + birim fiyat + kategori) Gemini'ye verip yemekhane için DOĞRU HAM malzemeyi
+    seçtirir; işlenmiş/hazır/aromalı/tatlı/turşu/içecek olanları eler. Uygun ham ürün
+    yoksa {'found': False} döner → sitede yok, manuel giriş gerekir.
+    Dönüş: {'found': True, 'id': <ürün id>} | {'found': False} | None (LLM yok/başarısız)."""
+    try:
+        from app.config import settings
+    except Exception:
+        return None
+    if not getattr(settings, "gemini_api_key", None) or not candidates:
+        return None
+
+    lines = []
+    for c in candidates[:25]:
+        cats = " > ".join(_category_chain(c)) or "?"
+        lines.append(f'{{"id": {c.get("id")}, "ad": "{_name_of(c)}", "kategori": "{cats}"}}')
+    catalog = "\n".join(lines)
+    prompt = (
+        f"Bir okul yemekhanesi için '{ingredient_name}' adlı HAM/TAZE mutfak malzemesini "
+        "satın alıyoruz. Aşağıdaki Migros ürünlerinden hangisi tam olarak bu ham malzemenin "
+        "kendisidir? Şunları KESİNLİKLE ELE: işlenmiş/hazır yemek, tatlı, turşu, reçel, "
+        "marmelat, içecek, meyve suyu, aromalı ürün, cips, kraker, dondurma, kozmetik/temizlik. "
+        "Sadece pişirmede kullanılacak ham/taze/temel gıda hali kabul edilir. "
+        "Uygun ham ürün YOKSA id olarak null ver. "
+        'SADECE şu JSON ile yanıt ver: {"id": <secilen_id_veya_null>}\n\n'
+        f"Ürünler:\n{catalog}"
+    )
+    try:
+        from google import genai
+        client = genai.Client(api_key=settings.gemini_api_key)
+        resp = client.models.generate_content(model=settings.gemini_model, contents=prompt)
+        m = re.search(r"\{.*\}", getattr(resp, "text", "") or "", re.S)
+        if not m:
+            return None
+        chosen = json.loads(m.group(0)).get("id")
+        if chosen is None:
+            return {"found": False}
+        for c in candidates:
+            if c.get("id") == chosen:
+                return {"found": True, "id": chosen}
+        return {"found": False}
+    except Exception:
+        return None
+
+
 # ─────────────────────── İsim eşleşme güveni ───────────────────────
 _TR_FOLD = str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosuCGIOSU")
 _NOISE = {"g", "gr", "kg", "ml", "l", "lt", "adet", "li", "lu", "x", "ve",
@@ -186,6 +233,7 @@ _DISQUALIFY = {
     "meyveli", "meyvelim", "limonata", "aromali", "fanta", "schweppes",
     "frutti", "pet",  # içecek işaretçileri (PET şişe / meyveli içecek)
     "kefir", "kokulu", "mendil", "kokteyl", "puf",  # aromalı/kozmetik ürün işaretçileri
+    "kadayif", "baklava", "borek", "boregi", "kurabiye", "pogaca", "pasta", "kek",  # hamur işi/tatlı
 }
 
 
@@ -197,7 +245,9 @@ _BLOCKED_CATEGORIES = {
     "kağıt", "kagit", "pet shop", "petshop", "bebek", "ev, yaşam", "ev yasam",
     "reçel", "recel", "marmelat", "dondurma", "çikolata", "cikolata", "gofret",
     "şekerleme", "sekerleme", "cips", "kraker", "bisküvi", "biskuvi", "sakız", "sakiz",
-    "kuruyemiş", "kuruyemis", "atıştırmalık", "atistirmalik", "ciklet", "sos", "çeşni", "cesni",
+    "ciklet", "sos", "çeşni", "cesni",
+    "tatlı", "tatli", "pastane", "fırın, pastane", "firin, pastane", "hazır yemek", "hazir yemek",
+    # not: "Kuru Meyve/Atıştırmalık" bloklanmaz — ham ceviz/fındık/badem orada satılıyor.
 }
 
 
@@ -459,13 +509,13 @@ def fetch_ingredient_market_price(ingredient_name: str, unit: str, product_url: 
         primary = search_products(ingredient_name)
     except MigrosError:
         primary = []
+    pooled = {p.get("id"): p for p in primary if p.get("id") is not None}
     result = _pick_best(ingredient_name, primary)
 
     # Kurtarma gerekli mi? (a) sonuç yok/güvenilmez (füme, bulyon...) VEYA
     # (b) güvenilir ama PAKETLİ (PIECE) — ham kiloyla-satılan bir alternatif olabilir
     primary_piece = result is not None and (result[0].get("unit") or "").upper() == "PIECE"
     if result is None or not result[5] or primary_piece:
-        pooled = {p.get("id"): p for p in primary if p.get("id") is not None}
         for q in _query_variants(ingredient_name)[1:]:  # [0]=isim zaten arandı
             try:
                 for p in search_products(q):
@@ -483,12 +533,42 @@ def fetch_ingredient_market_price(ingredient_name: str, unit: str, product_url: 
             elif primary_piece and r_loose and r_head:
                 result = rescued                       # paketliyi HAM kiloyla-satılanla değiştir
 
-    if result is None:
-        raise MigrosError(f"Migros'ta '{ingredient_name}' için fiyatlı ürün bulunamadı.")
+    # ── LLM EŞLEŞME DENETİM AJANI ──────────────────────────────────────────────
+    # Kural-tabanlı sistem hâlâ güvenilir bir eşleşme bulamadıysa (ör. Karnabahar→Kelek,
+    # Ceviz→Cevizli Kadayıf) LLM ajanı adayları inceleyip doğru HAM ürünü seçer; sitede
+    # gerçekten uygun ham ürün yoksa 'manuel giriş' durumuna düşürür. LLM yalnızca BURADA,
+    # yani kural güvenilmezken çalışır — güvenilir eşleşmelerde LLM harcanmaz.
+    manual_entry = False
+    verified_by_llm = False
+    if result is None or not result[5]:
+        verdict = verify_match_with_llm(ingredient_name, list(pooled.values()))
+        if verdict is not None:
+            if verdict.get("found"):
+                chosen = next((p for p in pooled.values() if p.get("id") == verdict["id"]), None)
+                if chosen is not None:
+                    conf, unm = match_confidence(ingredient_name, _name_of(chosen))
+                    price2 = _extract_price(chosen)
+                    if price2["unit_price"] is not None:
+                        result = (chosen, conf, unm, price2, [], True)
+                        verified_by_llm = True
+            else:
+                manual_entry = True   # LLM: sitede uygun ham ürün yok → manuel giriş
+
+    if manual_entry or result is None:
+        # Ürün bulunamadı / uygun değil → kayıt döndürme, manuel giriş iste
+        return {
+            "product_url": None, "product_name": None,
+            "detected_unit": None, "pack_quantity": None,
+            "last_price": None, "unit_price": None, "strategy": "migros-api",
+            "confidence": 0.0, "reliable": False, "needs_manual_entry": True,
+            "verified_by_llm": verified_by_llm,
+            "warning": f"Migros'ta '{ingredient_name}' için uygun ham ürün bulunamadı — "
+                       "fiyatı elle girin.",
+        }
 
     best, confidence, unmatched, price, disq_hits, reliable = result
     warnings: list[str] = []
-    if unmatched and unmatched != ["?"]:
+    if not reliable and unmatched and unmatched != ["?"]:
         warnings.append("Eşleşme zayıf: '" + ", ".join(unmatched) +
                         "' ürün adında yok — yanlış ürün eşleşmiş olabilir.")
     if disq_hits:
@@ -508,6 +588,8 @@ def fetch_ingredient_market_price(ingredient_name: str, unit: str, product_url: 
         "strategy": "migros-api",
         "confidence": confidence,
         "reliable": reliable,
+        "needs_manual_entry": False,
+        "verified_by_llm": verified_by_llm,
         "warning": " ".join(warnings) or None,
     }
 

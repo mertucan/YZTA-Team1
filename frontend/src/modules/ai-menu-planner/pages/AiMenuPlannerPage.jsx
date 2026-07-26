@@ -4,14 +4,18 @@ import {
   getMenu,
   generateMenu,
   createManualMenu,
+  updateMenuPortions,
   addMealItem,
   removeMenuItem,
   approveMenu,
   deleteMenu,
   getSeasonalRevisions,
+  getAttendanceSuggestion,
+  applyAttendanceSuggestion,
 } from "../api/aiMenuPlanner";
 import { getIngredients } from "../../../api/ingredients";
 import { getMeals } from "../../../api/meals";
+import { aiPurchasePlan } from "../../../api/orders";
 import { formatLocalDate, todayLocal } from "../../../utils/date";
 
 const DAYS_OF_WEEK = [
@@ -161,10 +165,16 @@ function MenuDetailPanel({
   onAddMeal,
   onRemoveItem,
   onApprove,
+  onUpdatePortions,
   onDelete,
   onSeasonalRevisions,
   seasonalRevisions,
   revisionsLoading,
+  onAttendance,
+  attendance,
+  attendanceLoading,
+  onApplyAttendance,
+  notice,
 }) {
   const itemsByDay = useMemo(() => {
     return menu.items.reduce((acc, item) => {
@@ -208,6 +218,11 @@ function MenuDetailPanel({
             value: `${(menu.budget - menu.total_cost).toFixed(2)} TL`,
             color:
               menu.budget - menu.total_cost < 0 ? "var(--red)" : "var(--green)",
+          },
+          {
+            label: "Kişi Başı Maliyet",
+            value: `${(menu.total_cost / Math.max(menu.portions || 1, 1)).toFixed(2)} TL`,
+            color: "var(--accent)",
           },
           {
             label: "Toplam Kalori",
@@ -256,12 +271,44 @@ function MenuDetailPanel({
       <div
         style={{
           padding: "0 18px 14px",
-          fontSize: 11,
-          fontWeight: 700,
-          color: status.color,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 10,
         }}
       >
-        {status.label}
+        <span style={{ fontSize: 11, fontWeight: 700, color: status.color }}>
+          {status.label}
+        </span>
+        {onUpdatePortions && (
+          <label
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 11,
+              color: "var(--text2)",
+            }}
+          >
+            Kişi Sayısı:
+            <input
+              type="number"
+              min={1}
+              defaultValue={menu.portions || 40}
+              key={menu.portions}
+              onFocus={(e) => e.target.select()}
+              onBlur={(e) => {
+                const v = Math.max(parseInt(e.target.value, 10) || 1, 1);
+                if (v !== menu.portions) onUpdatePortions(v);
+              }}
+              onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }}
+              disabled={menu.status === "approved"}
+              title={menu.status === "approved" ? "Onaylı menü değiştirilemez" : "Kişi sayısını değiştir — maliyet yeniden hesaplanır"}
+              style={{ ...input, width: 90, padding: "5px 8px" }}
+            />
+          </label>
+        )}
       </div>
 
       {(seasonalInsights || []).length > 0 && (
@@ -456,12 +503,101 @@ function MenuDetailPanel({
             ? "Analiz ediliyor..."
             : "Mevsimsel Revizyon Öner"}
         </button>
+        <button
+          onClick={onAttendance}
+          disabled={attendanceLoading}
+          style={{ ...btnSm, borderColor: "var(--accent)", color: "var(--accent)" }}
+          title="Devamsızlık kayıtlarından her günün beklenen kişi sayısını hesaplar, porsiyon önerir"
+        >
+          {attendanceLoading ? "Hesaplanıyor..." : "🎓 Devamsızlığa Göre Porsiyon"}
+        </button>
         {menu.status === "draft" && (
           <button onClick={onDelete} style={{ ...btnSm, color: "var(--red)" }}>
             Menüyü Sil
           </button>
         )}
       </div>
+
+      {notice && (
+        <div
+          style={{
+            margin: "0 18px 14px", padding: "9px 13px", borderRadius: 8, fontSize: 12,
+            background: "rgba(22,163,74,0.10)", border: "1px solid rgba(22,163,74,0.3)",
+            color: "var(--green)",
+          }}
+        >
+          {notice}
+        </div>
+      )}
+
+      {attendance && (
+        <div style={{ padding: "0 18px 18px" }}>
+          <div style={insightBox}>
+            <div
+              style={{
+                ...insightTitle,
+                display: "flex", justifyContent: "space-between",
+                alignItems: "center", flexWrap: "wrap", gap: 6,
+              }}
+            >
+              <span>🎓 Devamsızlığa Göre Porsiyon Önerisi</span>
+              <span style={{ fontWeight: 400, fontSize: 11, color: "var(--text2)" }}>
+                Kayıtlı öğrenci: <strong>{attendance.total_students}</strong>
+                {attendance.total_estimated_saving > 0 && (
+                  <>
+                    {" · "}Tahmini tasarruf:{" "}
+                    <strong style={{ color: "var(--green)" }}>
+                      {attendance.total_estimated_saving.toFixed(2)} TL
+                    </strong>
+                  </>
+                )}
+              </span>
+            </div>
+            {!attendance.has_changes ? (
+              <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 6 }}>
+                Bu hafta için kayıtlı devamsızlık yok — porsiyonlar olduğu gibi kalabilir.
+              </div>
+            ) : (
+              <>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, marginTop: 8 }}>
+                  <thead>
+                    <tr>
+                      {["Gün", "Devamsız", "Mevcut Porsiyon", "Önerilen", "Fark"].map((h) => (
+                        <th key={h} style={{ textAlign: "left", fontSize: 10, color: "var(--text3)", padding: "6px 8px", borderBottom: "1px solid var(--border)" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {attendance.days.map((d) => (
+                      <tr key={d.date}>
+                        <td style={{ padding: "6px 8px", borderBottom: "1px solid var(--border)" }}>{d.day_of_week} <span style={{ color: "var(--text3)", fontSize: 10 }}>{d.date}</span></td>
+                        <td style={{ padding: "6px 8px", borderBottom: "1px solid var(--border)", color: d.absent ? "var(--red)" : "var(--text3)", fontWeight: d.absent ? 700 : 400 }}>{d.absent}</td>
+                        <td style={{ padding: "6px 8px", borderBottom: "1px solid var(--border)" }}>{d.current_portions}</td>
+                        <td style={{ padding: "6px 8px", borderBottom: "1px solid var(--border)", fontWeight: 700 }}>{d.suggested_portions}</td>
+                        <td style={{ padding: "6px 8px", borderBottom: "1px solid var(--border)", color: d.change < 0 ? "var(--green)" : "var(--text3)" }}>
+                          {d.change === 0 ? "—" : d.change}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {menu.status !== "approved" ? (
+                  <button
+                    onClick={onApplyAttendance}
+                    style={{ ...btnSm, marginTop: 10, borderColor: "var(--accent)", color: "var(--accent)" }}
+                  >
+                    ✔ Önerilen Porsiyonları Uygula
+                  </button>
+                ) : (
+                  <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 8 }}>
+                    Onaylı menüde uygulamak için önce taslağa çekin.
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {seasonalRevisions && (
         <div style={{ padding: "0 18px 18px" }}>
@@ -619,6 +755,7 @@ export default function AiMenuPlannerPage() {
   const [showPast, setShowPast] = useState(false);
   const [weekStartDate, setWeekStartDate] = useState(nextMonday());
   const [budget, setBudget] = useState(1000);
+  const [portions, setPortions] = useState(40);
   const [extraInstructions, setExtraInstructions] = useState("");
   const [seasonalMode, setSeasonalMode] = useState(true);
   const [localPriority, setLocalPriority] = useState(true);
@@ -658,10 +795,14 @@ export default function AiMenuPlannerPage() {
       setExpandedId(null);
       setExpandedDetail(null);
       setSeasonalRevisions(null);
+      setAttendance(null);
+      setApproveNotice("");
       return;
     }
     setPicker({});
     setSeasonalRevisions(null);
+    setAttendance(null);
+    setApproveNotice("");
     const detail = await getMenu(id);
     setExpandedId(id);
     setExpandedDetail(detail);
@@ -693,6 +834,7 @@ export default function AiMenuPlannerPage() {
       const menu = await generateMenu({
         week_start_date: weekStartDate,
         budget: parseFloat(budget) || 0,
+        portions: Math.max(parseInt(portions, 10) || 1, 1),
         extra_instructions: combinedInstructions || null,
       });
       setPicker({});
@@ -715,6 +857,7 @@ export default function AiMenuPlannerPage() {
       const menu = await createManualMenu({
         week_start_date: weekStartDate,
         budget: parseFloat(budget) || 0,
+        portions: Math.max(parseInt(portions, 10) || 1, 1),
       });
       setPicker({});
       setExpandedId(menu.id);
@@ -725,11 +868,67 @@ export default function AiMenuPlannerPage() {
     }
   };
 
+  const handleUpdatePortions = async (newPortions) => {
+    if (!expandedDetail) return;
+    const p = Math.max(parseInt(newPortions, 10) || 1, 1);
+    const updated = await updateMenuPortions(expandedDetail.id, p);
+    setExpandedDetail(updated);
+    refreshMenus();
+  };
+
+  const [approveNotice, setApproveNotice] = useState("");
+
   const handleApprove = async () => {
     if (!expandedDetail) return;
     const updated = await approveMenu(expandedDetail.id);
     setExpandedDetail({ ...expandedDetail, status: updated.status });
     refreshMenus();
+    // Onay → tedarik bağlantısı: eksik varsa AI Satın Alma Ajanını öner
+    if (updated.shortage_count > 0) {
+      const preview = (updated.shortage_preview || [])
+        .map((s) => `${s.name} (${s.shortage} ${s.unit})`)
+        .join(", ");
+      const ok = window.confirm(
+        `Menü onaylandı ✅\n\nBu menüyle birlikte ${updated.shortage_count} malzeme eksiğe düşüyor:\n${preview}...\n\nAI Satın Alma Ajanı tedarikçilere bölünmüş sipariş taslağı oluştursun mu?`,
+      );
+      if (ok) {
+        setApproveNotice("🧠 AI Satın Alma Ajanı planlıyor...");
+        try {
+          const plan = await aiPurchasePlan();
+          setApproveNotice(
+            plan.created === false
+              ? plan.message
+              : `🧠 ${plan.summary} — ${plan.orders.length} taslak sipariş "Siparişler" sayfasında hazır.`,
+          );
+        } catch {
+          setApproveNotice("AI sipariş planı oluşturulamadı — Siparişler sayfasından tekrar deneyin.");
+        }
+      }
+    }
+  };
+
+  const [attendance, setAttendance] = useState(null);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+
+  const handleAttendance = async () => {
+    if (!expandedDetail) return;
+    setAttendanceLoading(true);
+    try {
+      setAttendance(await getAttendanceSuggestion(expandedDetail.id));
+    } catch {
+      setAttendance(null);
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
+
+  const handleApplyAttendance = async () => {
+    if (!expandedDetail) return;
+    const updated = await applyAttendanceSuggestion(expandedDetail.id);
+    setExpandedDetail(updated);
+    setAttendance(null);
+    refreshMenus();
+    setApproveNotice("🎓 Porsiyonlar devamsızlığa göre güncellendi — maliyet yeniden hesaplandı.");
   };
 
   const handleSeasonalRevisions = async () => {
@@ -880,10 +1079,16 @@ export default function AiMenuPlannerPage() {
                           onAddMeal={handleAddMeal}
                           onRemoveItem={handleRemoveItem}
                           onApprove={handleApprove}
+                          onUpdatePortions={handleUpdatePortions}
                           onDelete={() => handleDelete(m.id)}
                           onSeasonalRevisions={handleSeasonalRevisions}
                           seasonalRevisions={seasonalRevisions}
                           revisionsLoading={revisionsLoading}
+                          onAttendance={handleAttendance}
+                          attendance={attendance}
+                          attendanceLoading={attendanceLoading}
+                          onApplyAttendance={handleApplyAttendance}
+                          notice={approveNotice}
                         />
                       </td>
                     </tr>
@@ -936,6 +1141,18 @@ export default function AiMenuPlannerPage() {
                 if (budget === "") setBudget(0);
               }}
               onChange={(e) => setBudget(numericValue(e.target.value))}
+              style={input}
+            />
+          </div>
+          <div>
+            <div style={fieldLabel}>Kişi Sayısı (Porsiyon)</div>
+            <input
+              type="number"
+              min={1}
+              value={portions}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => setPortions(e.target.value)}
+              onBlur={() => { if (!portions || Number(portions) < 1) setPortions(1); }}
               style={input}
             />
           </div>
