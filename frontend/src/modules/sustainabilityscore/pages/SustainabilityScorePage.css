@@ -32,21 +32,22 @@
 .sus-header-icon {
   width: 44px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: 8px;
   background: linear-gradient(135deg, rgba(22, 160, 94, 0.2), rgba(232, 128, 0, 0.2));
   color: var(--green);
   display: grid;
   place-items: center;
-  font-size: 22px;
   border: 1px solid rgba(22, 160, 94, 0.3);
 }
 
 .sus-header-text h1 {
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--text);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 34px;
+  line-height: 1.05;
+  font-weight: 700;
+  color: var(--ingredients-text, var(--text));
   margin: 0;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .sus-header-text p {
@@ -107,6 +108,9 @@
 }
 
 .sus-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   padding: 10px 18px;
   border-radius: 8px;
   font-size: 13px;

@@ -3,6 +3,7 @@ import TenderCards from "../components/TenderCards";
 import TenderFormModal from "../components/TenderFormModal";
 import InvoiceGeneratorModal from "../components/InvoiceGeneratorModal";
 import InvoicePdfPreviewModal from "../components/InvoicePdfPreviewModal";
+import LoadingSpinner from "../../../components/LoadingSpinner";
 import {
   getTenders,
   createTender,
@@ -13,6 +14,72 @@ import {
   deleteInvoice,
 } from "../api/tenderInvoice";
 import "./TenderInvoicePage.css";
+
+function ModuleIcon({ name, size = 18 }) {
+  const common = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": true,
+  };
+  const icons = {
+    building: (
+      <svg {...common}>
+        <rect x="4" y="3" width="16" height="18" rx="2" />
+        <path d="M8 7h2" />
+        <path d="M14 7h2" />
+        <path d="M8 11h2" />
+        <path d="M14 11h2" />
+        <path d="M9 21v-4h6v4" />
+      </svg>
+    ),
+    receipt: (
+      <svg {...common}>
+        <path d="M6 3h12v18l-2-1-2 1-2-1-2 1-2-1-2 1V3Z" />
+        <path d="M9 8h6" />
+        <path d="M9 12h6" />
+        <path d="M9 16h4" />
+      </svg>
+    ),
+    plus: (
+      <svg {...common}>
+        <path d="M12 5v14" />
+        <path d="M5 12h14" />
+      </svg>
+    ),
+    list: (
+      <svg {...common}>
+        <path d="M8 6h13" />
+        <path d="M8 12h13" />
+        <path d="M8 18h13" />
+        <path d="M3 6h.01" />
+        <path d="M3 12h.01" />
+        <path d="M3 18h.01" />
+      </svg>
+    ),
+    file: (
+      <svg {...common}>
+        <path d="M14 3H6v18h12V7l-4-4Z" />
+        <path d="M14 3v4h4" />
+        <path d="M8 13h8" />
+        <path d="M8 17h6" />
+      </svg>
+    ),
+    printer: (
+      <svg {...common}>
+        <path d="M6 9V3h12v6" />
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+        <path d="M6 14h12v7H6z" />
+      </svg>
+    ),
+  };
+  return icons[name] || icons.file;
+}
 
 export default function TenderInvoicePage() {
   const [activeTab, setActiveTab] = useState("tenders"); // "tenders" | "invoices"
@@ -107,7 +174,10 @@ export default function TenderInvoicePage() {
       {/* Üst Başlık & Butonlar */}
       <div className="tender-header-bar">
         <div>
-          <h1 className="tender-title">🏢 İhale Teklif Dosyası & Otomatik Fatura Yönetimi</h1>
+          <h1 className="tender-title">
+            <span className="tender-title-icon"><ModuleIcon name="building" size={22} /></span>
+            İhale Teklif Dosyası & Otomatik Fatura Yönetimi
+          </h1>
           <p className="tender-subtitle">
             Catering ihaleleri için canlı kâr marjı hesabı yapın, ay sonu hakediş ve KDV'li faturaları otomatik üretin.
           </p>
@@ -115,14 +185,18 @@ export default function TenderInvoicePage() {
 
         <div className="tender-action-buttons">
           <button className="btn-success" onClick={() => setIsInvoiceModalOpen(true)}>
-            🧾 Otomatik Hakediş Faturası Kes
+            <ModuleIcon name="receipt" /> Otomatik Hakediş Faturası Kes
           </button>
           <button className="btn-primary" onClick={() => setIsTenderModalOpen(true)}>
-            ➕ Yeni İhale & Teklif Oluştur
+            <ModuleIcon name="plus" /> Yeni İhale & Teklif Oluştur
           </button>
         </div>
       </div>
 
+      {loading ? (
+        <LoadingSpinner label="İhale ve fatura verileri yükleniyor" minHeight={300} size={42} />
+      ) : (
+        <>
       {/* KPI Metrik Kartları */}
       <TenderCards tenders={tenders} invoices={invoices} />
 
@@ -132,13 +206,13 @@ export default function TenderInvoicePage() {
           className={`tab-btn ${activeTab === "tenders" ? "active" : ""}`}
           onClick={() => setActiveTab("tenders")}
         >
-          📋 İhale Teklif Cetvelleri ({tenders.length})
+          <ModuleIcon name="list" /> İhale Teklif Cetvelleri ({tenders.length})
         </button>
         <button
           className={`tab-btn ${activeTab === "invoices" ? "active" : ""}`}
           onClick={() => setActiveTab("invoices")}
         >
-          🧾 Hakedişler & Faturalar ({invoices.length})
+          <ModuleIcon name="receipt" /> Hakedişler & Faturalar ({invoices.length})
         </button>
       </div>
 
@@ -167,9 +241,9 @@ export default function TenderInvoicePage() {
                 tenders.map((item) => (
                   <tr key={item.id}>
                     <td>
-                      <strong style={{ color: "#f8fafc" }}>{item.title}</strong>
+                      <strong className="tender-row-title">{item.title}</strong>
                       <br />
-                      <span style={{ fontSize: "12px", color: "#94a3b8" }}>{item.meal_type}</span>
+                      <span className="tender-row-muted">{item.meal_type}</span>
                     </td>
                     <td>{item.institution_name}</td>
                     <td>{item.daily_person_count?.toLocaleString("tr-TR")} Kişi</td>
@@ -187,7 +261,7 @@ export default function TenderInvoicePage() {
                           setPreviewType("proposal");
                         }}
                       >
-                        📄 Önizle / PDF
+                        <ModuleIcon name="file" size={14} /> Önizle / PDF
                       </button>
                       {item.status === "DRAFT" && (
                         <button
@@ -204,7 +278,7 @@ export default function TenderInvoicePage() {
                           style={{ background: "#3b82f6" }}
                           onClick={() => handleUpdateTenderStatus(item.id, "WON")}
                         >
-                          Kazanıldı 🎉
+                          Kazanıldı
                         </button>
                       )}
                       <button
@@ -272,7 +346,7 @@ export default function TenderInvoicePage() {
                           setPreviewType("invoice");
                         }}
                       >
-                        🖨️ Fatura PDF
+                        <ModuleIcon name="printer" size={14} /> Fatura PDF
                       </button>
                       {inv.status === "ISSUED" && (
                         <button
@@ -297,6 +371,8 @@ export default function TenderInvoicePage() {
             </tbody>
           </table>
         </div>
+      )}
+        </>
       )}
 
       {/* Modals */}

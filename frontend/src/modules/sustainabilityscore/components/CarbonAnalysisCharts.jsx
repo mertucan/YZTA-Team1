@@ -95,7 +95,7 @@ export default function CarbonAnalysisCharts({ analysis }) {
                 <span className="eco-alt">{swap.alternative} ({swap.alternative_co2} kg)</span>
               </div>
               <div style={{ fontSize: "12px", color: "var(--text2)", marginTop: "4px" }}>
-                💡 <strong>Avantaj:</strong> {swap.benefit}
+                <strong>Avantaj:</strong> {swap.benefit}
               </div>
             </div>
           ))}

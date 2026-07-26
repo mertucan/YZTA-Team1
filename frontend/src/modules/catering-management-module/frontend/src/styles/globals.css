@@ -1549,6 +1549,191 @@
     border-color: var(--border2);
 }
 
+.catering-management-scope .weekly-menu-calendar-section {
+    margin: 0 0 22px;
+}
+
+.catering-management-scope .weekly-menu-calendar-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 10px;
+}
+
+.catering-management-scope .weekly-menu-calendar-heading h2 {
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1.2;
+    margin: 0;
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+.catering-management-scope .weekly-menu-calendar-heading span {
+    color: var(--text3);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.catering-management-scope .weekly-menu-calendar-state {
+    min-height: 146px;
+    display: grid;
+    place-items: center;
+    color: var(--text3);
+    font-size: 13px;
+    font-weight: 700;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    box-shadow: 0 14px 34px rgba(24, 24, 24, 0.08);
+}
+
+.catering-management-scope .weekly-menu-calendar-rail {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    padding: 14px 2px 12px;
+    user-select: none;
+    scrollbar-width: none;
+}
+
+.catering-management-scope .weekly-menu-calendar-rail::-webkit-scrollbar {
+    display: none;
+}
+
+.catering-management-scope .weekly-menu-card {
+    position: relative;
+    flex: 0 0 1040px;
+    max-width: calc(100vw - 390px);
+    min-width: 780px;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    box-shadow: 0 14px 34px rgba(24, 24, 24, 0.08);
+    scroll-snap-align: center;
+}
+
+.catering-management-scope .weekly-menu-card.current {
+    border: 2px solid #e88000;
+    background: color-mix(in srgb, #e88000 7%, var(--surface));
+    box-shadow: 0 16px 38px rgba(232, 128, 0, 0.18);
+}
+
+.catering-management-scope .weekly-menu-card.past {
+    opacity: 0.74;
+}
+
+.catering-management-scope .weekly-menu-badge {
+    position: absolute;
+    top: -13px;
+    left: 18px;
+    padding: 4px 12px;
+    color: #fff;
+    background: linear-gradient(135deg, #e88000, #f59e0b);
+    border-radius: 999px;
+    box-shadow: 0 8px 18px rgba(232, 128, 0, 0.28);
+    font-size: 11px;
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: 0;
+}
+
+.catering-management-scope .weekly-menu-card-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.catering-management-scope .weekly-menu-card-head strong {
+    color: #e88000;
+    font-size: 17px;
+    line-height: 1.2;
+    font-weight: 900;
+}
+
+.catering-management-scope .weekly-menu-card-head span {
+    color: var(--text3);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.catering-management-scope .weekly-menu-days {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(120px, 1fr));
+    gap: 10px;
+}
+
+.catering-management-scope .weekly-menu-day {
+    min-height: 174px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface2);
+}
+
+.catering-management-scope .weekly-menu-day.today {
+    border: 2px solid #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.14);
+}
+
+.catering-management-scope .weekly-menu-day-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    color: var(--text2);
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.catering-management-scope .weekly-menu-day.today .weekly-menu-day-head {
+    color: #16a34a;
+}
+
+.catering-management-scope .weekly-menu-day-head span:last-child {
+    color: var(--text3);
+    font-weight: 700;
+}
+
+.catering-management-scope .weekly-menu-meals {
+    flex: 1;
+    padding: 9px 10px;
+}
+
+.catering-management-scope .weekly-menu-meals ul {
+    margin: 0;
+    padding-left: 16px;
+    color: var(--text2);
+    font-size: 12px;
+    line-height: 1.55;
+    font-weight: 700;
+}
+
+.catering-management-scope .weekly-menu-empty {
+    color: var(--text3);
+    font-size: 12px;
+}
+
+.catering-management-scope .weekly-menu-day-foot {
+    display: grid;
+    gap: 3px;
+    padding: 8px 10px;
+    color: var(--text3);
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    line-height: 1.25;
+    font-weight: 700;
+}
+
 .catering-management-scope .catering-dash-shell {
     background: transparent;
     color: var(--text);
@@ -1584,13 +1769,14 @@
     border-top: 3px solid #f97316;
 }
 
-.catering-management-scope .catering-dash-metric.compact {
+.catering-management-scope .catering-dash-metric.users {
     background: var(--surface);
     border-top: 3px solid #16a34a;
 }
 
-.catering-management-scope .catering-dash-metric.compact:nth-child(4) {
-    border-top-color: #7c3aed;
+.catering-management-scope .catering-dash-metric.license {
+    background: var(--surface);
+    border-top: 3px solid #7c3aed;
 }
 
 .catering-management-scope .catering-dash-metric::after {
@@ -1608,12 +1794,18 @@
     border-color: rgba(249, 115, 22, 0.10);
 }
 
-.catering-management-scope .catering-dash-metric.compact::after {
+.catering-management-scope .catering-dash-metric.users::after {
     border-color: rgba(22, 163, 74, 0.10);
 }
 
-.catering-management-scope .catering-dash-metric.compact:nth-child(4)::after {
+.catering-management-scope .catering-dash-metric.license::after {
     border-color: rgba(124, 58, 237, 0.10);
+}
+
+.catering-management-scope .catering-dash-metric > div:first-child {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
 }
 
 .catering-management-scope .catering-dash-metric span,
@@ -1632,20 +1824,31 @@
     margin: 18px 0 8px;
 }
 
-.catering-management-scope .catering-dash-metric.compact strong {
-    font-size: 22px;
-    margin: 6px 0 2px;
-}
-
 .catering-management-scope .catering-dash-metric-art {
     width: 42px;
     height: 42px;
+    flex: 0 0 42px;
     border-radius: 50%;
     display: grid;
     place-items: center;
+    background: rgba(37, 99, 235, 0.10);
+    color: #2563eb;
+    z-index: 1;
+}
+
+.catering-management-scope .catering-dash-metric.menu .catering-dash-metric-art {
     background: rgba(249, 115, 22, 0.10);
     color: #f97316;
-    z-index: 1;
+}
+
+.catering-management-scope .catering-dash-metric.users .catering-dash-metric-art {
+    background: rgba(22, 163, 74, 0.10);
+    color: #16a34a;
+}
+
+.catering-management-scope .catering-dash-metric.license .catering-dash-metric-art {
+    background: rgba(124, 58, 237, 0.10);
+    color: #7c3aed;
 }
 
 .catering-management-scope .catering-dash-grid {
@@ -1961,6 +2164,11 @@
     .catering-management-scope .catering-dash-grid {
         grid-template-columns: 1fr 1fr;
     }
+
+    .catering-management-scope .weekly-menu-card {
+        max-width: none;
+        min-width: 840px;
+    }
 }
 
 @media (max-width: 760px) {
@@ -1976,5 +2184,19 @@
     .catering-management-scope .donut-layout {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .catering-management-scope .weekly-menu-calendar-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .catering-management-scope .weekly-menu-card {
+        min-width: 760px;
+        padding: 14px;
+    }
+
+    .catering-management-scope .weekly-menu-days {
+        grid-template-columns: repeat(7, 104px);
     }
 }

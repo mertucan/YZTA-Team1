@@ -17,6 +17,59 @@ const REASON = { menu: "Menü ihtiyacı", threshold: "Kritik stok" };
 
 const emptySupplier = { name: "", contact_name: "", email: "", phone: "", categories: "", note: "" };
 
+function PageIcon({ name, size = 20 }) {
+  const common = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": true,
+  };
+  const icons = {
+    cart: (
+      <svg {...common}>
+        <path d="M4 5h2l2 10h9l2-7H7" />
+        <circle cx="10" cy="19" r="1.5" />
+        <circle cx="17" cy="19" r="1.5" />
+      </svg>
+    ),
+    brain: (
+      <svg {...common}>
+        <path d="M9 4a3 3 0 0 0-3 3v.5A3.5 3.5 0 0 0 4 14a3 3 0 0 0 3 3h1" />
+        <path d="M15 4a3 3 0 0 1 3 3v.5A3.5 3.5 0 0 1 20 14a3 3 0 0 1-3 3h-1" />
+        <path d="M9 4v16" />
+        <path d="M15 4v16" />
+      </svg>
+    ),
+    spark: (
+      <svg {...common}>
+        <path d="M12 3v5" />
+        <path d="M12 16v5" />
+        <path d="M4 12h5" />
+        <path d="M15 12h5" />
+        <path d="m6 6 3 3" />
+        <path d="m15 15 3 3" />
+        <path d="m18 6-3 3" />
+        <path d="m9 15-3 3" />
+      </svg>
+    ),
+    building: (
+      <svg {...common}>
+        <rect x="4" y="3" width="10" height="18" rx="1.5" />
+        <path d="M14 8h6v13" />
+        <path d="M7 7h3" />
+        <path d="M7 11h3" />
+        <path d="M7 15h3" />
+      </svg>
+    ),
+  };
+  return icons[name] || icons.cart;
+}
+
 export default function Orders() {
   const [orders, setOrders] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -41,7 +94,7 @@ export default function Orders() {
       if (res?.created === false) {
         setMsg(res.message || "Sipariş gerektiren malzeme yok.");
       } else {
-        setMsg(`🤖 Otomatik sipariş oluşturuldu — ${res.items?.length || 0} kalem, ${fmt(res.total_estimated)} TL tahmini.`);
+        setMsg(`Otomatik sipariş oluşturuldu — ${res.items?.length || 0} kalem, ${fmt(res.total_estimated)} TL tahmini.`);
         setExpanded(res.id);
         refresh();
       }
@@ -61,7 +114,7 @@ export default function Orders() {
         setMsg(res.message || "Sipariş gerektiren malzeme yok.");
       } else {
         const src = res.generated_by === "gemini" ? "Gemini" : "kural tabanlı";
-        setMsg(`🧠 AI Plan (${src}): ${res.summary} — ${res.orders.length} taslak sipariş oluşturuldu.`);
+        setMsg(`AI Plan (${src}): ${res.summary} — ${res.orders.length} taslak sipariş oluşturuldu.`);
         if (res.orders[0]) setExpanded(res.orders[0].id);
         refresh();
       }
@@ -74,7 +127,7 @@ export default function Orders() {
   const assignSupplier = async (id, supplier_id) => { await updateOrder(id, { supplier_id: supplier_id ? Number(supplier_id) : null }); refresh(); };
   const handleReceive = async (id) => {
     const res = await receiveOrder(id);
-    setMsg(`✅ Teslim alındı — ${res.restocked_items || 0} malzeme stoğa eklendi.`);
+    setMsg(`Teslim alındı — ${res.restocked_items || 0} malzeme stoğa eklendi.`);
     refresh();
   };
   const handleDelete = async (id) => { await deleteOrder(id); refresh(); };
@@ -99,7 +152,10 @@ export default function Orders() {
     <div>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
         <div>
-          <div style={{ fontSize: 20, fontWeight: 600 }}>🛒 Otomatik Siparişler</div>
+          <div style={pageTitle}>
+            <span style={titleIcon}><PageIcon name="cart" size={22} /></span>
+            Otomatik Siparişler
+          </div>
           <div style={{ fontSize: 13, color: "var(--text2)", marginTop: 3, maxWidth: 620 }}>
             Malzeme kritik seviyeye düştüğünde sistem, gelecek menü ihtiyacına göre eksik listesinden
             otomatik sipariş taslağı üretir. Tedarikçi seçip gönderin; teslim alınca stok kendiliğinden güncellenir.
@@ -112,10 +168,10 @@ export default function Orders() {
             style={{ ...btnPrimary, background: "var(--purple, #7c3aed)", opacity: aiBusy ? 0.6 : 1 }}
             title="AI eksikleri türüne göre doğru tedarikçilere bölüştürür ve her kaleme gerekçe yazar"
           >
-            {aiBusy ? "AI planlıyor..." : "🧠 AI Sipariş Planı"}
+            <span style={buttonIcon}><PageIcon name="brain" size={15} /></span>{aiBusy ? "AI planlıyor..." : "AI Sipariş Planı"}
           </button>
           <button onClick={handleGenerate} disabled={busy} style={{ ...btnPrimary, opacity: busy ? 0.6 : 1 }}>
-            {busy ? "Oluşturuluyor..." : "🤖 Hızlı Taslak"}
+            <span style={buttonIcon}><PageIcon name="spark" size={15} /></span>{busy ? "Oluşturuluyor..." : "Hızlı Taslak"}
           </button>
         </div>
       </div>
@@ -141,7 +197,7 @@ export default function Orders() {
       {/* Tedarikçiler */}
       <div style={card}>
         <button onClick={() => setSupOpen((o) => !o)} style={{ ...cardHd, width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: "1px solid var(--border)", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span>🏢 Tedarikçiler ({suppliers.length})</span>
+          <span><span style={inlineIcon}><PageIcon name="building" size={15} /></span>Tedarikçiler ({suppliers.length})</span>
           <span style={{ color: "var(--text3)" }}>{supOpen ? "▾" : "▸"}</span>
         </button>
         {supOpen && (
@@ -177,7 +233,7 @@ export default function Orders() {
         <div style={{ padding: 24, color: "var(--text3)" }}>Yükleniyor...</div>
       ) : orders.length === 0 ? (
         <div style={{ ...card, padding: 40, textAlign: "center", color: "var(--text3)" }}>
-          Henüz sipariş yok. Üstteki <b>🤖 Otomatik Sipariş Oluştur</b> ile eksik malzemelerden ilk siparişinizi üretin.
+          Henüz sipariş yok. Üstteki <b>Hızlı Taslak</b> ile eksik malzemelerden ilk siparişinizi üretin.
         </div>
       ) : (
         orders.map((o) => {
@@ -190,7 +246,7 @@ export default function Orders() {
               <div style={{ padding: "14px 18px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                 <span style={{ ...badge, color: st.color, background: st.bg }}>{st.label}</span>
                 <span style={{ fontWeight: 700, fontSize: 14 }}>Sipariş #{o.id}</span>
-                {o.auto_generated && <span style={{ ...miniTag }}>🤖 Otomatik</span>}
+                {o.auto_generated && <span style={{ ...miniTag }}>Otomatik</span>}
                 <span style={{ fontSize: 12, color: "var(--text3)" }}>{fmtDate(o.created_at)}</span>
                 <span style={{ marginLeft: "auto", fontSize: 12, color: "var(--text2)" }}>{items.length} kalem</span>
                 <span style={{ fontFamily: "var(--mono)", fontWeight: 700, fontSize: 15 }}>{fmt(o.total_estimated)} TL</span>
@@ -198,7 +254,7 @@ export default function Orders() {
 
               {o.note && (
                 <div style={{ padding: "0 18px 10px", fontSize: 12, color: "var(--text2)", fontStyle: "italic" }}>
-                  🧠 {o.note}
+                  {o.note}
                 </div>
               )}
 
@@ -222,10 +278,10 @@ export default function Orders() {
                     <button
                       onClick={() => o.supplier_id ? changeStatus(o.id, "sent") : setError("Önce tedarikçi seçin.")}
                       title={o.supplier_id ? "" : "Önce tedarikçi seçin"}
-                      style={{ ...btnAction, opacity: o.supplier_id ? 1 : 0.55 }}>📤 Gönder</button>
+                      style={{ ...btnAction, opacity: o.supplier_id ? 1 : 0.55 }}>Gönder</button>
                   )}
                   {o.status === "sent" && (
-                    <button onClick={() => handleReceive(o.id)} style={{ ...btnAction, background: "var(--green,#16a34a)" }}>✅ Teslim Alındı</button>
+                    <button onClick={() => handleReceive(o.id)} style={{ ...btnAction, background: "var(--green,#16a34a)" }}>Teslim Alındı</button>
                   )}
                   {o.status !== "received" && o.status !== "cancelled" && (
                     <button onClick={() => changeStatus(o.id, "cancelled")} style={btnSm}>İptal</button>
@@ -238,7 +294,7 @@ export default function Orders() {
                 <div style={{ borderTop: "1px solid var(--border)" }}>
                   {noPrice && (
                     <div style={{ padding: "8px 18px", fontSize: 11, color: "var(--amber)" }}>
-                      ⚠ Bazı kalemlerde birim fiyat yok — Malzeme Deposu'nda "Migros Fiyat Çek" ile fiyat ekleyince tahmini tutar tamamlanır.
+                      Bazı kalemlerde birim fiyat yok — Malzeme Deposu'nda "Migros Fiyat Çek" ile fiyat ekleyince tahmini tutar tamamlanır.
                     </div>
                   )}
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -266,6 +322,10 @@ export default function Orders() {
 }
 
 const card = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", boxShadow: "var(--shadow)", marginBottom: 16 };
+const pageTitle = { display: "flex", alignItems: "center", gap: 10, color: "var(--ingredients-text)", fontFamily: "Georgia, 'Times New Roman', serif", fontSize: 34, lineHeight: 1.05, fontWeight: 700 };
+const titleIcon = { width: 38, height: 38, borderRadius: 8, display: "inline-grid", placeItems: "center", color: "var(--accent)", background: "var(--accent-bg, rgba(232,128,0,.12))", border: "1px solid rgba(232,128,0,.28)", flexShrink: 0 };
+const inlineIcon = { display: "inline-flex", alignItems: "center", marginRight: 7, verticalAlign: "-2px", color: "var(--accent)" };
+const buttonIcon = { display: "inline-flex", alignItems: "center", marginRight: 7, verticalAlign: "-2px" };
 const cardHd = { padding: "14px 18px 12px", fontSize: 13, fontWeight: 600, color: "var(--text)" };
 const fieldLabel = { fontSize: 11, color: "var(--text2)", marginBottom: 5, fontWeight: 500 };
 const input = { width: "100%", background: "var(--surface2)", border: "1px solid var(--border2)", borderRadius: 7, padding: "7px 12px", fontSize: 13, color: "var(--text)", outline: "none" };

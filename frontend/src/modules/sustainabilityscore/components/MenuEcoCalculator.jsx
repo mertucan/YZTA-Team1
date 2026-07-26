@@ -117,7 +117,7 @@ export default function MenuEcoCalculator({ factors = [] }) {
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           <div className="sus-form-group">
             <label style={{ fontWeight: 700, marginBottom: "6px", display: "block" }}>
-              👥 Öğrenci Porsiyon Sayısı:
+              Öğrenci Porsiyon Sayısı:
             </label>
             <input
               type="number"
@@ -132,7 +132,7 @@ export default function MenuEcoCalculator({ factors = [] }) {
           <div style={{ background: "var(--surface2)", padding: "16px", borderRadius: "10px", border: "1px solid var(--border)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
               <h4 style={{ fontSize: "14px", fontWeight: 800, color: "var(--text)", margin: 0 }}>
-                🍲 Menü İçeriği ve Malzeme Emisyonları:
+                Menü İçeriği ve Malzeme Emisyonları:
               </h4>
               <button
                 onClick={handleAddIngredient}
@@ -234,7 +234,7 @@ export default function MenuEcoCalculator({ factors = [] }) {
           <div style={{ display: "flex", gap: "10px" }}>
             {!isOptimized ? (
               <button onClick={() => setIsOptimized(true)} className="sus-btn sus-btn-primary" style={{ width: "100%" }}>
-                🌱 Düşük Emisyonlu Yeşil İkameyi Uygula
+                Düşük Emisyonlu Yeşil İkameyi Uygula
               </button>
             ) : (
               <button onClick={() => setIsOptimized(false)} className="sus-btn sus-btn-secondary" style={{ width: "100%" }}>
@@ -300,7 +300,7 @@ export default function MenuEcoCalculator({ factors = [] }) {
           {/* İkame Değişim Detayları */}
           {isOptimized && swapItems.length > 0 && (
             <div style={{ background: "var(--surface)", padding: "12px", borderRadius: "8px", border: "1px solid var(--green-border)", fontSize: "12px" }}>
-              <div style={{ fontWeight: 800, color: "var(--green)", marginBottom: "6px" }}>♻️ Uygulanan Yeşil İkameler:</div>
+              <div style={{ fontWeight: 800, color: "var(--green)", marginBottom: "6px" }}>Uygulanan Yeşil İkameler:</div>
               {swapItems.map((sw, idx) => (
                 <div key={idx} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", color: "var(--text)" }}>
                   <span style={{ textDecoration: "line-through", color: "var(--text3)" }}>{sw.originalName} ({sw.originalCO2.toFixed(2)})</span>
@@ -313,7 +313,7 @@ export default function MenuEcoCalculator({ factors = [] }) {
           {isOptimized && (
             <div style={{ background: "var(--green-bg)", padding: "16px", borderRadius: "10px", border: "1px solid var(--green-border)" }}>
               <div style={{ fontWeight: 900, color: "var(--green)", fontSize: "16px" }}>
-                🎉 Toplam %{savingPercent} Karbon Tasarrufu!
+                Toplam %{savingPercent} Karbon Tasarrufu
               </div>
               <div style={{ fontSize: "13px", color: "var(--text)", marginTop: "6px" }}>
                 Tek günde <strong>{co2Saved.toFixed(2)} kg CO₂e</strong> atmosfere salınmaktan kurtarıldı.
