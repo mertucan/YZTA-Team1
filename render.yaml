@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: yzta-team1-api
+    name: tablodot-api
     runtime: python
     plan: free
     region: frankfurt
@@ -14,7 +14,7 @@ services:
       - key: APP_NAME
         value: TabloDot API
       - key: ALLOWED_ORIGINS
-        value: https://yzta-team1-web.onrender.com
+        value: https://tablodot.onrender.com
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_ANON_KEY
@@ -41,7 +41,7 @@ services:
         value: TabloDot
 
   - type: web
-    name: yzta-team1-web
+    name: tablodot
     runtime: static
     rootDir: frontend
     buildCommand: npm ci && npm run build
@@ -49,7 +49,7 @@ services:
     autoDeployTrigger: commit
     envVars:
       - key: VITE_API_URL
-        value: https://yzta-team1-api.onrender.com
+        value: https://tablodot-api.onrender.com
       - key: VITE_SUPABASE_URL
         sync: false
       - key: VITE_SUPABASE_ANON_KEY
