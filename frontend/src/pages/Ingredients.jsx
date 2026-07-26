@@ -1,4 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { generateOrder } from "../api/orders";
 import {
   getIngredients,
   createIngredient,
@@ -11,6 +13,10 @@ import {
   fetchMarketPrice,
   getMarketHealth,
   selfHealMarket,
+  getStockAlerts,
+  closeServiceDay,
+  getForecast,
+  applyAiMinStock,
 } from "../api/ingredients";
 import { todayLocal } from "../utils/date";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -44,6 +50,7 @@ const emptyForm = {
   season_end_month: "",
   market_price: "",
   last_price_checked_at: "",
+  min_stock: "",
 };
 
 const emptyBatchForm = {
@@ -130,6 +137,23 @@ function A101Cell({ rec, ingredientName, error, busy, onFetch }) {
     const d = new Date(iso);
     return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   };
+  // LLM ajanı Migros'ta uygun ham ürün bulamadıysa → net "manuel giriş" durumu
+  if (rec && rec.needs_manual_entry) {
+    return (
+      <div style={marketCell}>
+        <div style={{ fontSize: 10, color: "var(--amber)", fontWeight: 700 }} title={rec.warning || ""}>
+          Migros'ta yok — elle girin
+        </div>
+        <div style={{ fontSize: 9, color: "var(--text3)" }}>
+          Fiyatı "Fiyat (TL)" alanından girin
+        </div>
+        <button onClick={onFetch} disabled={busy} style={{ ...btnIconSm, marginTop: 2 }} title="Tekrar dene">
+          {busy ? "..." : "Tekrar dene"}
+        </button>
+        {error && <div style={{ fontSize: 9, color: "var(--red)" }}>{String(error).slice(0, 40)}</div>}
+      </div>
+    );
+  }
   return (
     <div style={marketCell}>
       {rec ? (
@@ -200,6 +224,7 @@ function BatchPanel({ ingredient, onStockChanged }) {
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(emptyBatchForm);
+  const [entryWarnings, setEntryWarnings] = useState([]); // Veri Bekçisi uyarıları
 
   const refresh = () =>
     getBatches(ingredient.id)
@@ -212,12 +237,13 @@ function BatchPanel({ ingredient, onStockChanged }) {
 
   const handleAdd = async () => {
     if (!form.quantity || !form.purchase_date) return;
-    await createBatch(ingredient.id, {
+    const saved = await createBatch(ingredient.id, {
       quantity: numericPayloadValue(form.quantity),
       unit_price: form.unit_price !== "" ? Number(form.unit_price) : null,
       purchase_date: form.purchase_date,
       expiry_date: form.expiry_date || null,
     });
+    setEntryWarnings(saved?.warnings || []);
     setForm(emptyBatchForm);
     await refresh();
     onStockChanged();
@@ -231,6 +257,18 @@ function BatchPanel({ ingredient, onStockChanged }) {
 
   return (
     <div style={{ padding: "12px 18px 18px", background: "var(--surface2)" }}>
+      {/* Veri Bekçisi: şüpheli giriş uyarısı (kayıt yapıldı ama kontrol önerilir) */}
+      {entryWarnings.length > 0 && (
+        <div
+          style={{
+            marginBottom: 10, padding: "8px 12px", borderRadius: 8, fontSize: 12,
+            background: "rgba(217,161,32,0.12)", border: "1px solid rgba(217,161,32,0.4)",
+            color: "var(--amber)",
+          }}
+        >
+          🛡️ <strong>Veri Bekçisi:</strong> {entryWarnings.join(" ")}
+        </div>
+      )}
       {/* Mevsim / Yerellik bilgisi */}
       {(ingredient.origin_region || ingredient.season_start_month) && (
         <div
@@ -450,6 +488,16 @@ export default function Ingredients() {
   const [a101Notice, setA101Notice] = useState(""); // birim değişimi/özet bildirimi
   const [health, setHealth] = useState(null);
   const [healing, setHealing] = useState(false);
+  const [alerts, setAlerts] = useState(null);   // {expired, expiring_soon, shortages, counts}
+  const [alertsOpen, setAlertsOpen] = useState(true);
+  const [alertBusy, setAlertBusy] = useState(null);
+  const [orderBusy, setOrderBusy] = useState(false);
+  const [forecast, setForecast] = useState([]);
+  const [forecastOpen, setForecastOpen] = useState(false);
+  const [dayBusy, setDayBusy] = useState(false);
+  const [dayResult, setDayResult] = useState(null); // {ok, message}
+  const [minStockBusy, setMinStockBusy] = useState(false);
+  const navigate = useNavigate();
 
   const refresh = () =>
     getIngredients()
@@ -459,10 +507,100 @@ export default function Ingredients() {
     getMarketPrices()
       .then((list) => setA101(Object.fromEntries(list.map((r) => [r.ingredient_id, r]))))
       .catch(() => {});
+  const refreshAlerts = () => getStockAlerts().then(setAlerts).catch(() => {});
+  const refreshForecast = () => getForecast().then(setForecast).catch(() => {});
   useEffect(() => {
     refresh();
     refreshA101();
+    refreshAlerts();
+    refreshForecast();
   }, []);
+
+  // Günü Kapat: bugünün menüsü servis edildi → stok partilerden FEFO düşülür (DB)
+  const handleCloseDay = async () => {
+    setDayBusy(true);
+    setDayResult(null);
+    try {
+      const r = await closeServiceDay();
+      const short = r.shortfall_count
+        ? ` ⚠ ${r.shortfall_count} malzemede stok ihtiyacı tam karşılayamadı.`
+        : "";
+      setDayResult({
+        ok: true,
+        message: `📉 ${r.service_date} (${r.day_of_week}) kapatıldı — ${r.consumed_count} malzeme, ${r.total_portions} porsiyon servis tüketimi stoktan düşüldü.${short}`,
+      });
+      await Promise.all([refresh(), refreshAlerts(), refreshForecast()]);
+    } catch (err) {
+      setDayResult({ ok: false, message: err?.response?.data?.detail || "Gün kapatılamadı." });
+    } finally {
+      setDayBusy(false);
+    }
+  };
+
+  // AI Min-Stok: tüketim hızından malzeme bazlı kritik eşik hesaplar ve DB'ye uygular
+  const handleAiMinStock = async () => {
+    setMinStockBusy(true);
+    try {
+      const r = await applyAiMinStock();
+      setDayResult({
+        ok: true,
+        message: `🎯 AI, ${r.updated} malzemenin kritik eşiğini tüketim hızına göre güncelledi (eşik = günlük tüketim × 5 gün).`,
+      });
+      await Promise.all([refresh(), refreshAlerts(), refreshForecast()]);
+    } catch {
+      setDayResult({ ok: false, message: "Min-stok önerisi uygulanamadı." });
+    } finally {
+      setMinStockBusy(false);
+    }
+  };
+
+  // SKT'si geçmiş partiyi imha et (DB'den sil → stok otomatik düşer)
+  const handleDiscardBatch = async (ingredientId, batchId) => {
+    setAlertBusy(`d${batchId}`);
+    try {
+      await deleteBatch(ingredientId, batchId);
+      await Promise.all([refresh(), refreshAlerts()]);
+    } finally {
+      setAlertBusy(null);
+    }
+  };
+
+  // Eksik malzeme için tek tıkla stok girişi: eksik miktarı yeni parti olarak ekler (DB)
+  const handleQuickRestock = async (row) => {
+    setAlertBusy(`r${row.ingredient_id}`);
+    try {
+      await createBatch(row.ingredient_id, {
+        quantity: Number(row.shortage) || 0,
+        purchase_date: todayLocal(),
+        expiry_date: null,
+      });
+      await Promise.all([refresh(), refreshAlerts()]);
+    } finally {
+      setAlertBusy(null);
+    }
+  };
+
+  const scrollToAlerts = () => {
+    setAlertsOpen(true);
+    document.getElementById("stock-alerts")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // Otomatik Sipariş Ajanı: eksik listesinden taslak sipariş üret, Siparişler sayfasına git
+  const handleGenerateOrder = async () => {
+    setOrderBusy(true);
+    try {
+      const res = await generateOrder();
+      if (res?.created === false) {
+        window.alert(res.message || "Sipariş gerektiren malzeme yok.");
+      } else {
+        navigate("/orders");
+      }
+    } catch {
+      window.alert("Sipariş oluşturulamadı.");
+    } finally {
+      setOrderBusy(false);
+    }
+  };
 
   const handleFetchA101 = async (id) => {
     setA101Busy(id);
@@ -560,6 +698,7 @@ export default function Ingredients() {
         form.season_end_month !== "" ? Number(form.season_end_month) : null,
       market_price: form.market_price !== "" ? Number(form.market_price) : null,
       last_price_checked_at: form.last_price_checked_at || null,
+      min_stock: form.min_stock !== "" ? Number(form.min_stock) : null,
     };
     if (editingId) {
       await updateIngredient(editingId, payload);
@@ -587,6 +726,7 @@ export default function Ingredients() {
       season_end_month: item.season_end_month ?? "",
       market_price: item.market_price ?? "",
       last_price_checked_at: item.last_price_checked_at ?? "",
+      min_stock: item.min_stock ?? "",
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -599,23 +739,59 @@ export default function Ingredients() {
   const filtered = items.filter((i) =>
     i.name.toLowerCase().includes(search.toLowerCase()),
   );
-  const lowStockCount = items.filter((i) => Number(i.stock || 0) < 20).length;
   const localCount = items.filter((i) => i.is_local).length;
-  const seasonalCount = items.filter(isInSeason).length;
   const pricedCount = items.filter((i) => a101[i.id]).length;
+  const expiredCount = alerts?.counts?.expired ?? 0;
+  const expiringCount = alerts?.counts?.expiring_soon ?? 0;
+  const shortageCount =
+    alerts?.counts?.shortages ??
+    items.filter((i) => Number(i.stock || 0) < Number(i.min_stock ?? 15)).length;
   const stockSummary = [
     { label: "Toplam malzeme", value: items.length },
-    { label: "Kritik stok", value: lowStockCount, tone: lowStockCount ? "var(--red)" : "var(--ingredients-muted-strong)" },
-    { label: "Yerel ürün", value: localCount },
+    { label: "SKT'si geçen", value: expiredCount, tone: expiredCount ? "var(--red)" : "var(--ingredients-muted-strong)" },
+    { label: "SKT'si yaklaşan", value: expiringCount, tone: expiringCount ? "var(--amber)" : "var(--ingredients-muted-strong)" },
+    { label: "Eksik / kritik", value: shortageCount, tone: shortageCount ? "var(--red)" : "var(--ingredients-muted-strong)" },
     { label: "Migros fiyatlı", value: pricedCount },
-    { label: "Mevsimde", value: seasonalCount },
   ];
 
   return (
     <div className="ingredients-page" style={page}>
-      <div style={pageHeader}>
+      <div style={{ ...pageHeader, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
         <div style={pageTitle}>Malzeme Deposu</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button
+            type="button"
+            onClick={handleCloseDay}
+            disabled={dayBusy}
+            title="Bugünün menüsü servis edildi: gereken malzemeler partilerden (önce SKT'si yakın) stoktan düşülür"
+            style={{ ...alertActionBtn, padding: "8px 14px", fontSize: 12, opacity: dayBusy ? 0.6 : 1 }}
+          >
+            {dayBusy ? "Kapatılıyor..." : "📉 Günü Kapat (Servis Tüketimi)"}
+          </button>
+          {(expiredCount + expiringCount + shortageCount) > 0 && (
+            <button
+              type="button"
+              onClick={scrollToAlerts}
+              title={`${expiredCount} SKT geçen · ${expiringCount} yaklaşan · ${shortageCount} eksik malzeme`}
+              style={bellBtn}
+            >
+              <span style={{ fontSize: 18 }}>🔔</span>
+              <span style={bellBadge}>{expiredCount + expiringCount + shortageCount}</span>
+            </button>
+          )}
+        </div>
       </div>
+
+      {dayResult && (
+        <div style={{
+          padding: "10px 14px", borderRadius: 8, marginBottom: 14, fontSize: 13,
+          background: dayResult.ok ? "rgba(22,163,74,0.10)" : "rgba(220,38,38,0.10)",
+          border: `1px solid ${dayResult.ok ? "rgba(22,163,74,0.3)" : "rgba(220,38,38,0.3)"}`,
+          color: dayResult.ok ? "var(--green, #16a34a)" : "var(--red)",
+        }}>
+          {dayResult.message}
+        </div>
+      )}
 
       <div style={summaryGrid}>
         {stockSummary.map((item) => (
@@ -627,6 +803,157 @@ export default function Ingredients() {
           </div>
         ))}
       </div>
+
+      {/* ── Akıllı Stok Uyarıları: SKT geçen/yaklaşan + gelecek menü ihtiyacına göre eksik ── */}
+      {alerts && (expiredCount > 0 || expiringCount > 0 || shortageCount > 0) && (
+        <div id="stock-alerts" style={{ ...card, borderColor: "var(--red)" }}>
+          <button type="button" style={accordionHeader} onClick={() => setAlertsOpen((v) => !v)} aria-expanded={alertsOpen}>
+            <div>
+              <div style={cardTitle}>⚠ Stok Uyarıları & İhtiyaç Listesi</div>
+              <div style={cardHint}>
+                SKT'si geçen {expiredCount} parti · Yaklaşan {expiringCount} · Gelecek menülere göre {shortageCount} eksik malzeme
+              </div>
+            </div>
+            <span style={{ fontSize: 12, color: "var(--ingredients-muted)" }}>{alertsOpen ? "Gizle ▲" : "Göster ▼"}</span>
+          </button>
+          {alertsOpen && (
+            <div style={{ padding: "0 16px 16px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              {/* Eksik malzemeler (ne kadar sipariş edilmeli) */}
+              <div>
+                <div style={alertColTitle}>Sipariş edilecek (eksik) malzemeler</div>
+                {alerts.shortages.length === 0 ? (
+                  <div style={alertEmpty}>Eksik malzeme yok.</div>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                    <thead><tr>{["Malzeme", "Stok", "Gereken", "Eksik", ""].map((h) => <th key={h} style={alertTh}>{h}</th>)}</tr></thead>
+                    <tbody>
+                      {alerts.shortages.slice(0, 12).map((r) => (
+                        <tr key={r.ingredient_id}>
+                          <td style={alertTd}>{r.name} {r.reason === "menu" && <span style={menuTag}>menü</span>}</td>
+                          <td style={alertTd}>{r.stock} {r.unit}</td>
+                          <td style={alertTd}>{r.required} {r.unit}</td>
+                          <td style={{ ...alertTd, color: "var(--red)", fontWeight: 700 }}>{r.shortage} {r.unit}</td>
+                          <td style={alertTd}>
+                            <button
+                              onClick={() => handleQuickRestock(r)}
+                              disabled={alertBusy === `r${r.ingredient_id}`}
+                              style={alertActionBtn}
+                              title={`${r.shortage} ${r.unit} stok girişi yap (parti olarak eklenir)`}
+                            >
+                              {alertBusy === `r${r.ingredient_id}` ? "..." : "+ Stok Ekle"}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+                {alerts.shortages.length > 0 && (
+                  <button
+                    onClick={handleGenerateOrder}
+                    disabled={orderBusy}
+                    style={{
+                      marginTop: 10, width: "100%", padding: "9px 12px", borderRadius: 8,
+                      border: "none", background: "var(--accent)", color: "#fff",
+                      fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: orderBusy ? 0.6 : 1,
+                    }}
+                    title="Eksik malzemelerden otomatik tedarikçi sipariş taslağı oluştur"
+                  >
+                    {orderBusy ? "Oluşturuluyor..." : "🤖 Bu eksiklerden Otomatik Sipariş Oluştur"}
+                  </button>
+                )}
+              </div>
+              {/* SKT geçen / yaklaşan partiler */}
+              <div>
+                <div style={alertColTitle}>SKT'si geçen / yaklaşan partiler</div>
+                {alerts.expired.length === 0 && alerts.expiring_soon.length === 0 ? (
+                  <div style={alertEmpty}>SKT sorunu yok.</div>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                    <thead><tr>{["Malzeme", "Miktar", "SKT", "Durum", ""].map((h) => <th key={h} style={alertTh}>{h}</th>)}</tr></thead>
+                    <tbody>
+                      {[...alerts.expired, ...alerts.expiring_soon].slice(0, 12).map((r) => (
+                        <tr key={r.batch_id}>
+                          <td style={alertTd}>{r.name}</td>
+                          <td style={alertTd}>{r.quantity} {r.unit}</td>
+                          <td style={alertTd}>{r.expiry_date}</td>
+                          <td style={{ ...alertTd, color: r.days_left < 0 ? "var(--red)" : "var(--amber)", fontWeight: 700 }}>
+                            {r.days_left < 0 ? `${-r.days_left} gün geçti` : `${r.days_left} gün kaldı`}
+                          </td>
+                          <td style={alertTd}>
+                            {r.days_left < 0 && (
+                              <button
+                                onClick={() => handleDiscardBatch(r.ingredient_id, r.batch_id)}
+                                disabled={alertBusy === `d${r.batch_id}`}
+                                style={{ ...alertActionBtn, color: "var(--red)", borderColor: "var(--red)" }}
+                                title="Süresi geçen partiyi imha et (stoktan düşülür)"
+                              >
+                                {alertBusy === `d${r.batch_id}` ? "..." : "İmha Et"}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── AI Tükeniş Tahmini: tüketim hızından her malzemenin bitiş tarihi ── */}
+      {forecast.length > 0 && (
+        <div style={card}>
+          <button type="button" style={accordionHeader} onClick={() => setForecastOpen((v) => !v)} aria-expanded={forecastOpen}>
+            <div>
+              <div style={cardTitle}>📈 AI Tükeniş Tahmini</div>
+              <div style={cardHint}>
+                Son günlerin servis tüketimi + gelecek menülerden hesaplanır — {forecast.filter((f) => f.urgent).length} malzeme için sipariş günü geldi
+              </div>
+            </div>
+            <span style={{ fontSize: 12, color: "var(--ingredients-muted)" }}>{forecastOpen ? "Gizle ▲" : "Göster ▼"}</span>
+          </button>
+          {forecastOpen && (
+            <div style={{ padding: "0 16px 16px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+                <button
+                  onClick={handleAiMinStock}
+                  disabled={minStockBusy}
+                  style={{ ...alertActionBtn, opacity: minStockBusy ? 0.6 : 1 }}
+                  title="Kritik eşikleri tüketim hızına göre yeniden hesapla ve uygula (eşik = günlük tüketim × 5 gün)"
+                >
+                  {minStockBusy ? "Hesaplanıyor..." : "🎯 AI ile Kritik Eşikleri Güncelle"}
+                </button>
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                <thead>
+                  <tr>{["Malzeme", "Stok", "Günlük Tüketim", "Kaç Gün Yeter", "Tükeniş", "Son Sipariş Günü"].map((h) => (
+                    <th key={h} style={alertTh}>{h}</th>
+                  ))}</tr>
+                </thead>
+                <tbody>
+                  {forecast.slice(0, 12).map((f) => (
+                    <tr key={f.ingredient_id}>
+                      <td style={alertTd}>{f.name}</td>
+                      <td style={alertTd}>{f.stock} {f.unit}</td>
+                      <td style={alertTd}>{f.daily_rate} {f.unit}/gün</td>
+                      <td style={{ ...alertTd, fontWeight: 700, color: f.days_left <= 5 ? "var(--red)" : f.days_left <= 10 ? "var(--amber)" : "var(--ingredients-text)" }}>
+                        {f.days_left} gün
+                      </td>
+                      <td style={alertTd}>{f.depletion_date}</td>
+                      <td style={{ ...alertTd, fontWeight: f.urgent ? 700 : 400, color: f.urgent ? "var(--red)" : "var(--ingredients-muted)" }}>
+                        {f.urgent ? "BUGÜN sipariş ver" : f.order_by_date}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Form ── */}
       <div style={card}>
@@ -781,6 +1108,18 @@ export default function Ingredients() {
                 onChange={(e) =>
                   setField("last_price_checked_at", e.target.value)
                 }
+                style={input}
+              />
+            </div>
+
+            <div>
+              <div style={fieldLabel}>Kritik Eşik (Min Stok)</div>
+              <input
+                inputMode="decimal"
+                placeholder="Örn: 25 — altına inince uyarı"
+                value={form.min_stock}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => setField("min_stock", numericValue(e.target.value))}
                 style={input}
               />
             </div>
@@ -1008,7 +1347,7 @@ export default function Ingredients() {
                             borderBottom: "1px solid var(--border)",
                           }}
                         >
-                          <BatchPanel ingredient={i} onStockChanged={refresh} />
+                          <BatchPanel ingredient={i} onStockChanged={() => { refresh(); refreshAlerts(); }} />
                         </td>
                       </tr>
                     )}
@@ -1066,6 +1405,14 @@ const summaryGrid = {
   gap: 12,
   marginBottom: 16,
 };
+const bellBtn = { position: "relative", background: "var(--ingredients-card)", border: "1px solid var(--ingredients-border)", borderRadius: 10, padding: "8px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center" };
+const bellBadge = { position: "absolute", top: -6, right: -6, background: "var(--red)", color: "#fff", borderRadius: 999, fontSize: 10, fontWeight: 700, minWidth: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" };
+const alertActionBtn = { background: "transparent", border: "1px solid var(--accent, #4661d8)", color: "var(--accent, #4661d8)", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" };
+const alertColTitle = { fontSize: 12, fontWeight: 700, color: "var(--ingredients-text)", margin: "6px 0 8px" };
+const alertEmpty = { fontSize: 12, color: "var(--ingredients-muted)", padding: "8px 0" };
+const alertTh = { textAlign: "left", fontSize: 10, fontWeight: 700, color: "var(--ingredients-muted)", textTransform: "uppercase", letterSpacing: ".05em", padding: "6px 8px", borderBottom: "1px solid var(--ingredients-border)" };
+const alertTd = { padding: "6px 8px", color: "var(--ingredients-text)", borderBottom: "1px solid var(--ingredients-border)" };
+const menuTag = { fontSize: 9, background: "var(--accent-bg, #eef)", color: "var(--accent, #4661d8)", borderRadius: 4, padding: "1px 5px", marginLeft: 4, fontWeight: 700 };
 const summaryCard = {
   background: "var(--ingredients-card)",
   border: "1px solid var(--ingredients-border)",

@@ -16,7 +16,7 @@ import {
   Users,
   X,
 } from "./icons.jsx";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Routes,
   Route,
@@ -37,6 +37,9 @@ import {
 import { isSupabaseConfigured, supabase } from "./supabase";
 import { useRealtimeData } from "./hooks/useRealtimeData";
 import { RealtimeIndicator } from "./components/RealtimeIndicator";
+import LoadingSpinner from "../../../../components/LoadingSpinner";
+import { getMenu, getMenus } from "../../../ai-menu-planner/api/aiMenuPlanner";
+import tabloDotLogo from "../../../../assets/tablo-dot-logo.png";
 
 const ROLE_LABELS = {
   SUPER_ADMIN: "Süper Admin",
@@ -47,7 +50,6 @@ const ROLE_LABELS = {
   FINANCE_MANAGER: "Finans Yöneticisi",
   OPERATIONS_MANAGER: "Operasyon Yöneticisi",
   STUDENT: "Öğrenci",
-  SYSTEM_SUPPORT: "Sistem Destek",
   WAREHOUSE_STAFF: "Depo Görevlisi",
   PURCHASING_STAFF: "Satın Alma Sorumlusu",
   RESEARCHER: "Araştırmacı",
@@ -68,7 +70,6 @@ const ROLE_ACCESS = {
     "FINANCE_MANAGER",
     "OPERATIONS_MANAGER",
     "STUDENT",
-    "SYSTEM_SUPPORT",
     "WAREHOUSE_STAFF",
     "PURCHASING_STAFF",
     "RESEARCHER",
@@ -79,7 +80,6 @@ const ROLE_ACCESS = {
     "SUPER_ADMIN",
     "CATERING_ADMIN",
     "UNIVERSITY_ADMIN",
-    "SYSTEM_SUPPORT",
   ],
   menuAssignments: [
     "SUPER_ADMIN",
@@ -89,32 +89,6 @@ const ROLE_ACCESS = {
     "CHEF",
   ],
   companies: ["SUPER_ADMIN", "CATERING_ADMIN", "FINANCE_MANAGER"],
-  inventory: [
-    "SUPER_ADMIN",
-    "CATERING_ADMIN",
-    "CHEF",
-    "WAREHOUSE_STAFF",
-    "OPERATIONS_MANAGER",
-    "PURCHASING_STAFF",
-  ],
-  meals: ["SUPER_ADMIN", "CATERING_ADMIN", "DIETITIAN", "CHEF"],
-  aiMenu: ["SUPER_ADMIN", "CATERING_ADMIN", "DIETITIAN", "CHEF"],
-  allergies: ["SUPER_ADMIN", "DIETITIAN", "UNIVERSITY_ADMIN", "STUDENT"],
-  holidays: ["SUPER_ADMIN", "CATERING_ADMIN", "UNIVERSITY_ADMIN", "STUDENT"],
-  dorms: ["SUPER_ADMIN", "UNIVERSITY_ADMIN", "STUDENT"],
-  reports: [
-    "SUPER_ADMIN",
-    "CATERING_ADMIN",
-    "FINANCE_MANAGER",
-    "OPERATIONS_MANAGER",
-    "SYSTEM_SUPPORT",
-  ],
-  yokUniv: [
-    "SUPER_ADMIN",
-    "CATERING_ADMIN",
-    "UNIVERSITY_ADMIN",
-    "SYSTEM_SUPPORT",
-  ],
 };
 
 function roleCan(role, key) {
@@ -128,14 +102,6 @@ function getCateringRouteKey(pathname) {
   if (pathname.endsWith("/users")) return "users";
   if (pathname.endsWith("/menu-assignments")) return "menuAssignments";
   if (pathname.endsWith("/companies")) return "companies";
-  if (pathname.endsWith("/inventory")) return "inventory";
-  if (pathname.endsWith("/meals")) return "meals";
-  if (pathname.endsWith("/ai-menu")) return "aiMenu";
-  if (pathname.endsWith("/allergies")) return "allergies";
-  if (pathname.endsWith("/holidays")) return "holidays";
-  if (pathname.endsWith("/dorms")) return "dorms";
-  if (pathname.endsWith("/reports")) return "reports";
-  if (pathname.endsWith("/yok-univ")) return "yokUniv";
   return "dashboard";
 }
 
@@ -279,9 +245,70 @@ const DASH_COLORS = [
   "#65a30d",
 ];
 const WEEK_DAYS = ["Pzt", "Sal", "Çar", "Per", "Cum"];
+const MENU_CALENDAR_DAYS = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
+const MENU_CALENDAR_DAYS_SHORT = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
+const TR_MONTHS_SHORT = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
 
 function formatTRNumber(value) {
   return Number(value || 0).toLocaleString("tr-TR");
+}
+
+function formatMenuDateShort(date) {
+  return `${String(date.getDate()).padStart(2, "0")} ${TR_MONTHS_SHORT[date.getMonth()]}`;
+}
+
+function startOfDay(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function sameDay(a, b) {
+  return startOfDay(a).getTime() === startOfDay(b).getTime();
+}
+
+function mondayOf(date) {
+  const d = startOfDay(date);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d;
+}
+
+function isoLocal(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function pickRepresentativeMenu(menusForWeek) {
+  return [...menusForWeek].sort((a, b) => {
+    if (a.status !== b.status) {
+      return String(a.status).toLowerCase() === "approved" ? -1 : 1;
+    }
+    const ai = a.items?.length || 0;
+    const bi = b.items?.length || 0;
+    if (ai !== bi) return bi - ai;
+    return Number(b.id || 0) - Number(a.id || 0);
+  })[0];
+}
+
+function getMenuDayStats(items, day) {
+  const dayItems = (items || []).filter((item) => item.day_of_week === day);
+  let totalCost = 0;
+  let portions = null;
+  const mealNames = [];
+
+  dayItems.forEach((item) => {
+    if (item.portions) {
+      totalCost += (item.estimated_cost || 0) * item.portions;
+      portions = Math.max(portions || 0, item.portions);
+    } else {
+      totalCost += item.estimated_cost || 0;
+    }
+    if (item.meal_name && !mealNames.includes(item.meal_name)) {
+      mealNames.push(item.meal_name);
+    }
+  });
+
+  const perPerson = portions ? totalCost / portions : null;
+  return { mealNames, totalCost, portions, perPerson };
 }
 
 function digitsOnly(value, maxLength) {
@@ -595,6 +622,191 @@ function MenuBars({ menuAssignments }) {
   );
 }
 
+function WeeklyMenuCalendar() {
+  const [menusDetailed, setMenusDetailed] = useState(null);
+  const [error, setError] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const scrollerRef = useRef(null);
+  const currentWeekRef = useRef(null);
+  const dragRef = useRef({ isDown: false, startX: 0, scrollLeft: 0 });
+
+  useEffect(() => {
+    let active = true;
+
+    getMenus()
+      .then(async (list) => {
+        const results = await Promise.allSettled(
+          list.map((menu) => getMenu(menu.id)),
+        );
+        if (!active) return;
+        setMenusDetailed(
+          results
+            .filter((result) => result.status === "fulfilled")
+            .map((result) => result.value),
+        );
+      })
+      .catch(() => {
+        if (!active) return;
+        setError(true);
+        setMenusDetailed([]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const weekCards = useMemo(() => {
+    if (!menusDetailed) return [];
+    const byWeek = new Map();
+
+    menusDetailed.forEach((menu) => {
+      if (!menu.week_start_date) return;
+      const key = isoLocal(mondayOf(new Date(`${menu.week_start_date}T00:00:00`)));
+      if (!byWeek.has(key)) byWeek.set(key, []);
+      byWeek.get(key).push(menu);
+    });
+
+    const today = startOfDay(new Date());
+    return Array.from(byWeek.entries())
+      .map(([weekStartStr, menusForWeek]) => {
+        const menu = pickRepresentativeMenu(menusForWeek);
+        const weekStart = startOfDay(new Date(`${weekStartStr}T00:00:00`));
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        return {
+          menu,
+          weekStart,
+          weekEnd,
+          isCurrent: today >= weekStart && today <= weekEnd,
+          isPast: today > weekEnd,
+        };
+      })
+      .sort((a, b) => a.weekStart - b.weekStart);
+  }, [menusDetailed]);
+
+  useEffect(() => {
+    if (!weekCards.length) return;
+    const frame = requestAnimationFrame(() => {
+      const card = currentWeekRef.current;
+      const scroller = scrollerRef.current;
+      if (!card || !scroller) return;
+      scroller.scrollTo({
+        left: card.offsetLeft - (scroller.clientWidth - card.clientWidth) / 2,
+        behavior: "auto",
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [weekCards.length]);
+
+  const handlePointerDown = (event) => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    dragRef.current = {
+      isDown: true,
+      startX: event.pageX,
+      scrollLeft: scroller.scrollLeft,
+    };
+    setIsDragging(true);
+  };
+
+  const handlePointerMove = (event) => {
+    if (!dragRef.current.isDown) return;
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    const dx = event.pageX - dragRef.current.startX;
+    scroller.scrollLeft = dragRef.current.scrollLeft - dx;
+  };
+
+  const endDrag = () => {
+    dragRef.current.isDown = false;
+    setIsDragging(false);
+  };
+
+  return (
+    <section className="weekly-menu-calendar-section">
+      <div className="weekly-menu-calendar-heading">
+        <h2>Haftalık Menü Takvimi</h2>
+        <span>Yatay kaydırarak önceki ve sonraki haftaları inceleyin</span>
+      </div>
+
+      {menusDetailed === null ? (
+        <div className="weekly-menu-calendar-state">
+          <LoadingSpinner label="Haftalık menü yükleniyor" minHeight={130} size={38} />
+        </div>
+      ) : error || weekCards.length === 0 ? (
+        <div className="weekly-menu-calendar-state">
+          Henüz oluşturulmuş haftalık menü bulunamadı.
+        </div>
+      ) : (
+        <div
+          ref={scrollerRef}
+          className="weekly-menu-calendar-rail"
+          onMouseDown={handlePointerDown}
+          onMouseMove={handlePointerMove}
+          onMouseUp={endDrag}
+          onMouseLeave={endDrag}
+          style={{ cursor: isDragging ? "grabbing" : "grab" }}
+        >
+          {weekCards.map(({ menu, weekStart, weekEnd, isCurrent, isPast }) => (
+            <article
+              key={menu.id}
+              ref={isCurrent ? currentWeekRef : null}
+              className={`weekly-menu-card${isCurrent ? " current" : ""}${isPast && !isCurrent ? " past" : ""}`}
+            >
+              {isCurrent && <div className="weekly-menu-badge">BU HAFTA</div>}
+              <div className="weekly-menu-card-head">
+                <strong>
+                  {formatMenuDateShort(weekStart)} - {formatMenuDateShort(weekEnd)}
+                </strong>
+                <span>
+                  {String(menu.status).toLowerCase() === "approved" ? "Onaylandı" : "Taslak"} · Bütçe {Number(menu.budget || 0).toFixed(0)} TL
+                </span>
+              </div>
+
+              <div className="weekly-menu-days">
+                {MENU_CALENDAR_DAYS.map((day, index) => {
+                  const dayDate = new Date(weekStart);
+                  dayDate.setDate(dayDate.getDate() + index);
+                  const isToday = sameDay(dayDate, new Date());
+                  const { mealNames, totalCost, portions, perPerson } = getMenuDayStats(menu.items, day);
+
+                  return (
+                    <div key={day} className={`weekly-menu-day${isToday ? " today" : ""}`}>
+                      <div className="weekly-menu-day-head">
+                        <span>{MENU_CALENDAR_DAYS_SHORT[index]}</span>
+                        <span>
+                          {String(dayDate.getDate()).padStart(2, "0")}.{String(dayDate.getMonth() + 1).padStart(2, "0")}
+                        </span>
+                      </div>
+                      <div className="weekly-menu-meals">
+                        {mealNames.length === 0 ? (
+                          <span className="weekly-menu-empty">-</span>
+                        ) : (
+                          <ul>
+                            {mealNames.map((name) => (
+                              <li key={name}>{name}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      <div className="weekly-menu-day-foot">
+                        <span>{portions ?? "-"} kişi</span>
+                        <span>{totalCost.toFixed(0)} TL</span>
+                        <span>{perPerson !== null ? `${perPerson.toFixed(2)} TL/kişi` : "-"}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function CateringDashboard({
   dashboard,
   universities,
@@ -682,15 +894,19 @@ function CateringDashboard({
             label="Toplam Öğrenci"
             value={formatTRNumber(totalStudents)}
             sub={`${universityCount} Üniversite kaydı`}
-          />
+          >
+            <Building2 size={24} />
+          </DashboardMetricCard>
           <DashboardMetricCard
             tone="menu"
             label="Aktif Menü"
             value={formatTRNumber(activeMenus)}
             sub={`${publishedMenus} yayınlanan menü`}
-          />
+          >
+            <Calendar size={24} />
+          </DashboardMetricCard>
           <DashboardMetricCard
-            tone="compact"
+            tone="users"
             label="Kullanıcılar"
             value={`${activeUsers}`}
             sub={`${activeUsers} aktif`}
@@ -698,7 +914,7 @@ function CateringDashboard({
             <Users size={24} />
           </DashboardMetricCard>
           <DashboardMetricCard
-            tone="compact"
+            tone="license"
             label="Lisans"
             value={dashboard?.active_license ? "Aktif" : "Pasif"}
             sub={
@@ -710,6 +926,8 @@ function CateringDashboard({
             <Award size={24} />
           </DashboardMetricCard>
         </div>
+
+        <WeeklyMenuCalendar />
 
         <div className="catering-dash-grid">
           <DashboardPanel
@@ -1727,17 +1945,40 @@ function CateringManagementContent() {
   });
   const loginDisabled = loading || !isValidEmail(normalizedAuthEmail) || !password;
   const registerDisabled = loading || registerErrors.length > 0;
+  const authHeaderCopy = {
+    login: {
+      title: "TabloDot Giriş Paneli",
+      description: "Rolünüze özel çalışma alanına güvenli erişim sağlayın.",
+    },
+    register: {
+      title: "TabloDot Kayıt Paneli",
+      description: "Firma ve kullanıcı bilgilerinizi girerek çalışma alanınızı oluşturun.",
+    },
+    forgot: {
+      title: "Şifre Sıfırlama",
+      description: "E-posta adresinize gelen kod ile yeni şifrenizi belirleyin.",
+    },
+  }[authMode];
 
   if (!isAuthed) {
     return (
       <main className="login-shell">
-        <section className="login-panel">
+        <div className="login-page">
+          <header className="login-topbar">
+            <a href="/" className="login-brand" aria-label="TabloDot ana sayfa">
+              <img src={tabloDotLogo} alt="TabloDot" />
+            </a>
+            <a href="/" className="login-home-link">Ana sayfaya dön</a>
+          </header>
+
+          <div className="login-layout">
+            <section className="login-panel">
           <header className="login-header">
             <div className="logo-shield animate-pulse">
               <ShieldCheck size={40} />
             </div>
-            <h1>TabloDot Giriş Paneli</h1>
-            <p>Rolünüze özel çalışma alanına güvenli erişim sağlayın.</p>
+            <h1>{authHeaderCopy.title}</h1>
+            <p>{authHeaderCopy.description}</p>
           </header>
 
           <div className="auth-tabs">
@@ -1976,7 +2217,9 @@ function CateringManagementContent() {
               {info}
             </div>
           )}
-        </section>
+            </section>
+          </div>
+        </div>
       </main>
     );
   }
@@ -2116,126 +2359,6 @@ function CateringManagementContent() {
               companies={companies}
               currentUser={currentUser}
             />
-          }
-        />
-
-        <Route
-          path="inventory"
-          element={
-            <div className="placeholder-view">
-              <div className="placeholder-icon">MD</div>
-              <h2>Malzeme Deposu</h2>
-              <p>
-                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
-                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
-                sonrasında aktif hale gelecektir.
-              </p>
-            </div>
-          }
-        />
-
-        <Route
-          path="meals"
-          element={
-            <div className="placeholder-view">
-              <div className="placeholder-icon">YY</div>
-              <h2>Yapılacak Yemekler</h2>
-              <p>
-                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
-                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
-                sonrasında aktif hale gelecektir.
-              </p>
-            </div>
-          }
-        />
-
-        <Route
-          path="ai-menu"
-          element={
-            <div className="placeholder-view">
-              <div className="placeholder-icon">AI</div>
-              <h2>AI Menü Planı</h2>
-              <p>
-                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
-                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
-                sonrasında aktif hale gelecektir.
-              </p>
-            </div>
-          }
-        />
-
-        <Route
-          path="allergies"
-          element={
-            <div className="placeholder-view">
-              <div className="placeholder-icon">AP</div>
-              <h2>Alerji Profilleri</h2>
-              <p>
-                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
-                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
-                sonrasında aktif hale gelecektir.
-              </p>
-            </div>
-          }
-        />
-
-        <Route
-          path="holidays"
-          element={
-            <div className="placeholder-view">
-              <div className="placeholder-icon">TD</div>
-              <h2>Tatil & Devamsızlık</h2>
-              <p>
-                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
-                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
-                sonrasında aktif hale gelecektir.
-              </p>
-            </div>
-          }
-        />
-
-        <Route
-          path="dorms"
-          element={
-            <div className="placeholder-view">
-              <div className="placeholder-icon">YR</div>
-              <h2>Yurtlar</h2>
-              <p>
-                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
-                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
-                sonrasında aktif hale gelecektir.
-              </p>
-            </div>
-          }
-        />
-
-        <Route
-          path="reports"
-          element={
-            <div className="placeholder-view">
-              <div className="placeholder-icon">RP</div>
-              <h2>Raporlar</h2>
-              <p>
-                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
-                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
-                sonrasında aktif hale gelecektir.
-              </p>
-            </div>
-          }
-        />
-
-        <Route
-          path="yok-univ"
-          element={
-            <div className="placeholder-view">
-              <div className="placeholder-icon">YK</div>
-              <h2>YÖK / Üniversite</h2>
-              <p>
-                TabloDot Üniversite Beslenme Sistemi kapsamında bu modül diğer
-                ekip üyeleri tarafından geliştirilmektedir. GitHub entegrasyonu
-                sonrasında aktif hale gelecektir.
-              </p>
-            </div>
           }
         />
 

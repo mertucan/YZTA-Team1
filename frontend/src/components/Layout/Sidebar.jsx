@@ -10,6 +10,8 @@ const recordItems = [
   { to: "/meals", icon: "utensils", label: "Yemek Kategorisi" },
   { to: "/students", icon: "graduation", label: "Öğrenciler" },
   { to: "/absences", icon: "calendar", label: "Devamsızlık" },
+  { to: "/expenses", icon: "box", label: "Harcamalar" },
+  { to: "/orders", icon: "cart", label: "Siparişler" },
 ];
 
 const cateringItems = [
@@ -27,7 +29,6 @@ const roleLabels = {
   FINANCE_MANAGER: "Finans Yöneticisi",
   OPERATIONS_MANAGER: "Operasyon Yöneticisi",
   STUDENT: "Öğrenci",
-  SYSTEM_SUPPORT: "Sistem Destek",
   WAREHOUSE_STAFF: "Depo Görevlisi",
   PURCHASING_STAFF: "Satın Alma Sorumlusu",
   RESEARCHER: "Araştırmacı",
@@ -42,6 +43,8 @@ const moduleRoles = {
   "research-export": ["RESEARCHER", "UNIVERSITY_ADMIN"],
   "university-quality-integration": ["UNIVERSITY_ADMIN", "SUPER_ADMIN"],
   "partner-products": ["PARTNER_COMPANY", "DIETITIAN", "CHEF", "CATERING_ADMIN", "SUPER_ADMIN"],
+  "sustainabilityscore": ["DIETITIAN", "CHEF", "OPERATIONS_MANAGER", "FINANCE_MANAGER", "CATERING_ADMIN", "UNIVERSITY_ADMIN", "SUPER_ADMIN", "RESEARCHER"],
+  "tender-invoice-management": ["FINANCE_MANAGER", "OPERATIONS_MANAGER", "CATERING_ADMIN", "UNIVERSITY_ADMIN", "SUPER_ADMIN", "DIETITIAN"],
 };
 
 const recordRoles = {
@@ -49,6 +52,8 @@ const recordRoles = {
   "/meals": ["DIETITIAN", "CHEF"],
   "/students": ["UNIVERSITY_ADMIN", "DIETITIAN", "RESEARCHER"],
   "/absences": ["UNIVERSITY_ADMIN", "OPERATIONS_MANAGER"],
+  "/expenses": ["OPERATIONS_MANAGER", "FINANCE_MANAGER", "CATERING_ADMIN"],
+  "/orders": ["OPERATIONS_MANAGER", "PURCHASING_STAFF", "WAREHOUSE_STAFF", "CATERING_ADMIN"],
 };
 
 function readCateringSession() {
@@ -223,6 +228,22 @@ function NavIcon({ name }) {
         <circle cx="17" cy="19" r="1.5" />
       </svg>
     ),
+    "file-text": (
+      <svg {...common}>
+        <path d="M14 3H6v18h12V7l-4-4Z" />
+        <path d="M14 3v4h4" />
+        <path d="M8 12h8" />
+        <path d="M8 16h6" />
+      </svg>
+    ),
+    key: (
+      <svg {...common}>
+        <circle cx="8" cy="15" r="4" />
+        <path d="M11 12 21 2" />
+        <path d="m16 7 3 3" />
+        <path d="m18 5 2 2" />
+      </svg>
+    ),
   };
 
   return icons[name] || icons.home;
@@ -262,7 +283,8 @@ export default function Sidebar() {
   }, [isCateringUser, role]);
 
   const visibleRecordItems = useMemo(() => {
-    if (!isCateringUser || ["CATERING_ADMIN", "SUPER_ADMIN"].includes(role)) return recordItems;
+    if (!isCateringUser || role === "SUPER_ADMIN") return recordItems;
+    if (role === "CATERING_ADMIN") return recordItems.filter((item) => item.to !== "/students");
     return recordItems.filter((item) => recordRoles[item.to]?.includes(role));
   }, [isCateringUser, role]);
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { getDashboardStats } from "../api/dashboard";
 import { getMenus, getMenu } from "../modules/ai-menu-planner/api/aiMenuPlanner";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -26,6 +27,76 @@ const mondayOf = (date) => {
 
 const isoLocal = (d) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+const operationShortcuts = [
+  { label: "Bugünkü Menü", detail: "Planlanan öğünler", to: "/modules/ai-menu-planner", icon: "calendar", tone: "var(--accent)" },
+  { label: "Malzeme Deposu", detail: "Stok ve parti takibi", to: "/ingredients", icon: "box", tone: "var(--green)" },
+  { label: "Siparişler", detail: "Taslak ve teslimat", to: "/orders", icon: "cart", tone: "var(--amber)" },
+  { label: "Harcamalar", detail: "Ay bazlı giderler", to: "/expenses", icon: "wallet", tone: "var(--red)" },
+  { label: "Sürdürülebilirlik", detail: "Karbon ve eko skor", to: "/modules/sustainabilityscore", icon: "leaf", tone: "var(--green)" },
+  { label: "İhale & Fatura", detail: "Teklif ve hakediş", to: "/modules/tender-invoice-management", icon: "file", tone: "var(--purple)" },
+];
+
+function ShortcutIcon({ name, size = 20 }) {
+  const common = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": true,
+  };
+  const icons = {
+    calendar: (
+      <svg {...common}>
+        <path d="M7 3v4" />
+        <path d="M17 3v4" />
+        <rect x="4" y="5" width="16" height="16" rx="2" />
+        <path d="M4 10h16" />
+        <path d="M8 14h3" />
+        <path d="M8 17h2" />
+      </svg>
+    ),
+    box: (
+      <svg {...common}>
+        <path d="M21 8.5 12 3 3 8.5l9 5.5 9-5.5Z" />
+        <path d="M3 8.5V16l9 5 9-5V8.5" />
+        <path d="M12 14v7" />
+      </svg>
+    ),
+    cart: (
+      <svg {...common}>
+        <path d="M4 5h2l2 10h9l2-7H7" />
+        <circle cx="10" cy="19" r="1.5" />
+        <circle cx="17" cy="19" r="1.5" />
+      </svg>
+    ),
+    wallet: (
+      <svg {...common}>
+        <path d="M3 7a3 3 0 0 1 3-3h13v4H6a3 3 0 0 0 0 6h15v6H6a3 3 0 0 1-3-3Z" />
+        <path d="M16 12h.01" />
+      </svg>
+    ),
+    leaf: (
+      <svg {...common}>
+        <path d="M11 20A7 7 0 0 1 4 13c0-5 4-8 12-9 1 8-2 12-7 12" />
+        <path d="M5 19c4-6 8-8 13-10" />
+      </svg>
+    ),
+    file: (
+      <svg {...common}>
+        <path d="M14 3H6v18h12V7l-4-4Z" />
+        <path d="M14 3v4h4" />
+        <path d="M8 13h8" />
+        <path d="M8 17h6" />
+      </svg>
+    ),
+  };
+  return icons[name] || icons.box;
+}
 
 // Geçici ağ/başlangıç hatalarında kullanıcıya buton göstermeden kendiliğinden tekrar dene.
 async function withRetry(fn, tries = 3, delayMs = 1200) {
@@ -193,6 +264,26 @@ export default function Dashboard() {
           <div style={pageTitle}>Genel Bakış</div>
         </div>
         <div style={pageSubtitle}>Haftalık menü ve stok özeti</div>
+      </div>
+
+      <div style={shortcutSection}>
+        <div style={shortcutHeader}>
+          <span>Operasyon Kısayolları</span>
+          <small style={shortcutHeaderHint}>Kaydırarak modüller arasında hızlı geçiş yapın</small>
+        </div>
+        <div className="no-scrollbar" style={shortcutRail}>
+          {operationShortcuts.map((item) => (
+            <Link key={item.to} to={item.to} style={shortcutCard}>
+              <span style={{ ...shortcutIcon, color: item.tone }}>
+                <ShortcutIcon name={item.icon} />
+              </span>
+              <span style={{ minWidth: 0 }}>
+                <strong style={shortcutLabel}>{item.label}</strong>
+                <small style={shortcutDetail}>{item.detail}</small>
+              </span>
+            </Link>
+          ))}
+        </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 24 }}>
@@ -430,6 +521,84 @@ const pageSubtitle = {
   fontSize: 13,
   fontWeight: 700,
   paddingBottom: 3,
+};
+
+const shortcutSection = {
+  marginBottom: 22,
+};
+
+const shortcutHeader = {
+  display: "flex",
+  alignItems: "baseline",
+  justifyContent: "space-between",
+  gap: 12,
+  marginBottom: 10,
+  color: "var(--text)",
+  fontSize: 13,
+  fontWeight: 700,
+};
+
+const shortcutHeaderHint = {
+  color: "var(--text3)",
+  fontSize: 11,
+  fontWeight: 600,
+};
+
+const shortcutRail = {
+  display: "flex",
+  gap: 12,
+  overflowX: "auto",
+  padding: "2px 2px 8px",
+  scrollSnapType: "x proximity",
+  scrollbarWidth: "none",
+  msOverflowStyle: "none",
+};
+
+const shortcutCard = {
+  flex: "0 0 218px",
+  minHeight: 76,
+  scrollSnapAlign: "start",
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  padding: "13px 14px",
+  background: "var(--surface)",
+  border: "1px solid var(--border)",
+  borderRadius: "var(--radius)",
+  boxShadow: "var(--shadow)",
+  textDecoration: "none",
+  color: "var(--text)",
+};
+
+const shortcutIcon = {
+  width: 38,
+  height: 38,
+  borderRadius: 8,
+  display: "inline-grid",
+  placeItems: "center",
+  flexShrink: 0,
+  border: "1px solid var(--border2)",
+};
+
+const shortcutLabel = {
+  display: "block",
+  fontSize: 13,
+  lineHeight: 1.15,
+  color: "var(--text)",
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+};
+
+const shortcutDetail = {
+  display: "block",
+  marginTop: 4,
+  fontSize: 11,
+  lineHeight: 1.2,
+  color: "var(--text3)",
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
 };
 
 const th = { textAlign: "left", fontSize: 10, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: ".06em", padding: "10px 18px", borderBottom: "1px solid var(--border)" };
