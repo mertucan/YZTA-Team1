@@ -129,7 +129,7 @@ function a101NeedsVerification(ingredientName, productName) {
 }
 
 /* ─── A101 Fiyat Hücresi ────────────────────────────────────────────────────── */
-function A101Cell({ rec, ingredientName, error, busy, onFetch }) {
+function A101Cell({ rec, ingredient, ingredientName, error, busy, onFetch, onManualEdit }) {
   // Taze çekimde backend needs_verification döndürür; kayıtlı kayıtta ada göre hesapla.
   const flagged = rec && (rec.needs_verification ?? a101NeedsVerification(ingredientName, rec.product_name));
   const fmtDate = (iso) => {
@@ -137,22 +137,59 @@ function A101Cell({ rec, ingredientName, error, busy, onFetch }) {
     const d = new Date(iso);
     return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   };
-  // LLM ajanı Migros'ta uygun ham ürün bulamadıysa → net "manuel giriş" durumu
-  if (rec && rec.needs_manual_entry) {
-    return (
-      <div style={marketCell}>
-        <div style={{ fontSize: 10, color: "var(--amber)", fontWeight: 700 }} title={rec.warning || ""}>
-          Migros'ta yok — elle girin
+  // Elle girilmiş piyasa fiyatı (Migros kaydı olmayan malzemeler için tek kaynak)
+  const manualPrice = ingredient?.market_price;
+
+  // Migros kaydı yok VEYA ajan "ham ürün bulunamadı" dedi:
+  // elle fiyat girilmişse Migros fiyatı gibi göster, kaynağını "Manuel" rozetiyle belirt.
+  if (!rec || rec.needs_manual_entry) {
+    if (manualPrice != null && Number(manualPrice) > 0) {
+      return (
+        <div style={marketCell}>
+          <div style={marketCellRow}>
+            <span style={marketPriceText}>
+              {Number(manualPrice).toFixed(2)} TL/{ingredient?.unit}
+              <span style={manualBadge} title="Fiyat elle girildi (Migros'ta uygun ham ürün yok)">
+                Manuel
+              </span>
+            </span>
+            <span style={marketActions}>
+              <button onClick={onManualEdit} style={btnIconSm} title="Elle girilen fiyatı düzenle">
+                Düzenle
+              </button>
+            </span>
+          </div>
+          <div style={{ fontSize: 9, color: "var(--text3)" }}>
+            {rec?.needs_manual_entry ? "Migros'ta ham ürün yok" : "Elle girilen piyasa fiyatı"}
+          </div>
+          {ingredient?.last_price_checked_at && (
+            <div style={{ fontSize: 9, color: "var(--text3)" }}>
+              Kontrol: {ingredient.last_price_checked_at}
+            </div>
+          )}
+          <button onClick={onFetch} disabled={busy} style={{ ...btnIconSm, marginTop: 2 }} title="Migros'ta tekrar ara">
+            {busy ? "..." : "Migros'ta ara"}
+          </button>
         </div>
-        <div style={{ fontSize: 9, color: "var(--text3)" }}>
-          Fiyatı "Fiyat (TL)" alanından girin
+      );
+    }
+    // Fiyat da yoksa: net "elle girin" çağrısı
+    if (rec?.needs_manual_entry) {
+      return (
+        <div style={marketCell}>
+          <div style={{ fontSize: 10, color: "var(--amber)", fontWeight: 700 }} title={rec.warning || ""}>
+            Migros'ta yok — elle girin
+          </div>
+          <button onClick={onManualEdit} style={{ ...btnIconSm, marginTop: 2 }} title="Piyasa fiyatını elle gir">
+            Fiyat Gir
+          </button>
+          <button onClick={onFetch} disabled={busy} style={{ ...btnIconSm, marginTop: 2 }} title="Tekrar dene">
+            {busy ? "..." : "Tekrar dene"}
+          </button>
+          {error && <div style={{ fontSize: 9, color: "var(--red)" }}>{String(error).slice(0, 40)}</div>}
         </div>
-        <button onClick={onFetch} disabled={busy} style={{ ...btnIconSm, marginTop: 2 }} title="Tekrar dene">
-          {busy ? "..." : "Tekrar dene"}
-        </button>
-        {error && <div style={{ fontSize: 9, color: "var(--red)" }}>{String(error).slice(0, 40)}</div>}
-      </div>
-    );
+      );
+    }
   }
   return (
     <div style={marketCell}>
@@ -1086,11 +1123,11 @@ export default function Ingredients() {
             </div>
 
             <div>
-              <div style={fieldLabel}>Piyasa Fiyatı (TL)</div>
+              <div style={fieldLabel}>Piyasa Fiyatı (TL) — elle giriş</div>
               <input
                 type="text"
                 inputMode="decimal"
-                placeholder="Karşılaştırma için"
+                placeholder="Migros'ta yoksa buraya girin"
                 value={form.market_price}
                 onFocus={(e) => e.target.select()}
                 onChange={(e) =>
@@ -1314,10 +1351,12 @@ export default function Ingredients() {
                       <td style={td} onClick={(e) => e.stopPropagation()}>
                         <A101Cell
                           rec={a101[i.id]}
+                          ingredient={i}
                           ingredientName={i.name}
                           error={a101Errors[i.id]}
                           busy={a101Busy === i.id || a101Busy === "all"}
                           onFetch={() => handleFetchA101(i.id)}
+                          onManualEdit={() => startEdit(i)}
                         />
                       </td>
                       <td style={td}>{i.calories} kcal</td>
@@ -1567,6 +1606,18 @@ const marketWarnText = {
   color: "var(--amber)",
   fontSize: 11,
   minWidth: 0,
+};
+// Fiyatın kaynağını belli eden rozet: Migros yerine elle girilmiş değer
+const manualBadge = {
+  fontSize: 8,
+  fontWeight: 700,
+  letterSpacing: ".04em",
+  padding: "1px 5px",
+  borderRadius: 4,
+  color: "var(--accent)",
+  background: "rgba(232,128,0,0.12)",
+  border: "1px solid rgba(232,128,0,0.35)",
+  fontFamily: "system-ui, sans-serif",
 };
 const marketActions = {
   display: "inline-flex",

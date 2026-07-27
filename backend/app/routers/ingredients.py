@@ -124,14 +124,14 @@ def fetch_market_price(ingredient_id: int):
     birim (kg/lt/adet) fiyatını çıkarır. Zayıf/işlenmiş eşleşme 'güvenilmez' işaretlenir;
     o durumda malzeme fiyatı güncellenmez (menü planlayıcıya sızmaz)."""
     db = get_db()
-    ing_res = db.table("ingredients").select("id, name, unit").eq("id", ingredient_id).execute()
+    ing_res = db.table("ingredients").select("id, name, unit, market_price").eq("id", ingredient_id).execute()
     if not ing_res.data:
         raise HTTPException(status_code=404, detail="Ingredient not found")
     ingredient = ing_res.data[0]
 
     existing = (
         db.table("ingredient_market_prices")
-        .select("product_url")
+        .select("product_url, unit_price")
         .eq("ingredient_id", ingredient_id)
         .eq("source", "migros")
         .execute()
@@ -148,12 +148,21 @@ def fetch_market_price(ingredient_id: int):
     # LLM ajanı Migros'ta uygun ham ürün BULAMADIYSA (ör. karnabahar/mandalina taze yok):
     # kayıt yazma, malzeme verisine dokunma; frontend'e 'manuel giriş' durumu döndür.
     if info.get("needs_manual_entry"):
-        # eski eşleşme kaydını VE ondan yazılmış market_price kalıntısını temizle —
-        # yoksa 'Uludağ Mandalina içeceği'nin 556 TL/kg'ı malzemede yaşamaya devam eder
-        if existing.data:
+        # Eski yanlış eşleşmenin yazdığı market_price kalıntısını temizle (ör. 'Uludağ
+        # Mandalina içeceği'nin 556 TL/kg'ı) — AMA kullanıcının ELLE girdiği fiyata
+        # dokunma. Ayırt etme: market_price, eski Migros kaydının unit_price'ı ile
+        # birebir aynıysa o değer Migros'tan gelmiştir; farklıysa elle girilmiştir.
+        current_mp = ingredient.get("market_price")
+        stale_mp = existing.data[0].get("unit_price") if existing.data else None
+        came_from_migros = (
+            current_mp is not None and stale_mp is not None
+            and abs(float(current_mp) - float(stale_mp)) < 0.01
+        )
+        if came_from_migros:
             db.table("ingredients").update({
                 "market_price": None, "last_price_checked_at": None,
             }).eq("id", ingredient_id).execute()
+            current_mp = None
         db.table("ingredient_market_prices").delete().eq("ingredient_id", ingredient_id).eq("source", "migros").execute()
         return {
             "ingredient_id": ingredient_id, "source": "migros",
@@ -161,6 +170,8 @@ def fetch_market_price(ingredient_id: int):
             "reliable": False, "needs_verification": True, "needs_manual_entry": True,
             "verified_by_llm": info.get("verified_by_llm", False),
             "confidence": 0.0, "warning": info.get("warning"),
+            # elle girilmiş fiyat korunduysa frontend'e bildir (hücre onu gösterir)
+            "manual_price": current_mp,
         }
 
     # Güvenilmez eşleşme (ör. "Tavuk Göğsü" → "Tavuk Baget") malzemenin kendi
