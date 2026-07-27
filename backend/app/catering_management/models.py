@@ -22,7 +22,6 @@ class Role(str, enum.Enum):
     purchasing_staff = "PURCHASING_STAFF"
     researcher = "RESEARCHER"
     partner_company = "PARTNER_COMPANY"
-    system_support = "SYSTEM_SUPPORT"
 
 
 class LicensePlan(str, enum.Enum):
@@ -121,6 +120,7 @@ class UniversityMenuAssignment(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     menu_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    weekly_menu_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     university_id: Mapped[int] = mapped_column(ForeignKey("universities.id", ondelete="CASCADE"), index=True)
     company_id: Mapped[int] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"), index=True)
     assigned_by: Mapped[int] = mapped_column(ForeignKey("user_profiles.id", ondelete="CASCADE"), index=True)
@@ -150,38 +150,6 @@ class Student(Base):
     )
 
     user_profile: Mapped[UserProfile | None] = relationship()
-
-
-class ResearcherProfile(Base):
-    __tablename__ = "researcher_profiles"
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    user_profile_id: Mapped[int] = mapped_column(
-        ForeignKey("user_profiles.id", ondelete="CASCADE"),
-        unique=True,
-        index=True,
-    )
-    organization_name: Mapped[str] = mapped_column(String(160), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-    user_profile: Mapped[UserProfile] = relationship()
-
-
-class PartnerCompanyProfile(Base):
-    __tablename__ = "partner_company_profiles"
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    user_profile_id: Mapped[int] = mapped_column(
-        ForeignKey("user_profiles.id", ondelete="CASCADE"),
-        unique=True,
-        index=True,
-    )
-    partner_company_name: Mapped[str] = mapped_column(String(150), nullable=False)
-    brand_name: Mapped[str] = mapped_column(String(120), nullable=False)
-    product_category: Mapped[str | None] = mapped_column(String(80))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-    user_profile: Mapped[UserProfile] = relationship()
 
 
 class ResearchExportRequest(Base):

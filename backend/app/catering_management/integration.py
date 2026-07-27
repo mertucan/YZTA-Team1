@@ -33,11 +33,27 @@ def register_catering_routes(app):
         import uuid
         from datetime import date, timedelta
 
-        from sqlalchemy import or_, select
+        from sqlalchemy import inspect, or_, select, text
 
         from app.catering_management.models import Company, License, Role, RoleModel, University, UserProfile
 
         Base.metadata.create_all(bind=engine)
+        inspector = inspect(engine)
+        assignment_columns = {
+            column["name"]
+            for column in inspector.get_columns("university_menu_assignments")
+        }
+        if "weekly_menu_id" not in assignment_columns:
+            with engine.begin() as conn:
+                conn.execute(
+                    text("ALTER TABLE university_menu_assignments ADD COLUMN weekly_menu_id INTEGER")
+                )
+                conn.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS ix_university_menu_assignments_weekly_menu_id "
+                        "ON university_menu_assignments (weekly_menu_id)"
+                    )
+                )
         with SessionLocal() as db:
             existing_roles = set(db.scalars(select(RoleModel.role_name)).all())
             for role in Role:

@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import tabloDotLogo from "../../assets/tablo-dot-logo.png";
 import { modules } from "../../modules";
-
-const CATERING_SESSION_KEY = "catering_mock_session";
+import { readCateringSession } from "../../utils/cateringSession";
+import { moduleRoles, recordRoles } from "../../utils/roleAccess";
 
 const recordItems = [
   { to: "/ingredients", icon: "box", label: "Malzeme Deposu" },
@@ -34,37 +34,6 @@ const roleLabels = {
   RESEARCHER: "Araştırmacı",
   PARTNER_COMPANY: "Partner Firma",
 };
-
-const moduleRoles = {
-  "health-tracker": ["DIETITIAN", "RESEARCHER", "UNIVERSITY_ADMIN", "CATERING_ADMIN", "SUPER_ADMIN"],
-  "health-risk-analysis": ["DIETITIAN", "RESEARCHER", "UNIVERSITY_ADMIN", "CATERING_ADMIN", "SUPER_ADMIN"],
-  "student-health-flags": ["DIETITIAN", "UNIVERSITY_ADMIN", "SUPER_ADMIN"],
-  "ai-menu-planner": ["DIETITIAN", "CHEF"],
-  "research-export": ["RESEARCHER", "UNIVERSITY_ADMIN"],
-  "university-quality-integration": ["UNIVERSITY_ADMIN", "SUPER_ADMIN"],
-  "partner-products": ["PARTNER_COMPANY", "DIETITIAN", "CHEF", "CATERING_ADMIN", "SUPER_ADMIN"],
-  "sustainabilityscore": ["DIETITIAN", "CHEF", "OPERATIONS_MANAGER", "FINANCE_MANAGER", "CATERING_ADMIN", "UNIVERSITY_ADMIN", "SUPER_ADMIN", "RESEARCHER"],
-  "tender-invoice-management": ["FINANCE_MANAGER", "OPERATIONS_MANAGER", "CATERING_ADMIN", "UNIVERSITY_ADMIN", "SUPER_ADMIN", "DIETITIAN"],
-};
-
-const recordRoles = {
-  "/ingredients": ["CHEF", "OPERATIONS_MANAGER", "WAREHOUSE_STAFF", "PURCHASING_STAFF"],
-  "/meals": ["DIETITIAN", "CHEF"],
-  "/students": ["UNIVERSITY_ADMIN", "DIETITIAN", "RESEARCHER"],
-  "/absences": ["UNIVERSITY_ADMIN", "OPERATIONS_MANAGER"],
-  "/expenses": ["OPERATIONS_MANAGER", "FINANCE_MANAGER", "CATERING_ADMIN"],
-  "/orders": ["OPERATIONS_MANAGER", "PURCHASING_STAFF", "WAREHOUSE_STAFF", "CATERING_ADMIN"],
-};
-
-function readCateringSession() {
-  try {
-    const raw = localStorage.getItem(CATERING_SESSION_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
 
 function NavIcon({ name }) {
   const common = {
@@ -310,6 +279,13 @@ export default function Sidebar() {
           <span style={s.ico}><NavIcon name="home" /></span>
           <span style={s.navLabel}>Kontrol Paneli</span>
         </NavLink>
+
+        {isCateringUser && ["SUPER_ADMIN", "CATERING_ADMIN"].includes(role) && (
+          <NavLink to="/modules/catering-management/roles" style={navStyle}>
+            <span style={s.ico}><NavIcon name="key" /></span>
+            <span style={s.navLabel}>Rol Atamaları</span>
+          </NavLink>
+        )}
 
         {visibleRecordItems.length > 0 && (
           <>

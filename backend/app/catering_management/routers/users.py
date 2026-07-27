@@ -11,6 +11,16 @@ from app.catering_management.services import create_user_for_company
 
 router = APIRouter(prefix="/users", tags=["users"])
 
+COMPANY_ADMIN_BLOCKED_ROLES = {
+    Role.super_admin.value,
+}
+
+UNIVERSITY_ADMIN_ALLOWED_ROLES = {
+    Role.student.value,
+    Role.dietitian.value,
+    Role.chef.value,
+}
+
 
 @router.get("", response_model=list[UserRead])
 def list_users(
@@ -49,8 +59,11 @@ def create_user(
     if principal.role == Role.university_admin:
         if payload.university_id != principal.university_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot create users outside university scope")
-        if payload.role_name in {Role.super_admin.value, Role.catering_admin.value, Role.partner_company.value}:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot create company-level users")
+        if payload.role_name not in UNIVERSITY_ADMIN_ALLOWED_ROLES:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot create this role as university admin")
+    elif principal.role == Role.catering_admin:
+        if payload.role_name in COMPANY_ADMIN_BLOCKED_ROLES:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot create system-level users")
 
     return create_user_for_company(db, target_company_id, payload)
 
@@ -113,9 +126,14 @@ def update_user(
         user.university_id = payload.university_id
 
     if payload.role_name is not None:
+        if user.auth_user_id == principal.auth_user_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot change your own role")
         if principal.role == Role.university_admin:
-            if payload.role_name in {Role.super_admin.value, Role.catering_admin.value, Role.partner_company.value}:
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot assign company-level roles")
+            if payload.role_name not in UNIVERSITY_ADMIN_ALLOWED_ROLES:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot assign this role as university admin")
+        elif principal.role == Role.catering_admin:
+            if payload.role_name in COMPANY_ADMIN_BLOCKED_ROLES:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot assign system-level roles")
         
         role_row = db.scalar(select(RoleModel).where(RoleModel.role_name == payload.role_name))
         if role_row is None:

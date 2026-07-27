@@ -720,6 +720,37 @@
     color: #92400e;
 }
 
+[data-theme="dark"] .catering-management-scope .badge-role.super_admin {
+    background: rgba(248, 113, 113, 0.18);
+    color: #fecaca;
+    border: 1px solid rgba(248, 113, 113, 0.24);
+}
+
+[data-theme="dark"] .catering-management-scope .badge-role.catering_admin {
+    background: rgba(96, 165, 250, 0.18);
+    color: #bfdbfe;
+    border: 1px solid rgba(96, 165, 250, 0.24);
+}
+
+[data-theme="dark"] .catering-management-scope .badge-role.university_admin {
+    background: rgba(167, 139, 250, 0.18);
+    color: #ddd6fe;
+    border: 1px solid rgba(167, 139, 250, 0.24);
+}
+
+[data-theme="dark"] .catering-management-scope .badge-role.dietitian {
+    background: rgba(52, 211, 153, 0.18);
+    color: #bbf7d0;
+    border: 1px solid rgba(52, 211, 153, 0.24);
+}
+
+[data-theme="dark"] .catering-management-scope .badge-role.warehouse_staff,
+[data-theme="dark"] .catering-management-scope .badge-role.purchasing_staff {
+    background: rgba(251, 191, 36, 0.18);
+    color: #fde68a;
+    border: 1px solid rgba(251, 191, 36, 0.24);
+}
+
 .catering-management-scope .badge-plan {
     background: #f5f3ff;
     color: #5b21b6;
@@ -766,6 +797,157 @@
     font-size: 12px;
     font-weight: 800;
     white-space: nowrap;
+}
+
+.catering-management-scope .table-scroll {
+    overflow-x: auto;
+}
+
+.catering-management-scope .role-assignment-matrix {
+    margin-top: 0;
+    margin-bottom: 18px;
+}
+
+.catering-management-scope .role-matrix-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 18px;
+    border-bottom: 1px solid var(--border-color);
+    background:
+        linear-gradient(135deg, rgba(232, 128, 0, 0.10), rgba(34, 197, 94, 0.06)),
+        var(--bg-main);
+}
+
+.catering-management-scope .role-assignment-matrix h3,
+.catering-management-scope .role-current-assignments h3 {
+    margin: 0;
+    font-size: 16px;
+    color: var(--text-primary);
+}
+
+.catering-management-scope .role-assignment-matrix p,
+.catering-management-scope .role-current-assignments p {
+    margin: 4px 0 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.catering-management-scope .role-matrix-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(96px, 1fr));
+    gap: 8px;
+    min-width: min(420px, 100%);
+}
+
+.catering-management-scope .role-matrix-summary span {
+    display: grid;
+    gap: 2px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.catering-management-scope .role-matrix-summary strong {
+    color: var(--text-primary);
+    font-size: 18px;
+    line-height: 1;
+}
+
+.catering-management-scope .role-matrix-table th,
+.catering-management-scope .role-matrix-table td {
+    vertical-align: top;
+}
+
+.catering-management-scope .role-matrix-table.compact th,
+.catering-management-scope .role-matrix-table.compact td {
+    padding: 12px 16px;
+}
+
+.catering-management-scope .role-check {
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    display: inline-grid;
+    place-items: center;
+    font-size: 16px;
+    font-weight: 900;
+}
+
+.catering-management-scope .role-check.yes {
+    color: #15803d;
+    background: #dcfce7;
+    border: 1px solid #bbf7d0;
+}
+
+.catering-management-scope .role-check.no {
+    color: #b91c1c;
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+}
+
+.catering-management-scope .role-mini-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.catering-management-scope .role-current-assignments td small {
+    display: block;
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+[data-theme="dark"] .catering-management-scope .role-matrix-hero {
+    background:
+        linear-gradient(135deg, rgba(232, 128, 0, 0.18), rgba(34, 197, 94, 0.10)),
+        var(--bg-card);
+}
+
+[data-theme="dark"] .catering-management-scope .role-matrix-summary span {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .catering-management-scope .role-matrix-summary strong {
+    color: #ffffff;
+}
+
+[data-theme="dark"] .catering-management-scope .role-check.yes {
+    color: #bbf7d0;
+    background: rgba(34, 197, 94, 0.22);
+    border-color: rgba(74, 222, 128, 0.34);
+}
+
+[data-theme="dark"] .catering-management-scope .role-check.no {
+    color: #fecaca;
+    background: rgba(239, 68, 68, 0.22);
+    border-color: rgba(248, 113, 113, 0.34);
+}
+
+[data-theme="dark"] .catering-management-scope .role-mini-pill {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.14);
+    color: #e5e7eb;
+}
+
+[data-theme="dark"] .catering-management-scope .role-current-assignments td small {
+    color: #cbd5e1;
 }
 
 .catering-management-scope table {
@@ -1598,6 +1780,15 @@
     padding: 14px 2px 12px;
     user-select: none;
     scrollbar-width: none;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+    cursor: grab;
+    min-height: 286px;
+}
+
+.catering-management-scope .weekly-menu-calendar-rail,
+.catering-management-scope .weekly-menu-calendar-rail * {
+    -webkit-user-drag: none;
 }
 
 .catering-management-scope .weekly-menu-calendar-rail::-webkit-scrollbar {
@@ -1606,15 +1797,19 @@
 
 .catering-management-scope .weekly-menu-card {
     position: relative;
-    flex: 0 0 1040px;
-    max-width: calc(100vw - 390px);
+    flex: 0 0 min(1040px, calc(100% - 2px));
+    width: min(1040px, calc(100% - 2px));
     min-width: 780px;
     padding: 18px;
     border: 1px solid var(--border);
     border-radius: 14px;
     background: var(--surface);
     box-shadow: 0 14px 34px rgba(24, 24, 24, 0.08);
-    scroll-snap-align: center;
+    scroll-snap-align: start;
+}
+
+.catering-management-scope .weekly-menu-card.focused {
+    scroll-snap-align: start;
 }
 
 .catering-management-scope .weekly-menu-card.current {
@@ -1738,6 +1933,117 @@
     background: transparent;
     color: var(--text);
     min-height: 0;
+}
+
+.catering-management-scope .student-dashboard-shell {
+    display: grid;
+    gap: 18px;
+}
+
+.catering-management-scope .student-dash-header {
+    margin-bottom: 18px;
+}
+
+.catering-management-scope .student-welcome-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background:
+        linear-gradient(135deg, rgba(232, 128, 0, 0.10), rgba(37, 99, 235, 0.08)),
+        var(--surface);
+    box-shadow: 0 14px 34px rgba(24, 24, 24, 0.08);
+}
+
+.catering-management-scope .student-welcome-card span {
+    color: var(--text3);
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.catering-management-scope .student-welcome-card strong {
+    display: block;
+    margin-top: 4px;
+    color: var(--text);
+    font-size: 24px;
+    line-height: 1.15;
+}
+
+.catering-management-scope .student-welcome-card p {
+    max-width: 680px;
+    margin: 8px 0 0;
+    color: var(--text2);
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.catering-management-scope .student-profile-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(232, 128, 0, 0.24);
+    background: rgba(232, 128, 0, 0.10);
+    color: #c2410c;
+    white-space: nowrap;
+    font-weight: 900;
+}
+
+.catering-management-scope .student-profile-chip span {
+    color: inherit;
+    font-size: 12px;
+}
+
+.catering-management-scope .student-quick-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.catering-management-scope .student-quick-grid article {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 82px;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+}
+
+.catering-management-scope .student-quick-grid svg {
+    color: #e88000;
+}
+
+.catering-management-scope .student-quick-grid span {
+    display: block;
+    color: var(--text3);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.catering-management-scope .student-quick-grid strong {
+    display: block;
+    margin-top: 3px;
+    color: var(--text);
+    font-size: 15px;
+}
+
+[data-theme="dark"] .catering-management-scope .student-welcome-card {
+    background:
+        linear-gradient(135deg, rgba(232, 128, 0, 0.18), rgba(37, 99, 235, 0.12)),
+        var(--surface);
+}
+
+[data-theme="dark"] .catering-management-scope .student-profile-chip {
+    color: #fed7aa;
+    border-color: rgba(251, 146, 60, 0.30);
+    background: rgba(251, 146, 60, 0.14);
 }
 
 .catering-management-scope .catering-dash-metrics {
@@ -2169,6 +2475,10 @@
         max-width: none;
         min-width: 840px;
     }
+
+    .catering-management-scope .student-quick-grid {
+        grid-template-columns: 1fr 1fr;
+    }
 }
 
 @media (max-width: 760px) {
@@ -2177,8 +2487,14 @@
     }
 
     .catering-management-scope .catering-dash-metrics,
-    .catering-management-scope .catering-dash-grid {
+    .catering-management-scope .catering-dash-grid,
+    .catering-management-scope .student-quick-grid {
         grid-template-columns: 1fr;
+    }
+
+    .catering-management-scope .student-welcome-card {
+        align-items: flex-start;
+        flex-direction: column;
     }
 
     .catering-management-scope .donut-layout {

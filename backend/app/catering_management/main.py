@@ -40,6 +40,18 @@ def on_startup():
     if "password_hash" not in user_profile_columns:
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE user_profiles ADD COLUMN password_hash VARCHAR(255)"))
+    menu_assignment_columns = {
+        column["name"] for column in inspector.get_columns("university_menu_assignments")
+    }
+    if "weekly_menu_id" not in menu_assignment_columns:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE university_menu_assignments ADD COLUMN weekly_menu_id INTEGER"))
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_university_menu_assignments_weekly_menu_id "
+                    "ON university_menu_assignments (weekly_menu_id)"
+                )
+            )
 
     def default_password_hash() -> str:
         return bcrypt.hashpw("123456".encode("utf-8"), bcrypt.gensalt()).decode("utf-8")

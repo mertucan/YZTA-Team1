@@ -6,7 +6,7 @@ from bootstrap import *  # noqa: F401,F403
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 
-from app.catering_management.auth import get_current_principal
+from app.catering_management.auth import get_current_principal, require_company_scope
 from app.catering_management.models import Role
 from app.catering_management.routers.auth import (
     has_missing_password_hash,
@@ -69,3 +69,24 @@ class AuthTests(unittest.TestCase):
             exc_info.exception.detail,
             "Mock user profile not found or inactive",
         )
+
+    def test_researcher_does_not_require_company_scope(self):
+        profile = SimpleNamespace(
+            auth_user_id=uuid4(),
+            email="researcher@example.com",
+            company_id=None,
+            university_id=None,
+            role=Role.researcher,
+        )
+        principal = SimpleNamespace(
+            auth_user_id=profile.auth_user_id,
+            email=profile.email,
+            profile=profile,
+            company_id=None,
+            university_id=None,
+            role=Role.researcher,
+        )
+
+        scoped = require_company_scope(principal=principal, db=FakeDb())
+
+        self.assertIs(scoped, principal)

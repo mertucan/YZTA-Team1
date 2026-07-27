@@ -14,7 +14,7 @@ class CompanyCreate(BaseModel):
     company_name: str = Field(min_length=2, max_length=150)
     tax_number: str | None = Field(default=None, max_length=11, pattern=r"^\d{10,11}$")
     email: str | None = Field(default=None, max_length=150)
-    phone: str | None = Field(default=None, max_length=20)
+    phone: str | None = Field(default=None, pattern=r"^0\d{10}$")
     address: str | None = None
     plan_name: str = "Starter"
     max_users: int = Field(gt=0)
@@ -178,7 +178,8 @@ class AuthResponse(BaseModel):
 
 
 class MenuAssignmentCreate(BaseModel):
-    menu_id: uuid.UUID
+    weekly_menu_id: int = Field(gt=0)
+    menu_id: uuid.UUID | None = None
     university_id: int
     start_date: date
     end_date: date
@@ -196,6 +197,7 @@ class MenuAssignmentUpdate(BaseModel):
 class MenuAssignmentRead(BaseModel):
     id: int
     menu_id: uuid.UUID
+    weekly_menu_id: int | None
     university_id: int
     company_id: int
     assigned_by: int

@@ -9,9 +9,14 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.catering_management.core.config import get_settings
 from app.catering_management.core.database import get_db
-from app.catering_management.models import Role, UserProfile
+from app.catering_management.models import Role, University, UserProfile
 
 bearer_scheme = HTTPBearer(auto_error=False)
+
+NON_COMPANY_SCOPED_ROLES = {
+    Role.researcher,
+    Role.partner_company,
+}
 
 
 @dataclass(frozen=True)
@@ -87,10 +92,20 @@ def require_roles(*roles: Role):
     return dependency
 
 
-def require_company_scope(principal: Principal = Depends(get_current_principal)) -> Principal:
+def require_company_scope(
+    principal: Principal = Depends(get_current_principal),
+    db: Session = Depends(get_db),
+) -> Principal:
     if principal.role == Role.super_admin:
         return principal
+    if principal.role in NON_COMPANY_SCOPED_ROLES:
+        return principal
     if principal.company_id is None:
+        if principal.university_id is not None:
+            university = db.scalar(select(University).where(University.id == principal.university_id))
+            if university is not None:
+                principal.profile.company_id = university.company_id
+                return principal
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Company scope is required")
     return principal
 

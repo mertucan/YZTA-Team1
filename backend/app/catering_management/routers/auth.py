@@ -12,8 +12,6 @@ from app.catering_management.core.database import get_db
 from app.catering_management.models import (
     Company,
     License,
-    PartnerCompanyProfile,
-    ResearcherProfile,
     Role,
     RoleModel,
     Student,
@@ -160,21 +158,18 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
             detail="Bu rol ile herkese acik kayit olusturulamaz.",
         )
 
-    if payload.national_id:
-        existing_student = db.scalar(
-            select(Student).where(Student.national_id == payload.national_id)
+    if payload.national_id and requested_role != Role.student.value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="T.C. kimlik no yalnizca ogrenci kaydinda kullanilabilir.",
         )
-        if existing_student is not None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Bu T.C. kimlik numarasi ile ogrenci kaydi zaten var.",
-            )
 
     try:
         role_row = get_role_row(db, requested_role)
         company_id = None
         university_id = None
         full_name = payload.full_name.strip() if payload.full_name else ""
+        student_row = None
 
         if requested_role == Role.catering_admin.value:
             company_name = require_text(payload.company_name, "Firma adi")
@@ -225,13 +220,23 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
             require_text(payload.national_id, "T.C. kimlik no")
             university = get_public_university(db, payload.university_id)
             full_name = f"{first_name} {last_name}"
+            company_id = university.company_id
             university_id = university.id
+            student_row = db.scalar(
+                select(Student).where(Student.national_id == payload.national_id)
+            )
+            if student_row is not None and student_row.user_profile_id is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Bu ogrenci zaten bir kullanici hesabina bagli.",
+                )
 
         elif requested_role == Role.researcher.value:
             full_name = require_text(payload.full_name, "Ad soyad")
             require_text(payload.organization_name, "Kurum / universite")
             if payload.university_id is not None:
                 university = get_public_university(db, payload.university_id)
+                company_id = university.company_id
                 university_id = university.id
 
         elif requested_role == Role.partner_company.value:
@@ -254,32 +259,21 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
         db.flush()
 
         if requested_role == Role.student.value:
-            db.add(
-                Student(
-                    first_name=require_text(payload.first_name, "Ad"),
-                    last_name=require_text(payload.last_name, "Soyad"),
-                    national_id=require_text(payload.national_id, "T.C. kimlik no"),
-                    age=payload.age,
-                    user_profile_id=user.id,
+            if student_row is not None:
+                student_row.first_name = require_text(payload.first_name, "Ad")
+                student_row.last_name = require_text(payload.last_name, "Soyad")
+                student_row.age = payload.age
+                student_row.user_profile_id = user.id
+            else:
+                db.add(
+                    Student(
+                        first_name=require_text(payload.first_name, "Ad"),
+                        last_name=require_text(payload.last_name, "Soyad"),
+                        national_id=require_text(payload.national_id, "T.C. kimlik no"),
+                        age=payload.age,
+                        user_profile_id=user.id,
+                    )
                 )
-            )
-        elif requested_role == Role.researcher.value:
-            db.add(
-                ResearcherProfile(
-                    user_profile_id=user.id,
-                    organization_name=require_text(payload.organization_name, "Kurum / universite"),
-                )
-            )
-        elif requested_role == Role.partner_company.value:
-            db.add(
-                PartnerCompanyProfile(
-                    user_profile_id=user.id,
-                    partner_company_name=require_text(payload.partner_company_name, "Partner firma adi"),
-                    brand_name=require_text(payload.brand_name, "Marka adi"),
-                    product_category=payload.product_category,
-                )
-            )
-
         db.commit()
         db.refresh(user)
         _ = user.role_obj

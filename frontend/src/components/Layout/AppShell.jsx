@@ -8,9 +8,25 @@ import Orders from "../../pages/Orders";
 import Students from "../../pages/Students";
 import WelcomePage from "../../pages/WelcomePage";
 import { modules } from "../../modules";
-import { hasCateringSession } from "../../utils/cateringSession";
+import { hasCateringSession, readCateringSession } from "../../utils/cateringSession";
+import { canAccessModule, canAccessRecordPath, fallbackRouteForRole } from "../../utils/roleAccess";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
+
+function ProtectedRoute({ children, allow }) {
+  const session = readCateringSession();
+  const role = session?.user?.role_name;
+
+  if (!role) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (allow && !allow(role)) {
+    return <Navigate to={fallbackRouteForRole(role)} replace />;
+  }
+
+  return children;
+}
 
 export default function AppShell() {
   const { pathname } = useLocation();
@@ -35,16 +51,73 @@ export default function AppShell() {
         <Topbar />
         <main style={{ padding: 24, flex: 1, minWidth: 0, overflowX: "hidden" }}>
           <Routes>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/ingredients" element={<Ingredients />} />
-            <Route path="/meals" element={<Meals />} />
-            <Route path="/students" element={<Students />} />
-            <Route path="/absences" element={<Absences />} />
-            <Route path="/expenses" element={<Expenses />} />
-            <Route path="/orders" element={<Orders />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Navigate to="/modules/catering-management" replace />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ingredients"
+              element={
+                <ProtectedRoute allow={(role) => canAccessRecordPath(role, "/ingredients")}>
+                  <Ingredients />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/meals"
+              element={
+                <ProtectedRoute allow={(role) => canAccessRecordPath(role, "/meals")}>
+                  <Meals />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/students"
+              element={
+                <ProtectedRoute allow={(role) => canAccessRecordPath(role, "/students")}>
+                  <Students />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/absences"
+              element={
+                <ProtectedRoute allow={(role) => canAccessRecordPath(role, "/absences")}>
+                  <Absences />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/expenses"
+              element={
+                <ProtectedRoute allow={(role) => canAccessRecordPath(role, "/expenses")}>
+                  <Expenses />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/orders"
+              element={
+                <ProtectedRoute allow={(role) => canAccessRecordPath(role, "/orders")}>
+                  <Orders />
+                </ProtectedRoute>
+              }
+            />
 
             {modules.map((mod) => (
-              <Route key={mod.id} path={`${mod.route}/*`} element={<mod.component />} />
+              <Route
+                key={mod.id}
+                path={`${mod.route}/*`}
+                element={
+                  <ProtectedRoute allow={(role) => canAccessModule(role, mod.id)}>
+                    <mod.component />
+                  </ProtectedRoute>
+                }
+              />
             ))}
           </Routes>
         </main>

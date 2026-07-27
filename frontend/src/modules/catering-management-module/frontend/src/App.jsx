@@ -37,6 +37,8 @@ import {
 import { isSupabaseConfigured, supabase } from "./supabase";
 import { useRealtimeData } from "./hooks/useRealtimeData";
 import { RealtimeIndicator } from "./components/RealtimeIndicator";
+import { RegisterRoleFields } from "./components/RegisterRoleFields";
+import { RoleAssignmentMatrix } from "./components/RoleAssignmentMatrix";
 import LoadingSpinner from "../../../../components/LoadingSpinner";
 import { getMenu, getMenus } from "../../../ai-menu-planner/api/aiMenuPlanner";
 import tabloDotLogo from "../../../../assets/tablo-dot-logo.png";
@@ -54,7 +56,6 @@ const ROLE_LABELS = {
   PURCHASING_STAFF: "Satın Alma Sorumlusu",
   RESEARCHER: "Araştırmacı",
   PARTNER_COMPANY: "Partner Firma",
-  SYSTEM_SUPPORT: "Sistem Destek",
 };
 
 const PUBLIC_REGISTER_ROLE_VALUES = [
@@ -99,7 +100,46 @@ const ROLE_ACCESS = {
     "CHEF",
   ],
   companies: ["SUPER_ADMIN", "CATERING_ADMIN", "FINANCE_MANAGER"],
+  roles: ["SUPER_ADMIN", "CATERING_ADMIN"],
 };
+
+const ADMIN_DATA_ROLES = new Set([
+  "SUPER_ADMIN",
+  "CATERING_ADMIN",
+  "UNIVERSITY_ADMIN",
+  "DIETITIAN",
+  "CHEF",
+  "FINANCE_MANAGER",
+  "OPERATIONS_MANAGER",
+]);
+
+const USER_ROLE_OPTIONS = [
+  "SUPER_ADMIN",
+  "CATERING_ADMIN",
+  "UNIVERSITY_ADMIN",
+  "DIETITIAN",
+  "CHEF",
+  "FINANCE_MANAGER",
+  "OPERATIONS_MANAGER",
+  "STUDENT",
+  "WAREHOUSE_STAFF",
+  "PURCHASING_STAFF",
+  "RESEARCHER",
+  "PARTNER_COMPANY",
+];
+
+function getAssignableRoles(viewerRole) {
+  if (viewerRole === "SUPER_ADMIN") return USER_ROLE_OPTIONS;
+  if (viewerRole === "CATERING_ADMIN") {
+    return USER_ROLE_OPTIONS.filter(
+      (role) => role !== "SUPER_ADMIN",
+    );
+  }
+  if (viewerRole === "UNIVERSITY_ADMIN") {
+    return ["STUDENT", "DIETITIAN", "CHEF"];
+  }
+  return [];
+}
 
 function roleCan(role, key) {
   return Boolean(
@@ -107,12 +147,25 @@ function roleCan(role, key) {
   );
 }
 
+function GuardedCateringView({ role, accessKey, children }) {
+  if (!roleCan(role, accessKey)) {
+    return <Navigate to="/modules/catering-management" replace />;
+  }
+
+  return children;
+}
+
 function getCateringRouteKey(pathname) {
   if (pathname.endsWith("/universities")) return "universities";
   if (pathname.endsWith("/users")) return "users";
   if (pathname.endsWith("/menu-assignments")) return "menuAssignments";
   if (pathname.endsWith("/companies")) return "companies";
+  if (pathname.endsWith("/roles")) return "roles";
   return "dashboard";
+}
+
+function canLoadAdminData(role) {
+  return ADMIN_DATA_ROLES.has(role);
 }
 
 function getPasswordStrength(password) {
@@ -253,7 +306,9 @@ function getRoleAwareRegisterValidation({
     if (partnerCompanyName.trim().length < 2) errors.push("Partner firma adını girin.");
     if (brandName.trim().length < 2) errors.push("Marka adını girin.");
   }
-  if (phone && phone.replace(/\D/g, "").length < 10) errors.push("Telefon numarasını kontrol edin.");
+  if (phone && !/^0\d{10}$/.test(phone.replace(/\D/g, ""))) {
+    errors.push("Telefon numarasını 05555555555 formatında girin.");
+  }
   if (!isValidEmail(email)) errors.push("Geçerli bir e-posta girin.");
   if (password.length < 6) errors.push("Şifre en az 6 karakter olmalı.");
   if (strength.score < 2) errors.push("Daha güçlü bir şifre seçin.");
@@ -338,6 +393,33 @@ function mondayOf(date) {
 
 function isoLocal(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function addDaysIso(dateString, days) {
+  if (!dateString) return "";
+  const date = new Date(`${dateString}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  return isoLocal(date);
+}
+
+function getWeeklyMenuStatusLabel(status) {
+  return String(status).toLowerCase() === "approved" ? "Onaylandı" : "Taslak";
+}
+
+function formatWeeklyMenuLabel(menu) {
+  if (!menu) return "Menü seçilmedi";
+  const start = new Date(`${menu.week_start_date}T00:00:00`);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  return `${formatMenuDateShort(start)} - ${formatMenuDateShort(end)} | ${getWeeklyMenuStatusLabel(menu.status)} | Bütçe ${Number(menu.budget || 0).toFixed(0)} TL`;
+}
+
+function sortWeeklyMenus(menus) {
+  return [...(menus || [])].sort((a, b) => {
+    const dateDiff = new Date(`${b.week_start_date}T00:00:00`) - new Date(`${a.week_start_date}T00:00:00`);
+    if (dateDiff !== 0) return dateDiff;
+    return Number(b.id || 0) - Number(a.id || 0);
+  });
 }
 
 function pickRepresentativeMenu(menusForWeek) {
@@ -685,21 +767,171 @@ function MenuBars({ menuAssignments }) {
   );
 }
 
-function WeeklyMenuCalendar() {
+function StudentDashboard({ currentUser }) {
+  return (
+    <>
+      <header className="content-header catering-dash-header student-dash-header">
+        <div>
+          <h1>Öğrenci Paneli</h1>
+          <p>Haftalık yemekhane menüsünü ve öğrenci hesabınızı buradan takip edin.</p>
+        </div>
+      </header>
+
+      <div className="student-dashboard-shell">
+        <section className="student-welcome-card">
+          <div>
+            <span>Hoş geldin</span>
+            <strong>{currentUser?.full_name || "Öğrenci"}</strong>
+            <p>Bu haftanın yemekhane menüsü aşağıda öne çıkarılır.</p>
+          </div>
+          <div className="student-profile-chip">
+            <Users size={18} />
+            <span>{ROLE_LABELS[currentUser?.role_name] || "Öğrenci"}</span>
+          </div>
+        </section>
+
+        <div className="student-quick-grid">
+          <article>
+            <Calendar size={20} />
+            <div>
+              <span>Menü Takvimi</span>
+              <strong>Haftalık görünüm</strong>
+            </div>
+          </article>
+          <article>
+            <ShieldCheck size={20} />
+            <div>
+              <span>Hesap Durumu</span>
+              <strong>{currentUser?.is_active ? "Aktif" : "Pasif"}</strong>
+            </div>
+          </article>
+          <article>
+            <Building2 size={20} />
+            <div>
+              <span>Üniversite Bağlantısı</span>
+              <strong>{currentUser?.university_id ? "Tanımlı" : "Bekliyor"}</strong>
+            </div>
+          </article>
+        </div>
+
+        <WeeklyMenuCalendar assignedOnly />
+      </div>
+    </>
+  );
+}
+
+function FocusedRoleDashboard({ currentUser }) {
+  const roleName = currentUser?.role_name;
+  const copy = {
+    RESEARCHER: {
+      title: "Araştırmacı Paneli",
+      description: "Araştırma çıktıları ve veri dışa aktarım süreçleri için ilgili modülleri kullanın.",
+      primary: "Araştırma dışa aktarımları",
+      secondary: "Anonim veri akışları",
+    },
+    PARTNER_COMPANY: {
+      title: "Partner Firma Paneli",
+      description: "Ürün kataloğu ve tedarik süreçleri için partner ürünleri modülünü kullanın.",
+      primary: "Partner ürünleri",
+      secondary: "Tedarik görünümü",
+    },
+    WAREHOUSE_STAFF: {
+      title: "Depo Paneli",
+      description: "Stok ve depo hareketleri için malzeme deposu ekranını kullanın.",
+      primary: "Stok / depo",
+      secondary: "Malzeme takibi",
+    },
+    PURCHASING_STAFF: {
+      title: "Satın Alma Paneli",
+      description: "Sipariş, satın alma ve tedarik süreçleri için ilgili kayıt ve modülleri kullanın.",
+      primary: "Siparişler",
+      secondary: "Tedarik ürünleri",
+    },
+  }[roleName];
+
+  if (!copy) return null;
+
+  return (
+    <>
+      <header className="content-header catering-dash-header student-dash-header">
+        <div>
+          <h1>{copy.title}</h1>
+          <p>{copy.description}</p>
+        </div>
+      </header>
+      <div className="student-dashboard-shell">
+        <section className="student-welcome-card">
+          <div>
+            <span>Rolünüz</span>
+            <strong>{ROLE_LABELS[roleName] || roleName}</strong>
+            <p>{copy.description}</p>
+          </div>
+          <div className="student-profile-chip">
+            <Key size={18} />
+            <span>Yetkili görünüm</span>
+          </div>
+        </section>
+        <div className="student-quick-grid">
+          <article>
+            <ShieldCheck size={20} />
+            <div>
+              <span>Birincil alan</span>
+              <strong>{copy.primary}</strong>
+            </div>
+          </article>
+          <article>
+            <Globe size={20} />
+            <div>
+              <span>İkincil alan</span>
+              <strong>{copy.secondary}</strong>
+            </div>
+          </article>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function WeeklyMenuCalendar({ assignedOnly = false } = {}) {
   const [menusDetailed, setMenusDetailed] = useState(null);
   const [error, setError] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const scrollerRef = useRef(null);
   const currentWeekRef = useRef(null);
-  const dragRef = useRef({ isDown: false, startX: 0, scrollLeft: 0 });
+  const dragRef = useRef({ isDown: false, startX: 0, scrollLeft: 0, moved: false });
 
   useEffect(() => {
     let active = true;
 
-    getMenus()
-      .then(async (list) => {
+    async function loadMenus() {
+      try {
+        let menuIds;
+        if (assignedOnly) {
+          const assignments = await apiGet("/menu-assignments");
+          menuIds = [
+            ...new Set(
+              assignments
+                .filter(
+                  (assignment) =>
+                    assignment.weekly_menu_id &&
+                    assignment.is_published &&
+                    String(assignment.status).toUpperCase() === "ACTIVE",
+                )
+                .map((assignment) => Number(assignment.weekly_menu_id)),
+            ),
+          ];
+        } else {
+          const list = await getMenus();
+          menuIds = list.map((menu) => menu.id);
+        }
+
+        if (!menuIds.length) {
+          if (active) setMenusDetailed([]);
+          return;
+        }
+
         const results = await Promise.allSettled(
-          list.map((menu) => getMenu(menu.id)),
+          menuIds.map((menuId) => getMenu(menuId)),
         );
         if (!active) return;
         setMenusDetailed(
@@ -707,17 +939,19 @@ function WeeklyMenuCalendar() {
             .filter((result) => result.status === "fulfilled")
             .map((result) => result.value),
         );
-      })
-      .catch(() => {
+      } catch {
         if (!active) return;
         setError(true);
         setMenusDetailed([]);
-      });
+      }
+    }
+
+    loadMenus();
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [assignedOnly]);
 
   const weekCards = useMemo(() => {
     if (!menusDetailed) return [];
@@ -731,7 +965,7 @@ function WeeklyMenuCalendar() {
     });
 
     const today = startOfDay(new Date());
-    return Array.from(byWeek.entries())
+    const cards = Array.from(byWeek.entries())
       .map(([weekStartStr, menusForWeek]) => {
         const menu = pickRepresentativeMenu(menusForWeek);
         const weekStart = startOfDay(new Date(`${weekStartStr}T00:00:00`));
@@ -746,11 +980,29 @@ function WeeklyMenuCalendar() {
         };
       })
       .sort((a, b) => a.weekStart - b.weekStart);
+
+    if (!cards.length) return [];
+
+    const currentIndex = cards.findIndex((card) => card.isCurrent);
+    const upcomingIndex = cards.findIndex((card) => card.weekStart > today);
+    const focusIndex = currentIndex >= 0
+      ? currentIndex
+      : upcomingIndex >= 0
+        ? upcomingIndex
+        : cards.length - 1;
+
+    return cards
+      .map((card, index) => ({ ...card, isFocused: index === focusIndex }))
+      .sort((a, b) => {
+        if (a.isFocused !== b.isFocused) return a.isFocused ? -1 : 1;
+        return a.weekStart - b.weekStart;
+      });
   }, [menusDetailed]);
 
   useEffect(() => {
     if (!weekCards.length) return;
-    const frame = requestAnimationFrame(() => {
+    let retryId;
+    const scrollToFocusedWeek = () => {
       const card = currentWeekRef.current;
       const scroller = scrollerRef.current;
       if (!card || !scroller) return;
@@ -758,27 +1010,55 @@ function WeeklyMenuCalendar() {
         left: card.offsetLeft - (scroller.clientWidth - card.clientWidth) / 2,
         behavior: "auto",
       });
+    };
+    const frame = requestAnimationFrame(() => {
+      scrollToFocusedWeek();
+      retryId = window.setTimeout(scrollToFocusedWeek, 80);
     });
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(frame);
+      if (retryId) window.clearTimeout(retryId);
+    };
   }, [weekCards.length]);
 
-  const handlePointerDown = (event) => {
+  const beginDrag = (pageX) => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
     dragRef.current = {
       isDown: true,
-      startX: event.pageX,
+      startX: pageX,
       scrollLeft: scroller.scrollLeft,
+      moved: false,
     };
     setIsDragging(true);
   };
 
-  const handlePointerMove = (event) => {
+  const moveDrag = (pageX) => {
     if (!dragRef.current.isDown) return;
     const scroller = scrollerRef.current;
     if (!scroller) return;
-    const dx = event.pageX - dragRef.current.startX;
+    const dx = pageX - dragRef.current.startX;
+    if (Math.abs(dx) > 4) dragRef.current.moved = true;
     scroller.scrollLeft = dragRef.current.scrollLeft - dx;
+  };
+
+  const handleMouseDown = (event) => {
+    if (event.button !== 0) return;
+    beginDrag(event.pageX);
+  };
+
+  const handleMouseMove = (event) => {
+    if (!dragRef.current.isDown) return;
+    moveDrag(event.pageX);
+  };
+
+  const handleTouchStart = (event) => {
+    beginDrag(event.touches[0].pageX);
+  };
+
+  const handleTouchMove = (event) => {
+    if (!dragRef.current.isDown) return;
+    moveDrag(event.touches[0].pageX);
   };
 
   const endDrag = () => {
@@ -799,23 +1079,42 @@ function WeeklyMenuCalendar() {
         </div>
       ) : error || weekCards.length === 0 ? (
         <div className="weekly-menu-calendar-state">
-          Henüz oluşturulmuş haftalık menü bulunamadı.
+          {assignedOnly
+            ? "Henüz yayınlanmış yemekhane menüsü bulunamadı."
+            : "Henüz oluşturulmuş haftalık menü bulunamadı."}
         </div>
       ) : (
         <div
           ref={scrollerRef}
-          className="weekly-menu-calendar-rail"
-          onMouseDown={handlePointerDown}
-          onMouseMove={handlePointerMove}
+          className="weekly-menu-calendar-rail no-scrollbar"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
           onMouseUp={endDrag}
           onMouseLeave={endDrag}
-          style={{ cursor: isDragging ? "grabbing" : "grab" }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={endDrag}
+          onTouchCancel={endDrag}
+          style={{
+            display: "flex",
+            gap: 16,
+            overflowX: "auto",
+            padding: "18px 0 12px",
+            cursor: isDragging ? "grabbing" : "grab",
+            userSelect: isDragging ? "none" : "auto",
+            scrollSnapType: isDragging ? "none" : "x proximity",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+          }}
         >
-          {weekCards.map(({ menu, weekStart, weekEnd, isCurrent, isPast }) => (
+          {weekCards.map(({ menu, weekStart, weekEnd, isCurrent, isPast, isFocused }) => (
             <article
               key={menu.id}
-              ref={isCurrent ? currentWeekRef : null}
-              className={`weekly-menu-card${isCurrent ? " current" : ""}${isPast && !isCurrent ? " past" : ""}`}
+              ref={isFocused ? currentWeekRef : null}
+              className={`weekly-menu-card${isCurrent ? " current" : ""}${isPast && !isCurrent ? " past" : ""}${isFocused ? " focused" : ""}`}
+              style={{
+                scrollSnapAlign: "center",
+              }}
             >
               {isCurrent && <div className="weekly-menu-badge">BU HAFTA</div>}
               <div className="weekly-menu-card-head">
@@ -882,6 +1181,14 @@ function CateringDashboard({
   companies,
   currentUser,
 }) {
+  if (currentUser?.role_name === "STUDENT") {
+    return <StudentDashboard currentUser={currentUser} />;
+  }
+
+  if (["RESEARCHER", "PARTNER_COMPANY", "WAREHOUSE_STAFF", "PURCHASING_STAFF"].includes(currentUser?.role_name)) {
+    return <FocusedRoleDashboard currentUser={currentUser} />;
+  }
+
   const totalStudents = universities.reduce(
     (sum, university) => sum + Number(university.student_count || 0),
     0,
@@ -1035,6 +1342,97 @@ function CateringDashboard({
   );
 }
 
+function RoleAssignmentsView({ users, universities, currentUser, onEditUser }) {
+  return (
+    <>
+      <header className="content-header">
+        <div>
+          <h1>Rol Atamaları</h1>
+          <p>
+            Public kayıt rollerini, iç atama kurallarını ve mevcut kullanıcı
+            rollerini tek ekranda inceleyin.
+          </p>
+        </div>
+      </header>
+
+      <RoleAssignmentMatrix
+        roleLabels={ROLE_LABELS}
+        viewerRole={currentUser?.role_name}
+      />
+
+      <section className="table-card role-current-assignments">
+        <div className="table-toolbar">
+          <div>
+            <h3>Mevcut Kullanıcı Rolleri</h3>
+            <p>Kullanıcının rolünü değiştirmek için düzenle aksiyonunu kullanın.</p>
+          </div>
+          <span className="table-count">{users.length} kullanıcı</span>
+        </div>
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Kullanıcı</th>
+                <th>Rol</th>
+                <th>Üniversite</th>
+                <th>Durum</th>
+                <th className="actions-col">İşlem</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="text-center">
+                    Kullanıcı kaydı bulunamadı.
+                  </td>
+                </tr>
+              ) : (
+                users.map((user) => {
+                  const universityName =
+                    universities.find((u) => u.id === user.university_id)
+                      ?.university_name || "-";
+                  return (
+                    <tr key={user.id}>
+                      <td>
+                        <strong>{user.full_name}</strong>
+                        <small>{user.email}</small>
+                      </td>
+                      <td>
+                        <span className={`badge badge-role ${user.role_name.toLowerCase()}`}>
+                          {ROLE_LABELS[user.role_name] || user.role_name}
+                        </span>
+                      </td>
+                      <td>{universityName}</td>
+                      <td>
+                        <span className={`pill pill-${user.is_active ? "active" : "inactive"}`}>
+                          {user.is_active ? "Aktif" : "Pasif"}
+                        </span>
+                      </td>
+                      <td className="actions-col">
+                        {user.auth_user_id !== currentUser?.auth_user_id ? (
+                          <button
+                            className="icon-btn btn-edit"
+                            onClick={() => onEditUser(user)}
+                            title="Rolü düzenle"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </>
+  );
+}
+
 function CateringManagementContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -1106,6 +1504,7 @@ function CateringManagementContent() {
   const [universities, setUniversities] = useState([]);
   const [users, setUsers] = useState([]);
   const [menuAssignments, setMenuAssignments] = useState([]);
+  const [weeklyMenus, setWeeklyMenus] = useState([]);
   const [companies, setCompanies] = useState([]);
 
   const [error, setError] = useState(null);
@@ -1151,6 +1550,7 @@ function CateringManagementContent() {
 
   const [menuForm, setMenuForm] = useState({
     menu_id: "",
+    weekly_menu_id: "",
     university_id: "",
     start_date: "",
     end_date: "",
@@ -1262,6 +1662,7 @@ function CateringManagementContent() {
         setUniversities([]);
         setUsers([]);
         setMenuAssignments([]);
+        setWeeklyMenus([]);
         setCompanies([]);
         setModalType(null);
         resetAuthForm();
@@ -1283,60 +1684,9 @@ function CateringManagementContent() {
       return;
     }
     setLoading(true);
-    apiGet("/users")
-      .then((profiles) => {
-        const mockSessionStr = localStorage.getItem(CATERING_SESSION_KEY);
-        if (mockSessionStr) {
-          try {
-            const mockSession = JSON.parse(mockSessionStr);
-            const myProfile = profiles.find(
-              (p) => p.email === mockSession.user.email,
-            );
-            if (myProfile) {
-              setCurrentUser(myProfile);
-            } else if (mockSession.user.email === "superadmin@catering.com") {
-              setCurrentUser({
-                id: "00000000-0000-0000-0000-000000000000",
-                auth_user_id: "00000000-0000-0000-0000-000000000000",
-                company_id: null,
-                university_id: null,
-                email: mockSession.user.email,
-                full_name: "Süper Admin Yetkilisi",
-                role_name: "SUPER_ADMIN",
-                phone: null,
-                is_active: true,
-                created_at: new Date().toISOString(),
-              });
-            }
-          } catch {
-            // ignore
-          }
-          return;
-        }
-
-        // Find current authenticated user's profile
-        supabase.auth.getUser().then(({ data }) => {
-          const authId = data.user?.id;
-          const myProfile = profiles.find((p) => p.auth_user_id === authId);
-          if (myProfile) {
-            setCurrentUser(myProfile);
-          } else {
-            // Super admin or out-of-band profile creation fallback
-            // Create a temporary representation if not in table
-            setCurrentUser({
-              id: "00000000-0000-0000-0000-000000000000",
-              auth_user_id: authId || "",
-              company_id: null,
-              university_id: null,
-              email: data.user?.email || "superadmin@system.local",
-              full_name: "Sistem Yöneticisi",
-              role_name: "SUPER_ADMIN",
-              phone: null,
-              is_active: true,
-              created_at: new Date().toISOString(),
-            });
-          }
-        });
+    apiGet("/auth/me")
+      .then((profile) => {
+        setCurrentUser(profile);
       })
       .catch((err) => {
         setError(err.message);
@@ -1359,11 +1709,24 @@ function CateringManagementContent() {
 
   // Load view data
   const loadData = (silent = false) => {
-    if (!isAuthed) return Promise.resolve();
+    if (!isAuthed || !currentUser) return Promise.resolve();
     if (!silent) {
       setLoading(true);
     }
     setError(null);
+
+    if (!canLoadAdminData(currentUser.role_name)) {
+      setDashboard(null);
+      setUniversities([]);
+      setUsers([]);
+      setMenuAssignments([]);
+      setWeeklyMenus([]);
+      setCompanies([]);
+      if (!silent) {
+        setLoading(false);
+      }
+      return Promise.resolve();
+    }
 
     const fetches = [
       apiGet("/dashboard"),
@@ -1400,10 +1763,31 @@ function CateringManagementContent() {
       });
   };
 
+  function refreshWeeklyMenus() {
+    return getMenus()
+      .then((menus) => {
+        const sortedMenus = sortWeeklyMenus(menus);
+        setWeeklyMenus(sortedMenus);
+        return sortedMenus;
+      })
+      .catch(() => {
+        setWeeklyMenus([]);
+        return [];
+      });
+  }
+
   useEffect(() => {
     if (isAuthed && currentUser) {
       // Initial full load (with loading spinner)
       loadData(false);
+    }
+  }, [isAuthed, currentUser]);
+
+  useEffect(() => {
+    if (isAuthed && currentUser && roleCan(currentUser.role_name, "menuAssignments")) {
+      refreshWeeklyMenus();
+    } else {
+      setWeeklyMenus([]);
     }
   }, [isAuthed, currentUser]);
 
@@ -1458,6 +1842,15 @@ function CateringManagementContent() {
   }, [universities, users, menuAssignments, dateFilter, companyFilter]);
 
   const normalizeSearch = (value) => String(value || "").toLocaleLowerCase("tr-TR");
+  const weeklyMenusById = useMemo(
+    () => new Map(weeklyMenus.map((menu) => [Number(menu.id), menu])),
+    [weeklyMenus],
+  );
+  const selectedWeeklyMenu = weeklyMenusById.get(Number(menuForm.weekly_menu_id));
+  const menuAssignableUniversities =
+    currentUser?.role_name === "SUPER_ADMIN" && menuForm.company_id
+      ? universities.filter((university) => String(university.company_id) === String(menuForm.company_id))
+      : universities;
   const visibleUniversities = universities.filter((univ) => {
     const q = normalizeSearch(universitySearch);
     return !q || normalizeSearch(`${univ.university_name} ${univ.city} ${univ.student_count}`).includes(q);
@@ -1471,7 +1864,8 @@ function CateringManagementContent() {
     const q = normalizeSearch(menuAssignmentSearch);
     const uName = universities.find((u) => u.id === menu.university_id)?.university_name || "";
     const assignerName = users.find((u) => u.id === menu.assigned_by)?.full_name || "";
-    return !q || normalizeSearch(`${menu.menu_id} ${uName} ${assignerName} ${menu.status} ${menu.start_date} ${menu.end_date}`).includes(q);
+    const weeklyMenuLabel = formatWeeklyMenuLabel(weeklyMenusById.get(Number(menu.weekly_menu_id)));
+    return !q || normalizeSearch(`${weeklyMenuLabel} ${menu.menu_id} ${uName} ${assignerName} ${menu.status} ${menu.start_date} ${menu.end_date}`).includes(q);
   });
   const visibleCompanies = companies.filter((comp) => {
     const q = normalizeSearch(companySearch);
@@ -1622,7 +2016,7 @@ function CateringManagementContent() {
       });
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.detail ?? "Firma kaydı oluşturulamadı.");
+        throw new Error(data.detail ?? "Kayıt oluşturulamadı.");
       }
 
       setAuthMode("login");
@@ -1638,12 +2032,10 @@ function CateringManagementContent() {
       setRegisterUniversityId("");
       setRegisterPhone("");
       setOrganizationName("");
-      setResearchPurpose("");
-      setDataAccessReason("");
       setPartnerCompanyName("");
       setBrandName("");
       setProductCategory("");
-      setInfo("Firma kaydı oluşturuldu. Giriş yaparak devam edebilirsiniz.");
+      setInfo("Kayıt başarılı. Giriş yaparak devam edebilirsiniz.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Bir hata oluştu.");
     } finally {
@@ -1667,6 +2059,7 @@ function CateringManagementContent() {
     setUniversities([]);
     setUsers([]);
     setMenuAssignments([]);
+    setWeeklyMenus([]);
     setCompanies([]);
   }
 
@@ -1799,12 +2192,18 @@ function CateringManagementContent() {
     try {
       setLoading(true);
       setError(null);
+      if (!menuForm.weekly_menu_id) {
+        throw new Error("Atanacak haftalık menüyü seçin.");
+      }
+      if (!menuForm.university_id) {
+        throw new Error("Menünün atanacağı üniversiteyi seçin.");
+      }
       const url =
         currentUser?.role_name === "SUPER_ADMIN"
           ? `/menu-assignments?company_id=${menuForm.company_id}`
           : "/menu-assignments";
       await apiPost(url, {
-        menu_id: menuForm.menu_id,
+        weekly_menu_id: Number(menuForm.weekly_menu_id),
         university_id: menuForm.university_id,
         start_date: menuForm.start_date,
         end_date: menuForm.end_date,
@@ -2009,17 +2408,29 @@ function CateringManagementContent() {
     setModalType("edit-user");
   };
 
-  const openAddMenuModal = () => {
+  const openAddMenuModal = async () => {
+    const menuOptions = await refreshWeeklyMenus();
+    const defaultWeeklyMenu = (menuOptions.length ? menuOptions : weeklyMenus).find(
+      (menu) => String(menu.status).toLowerCase() === "approved",
+    ) || (menuOptions.length ? menuOptions : weeklyMenus)[0];
+    const defaultCompanyId = companies[0]?.id || "";
+    const defaultUniversity =
+      currentUser?.role_name === "SUPER_ADMIN" && defaultCompanyId
+        ? universities.find((university) => String(university.company_id) === String(defaultCompanyId))
+        : universities[0];
     setMenuForm({
-      menu_id: crypto.randomUUID(),
-      university_id: universities[0]?.id || "",
-      start_date: new Date().toISOString().split("T")[0],
-      end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0],
+      menu_id: "",
+      weekly_menu_id: defaultWeeklyMenu?.id || "",
+      university_id: defaultUniversity?.id || "",
+      start_date: defaultWeeklyMenu?.week_start_date || new Date().toISOString().split("T")[0],
+      end_date: defaultWeeklyMenu
+        ? addDaysIso(defaultWeeklyMenu.week_start_date, 6)
+        : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .split("T")[0],
       status: "ACTIVE",
       is_published: false,
-      company_id: companies[0]?.id || "",
+      company_id: defaultCompanyId,
     });
     setModalType("add-menu");
   };
@@ -2028,6 +2439,7 @@ function CateringManagementContent() {
     setSelectedMenu(menu);
     setMenuForm({
       menu_id: menu.menu_id,
+      weekly_menu_id: menu.weekly_menu_id || "",
       university_id: menu.university_id,
       start_date: menu.start_date,
       end_date: menu.end_date,
@@ -2320,73 +2732,42 @@ function CateringManagementContent() {
                 </div>
               )}
 
-              {registerRole === "STUDENT" ? (
-                <>
-                  <div className="input-group">
-                    <label>Ad</label>
-                    <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Ahmet" />
-                  </div>
-                  <div className="input-group">
-                    <label>Soyad</label>
-                    <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Yılmaz" />
-                  </div>
-                  <div className="input-group">
-                    <label>T.C. Kimlik No</label>
-                    <input type="text" inputMode="numeric" maxLength={11} value={nationalId} onChange={(e) => setNationalId(e.target.value.replace(/\D/g, "").slice(0, 11))} placeholder="11 haneli kimlik no" />
-                  </div>
-                  <div className="input-group">
-                    <label>Yaş</label>
-                    <input type="number" min="0" value={studentAge} onChange={(e) => setStudentAge(e.target.value)} placeholder="20" />
-                  </div>
-                </>
-              ) : (
-                <div className="input-group">
-                  <label>{registerRole === "PARTNER_COMPANY" ? "Yetkili Ad Soyad" : "Ad Soyad"}</label>
-                  <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Ahmet Yılmaz" />
-                </div>
-              )}
-
-              {["UNIVERSITY_ADMIN", "STUDENT", "RESEARCHER"].includes(registerRole) && (
-                <div className="input-group">
-                  <label>{registerRole === "RESEARCHER" ? "Bağlı Üniversite (opsiyonel)" : "Üniversite"}</label>
-                  <select value={registerUniversityId} onChange={(e) => setRegisterUniversityId(e.target.value)}>
-                    <option value="">Üniversite seçin</option>
-                    {registerOptions.universities.map((university) => (
-                      <option key={university.id} value={university.id}>{university.university_name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {registerRole === "RESEARCHER" && (
-                <>
-                  <div className="input-group">
-                    <label>Kurum / Üniversite</label>
-                    <input type="text" value={organizationName} onChange={(e) => setOrganizationName(e.target.value)} placeholder="Araştırma kurumunuz" />
-                  </div>
-                </>
-              )}
-
-              {registerRole === "PARTNER_COMPANY" && (
-                <>
-                  <div className="input-group">
-                    <label>Partner Firma Adı</label>
-                    <input type="text" value={partnerCompanyName} onChange={(e) => setPartnerCompanyName(e.target.value)} placeholder="Tedarikçi firma" />
-                  </div>
-                  <div className="input-group">
-                    <label>Marka Adı</label>
-                    <input type="text" value={brandName} onChange={(e) => setBrandName(e.target.value)} placeholder="Marka" />
-                  </div>
-                  <div className="input-group">
-                    <label>Ürün Kategorisi (opsiyonel)</label>
-                    <input type="text" value={productCategory} onChange={(e) => setProductCategory(e.target.value)} placeholder="Süt ürünleri, atıştırmalık..." />
-                  </div>
-                </>
-              )}
+              <RegisterRoleFields
+                registerRole={registerRole}
+                firstName={firstName}
+                setFirstName={setFirstName}
+                lastName={lastName}
+                setLastName={setLastName}
+                nationalId={nationalId}
+                setNationalId={setNationalId}
+                studentAge={studentAge}
+                setStudentAge={setStudentAge}
+                fullName={fullName}
+                setFullName={setFullName}
+                registerUniversityId={registerUniversityId}
+                setRegisterUniversityId={setRegisterUniversityId}
+                registerOptions={registerOptions}
+                organizationName={organizationName}
+                setOrganizationName={setOrganizationName}
+                partnerCompanyName={partnerCompanyName}
+                setPartnerCompanyName={setPartnerCompanyName}
+                brandName={brandName}
+                setBrandName={setBrandName}
+                productCategory={productCategory}
+                setProductCategory={setProductCategory}
+                digitsOnly={digitsOnly}
+              />
 
               <div className="input-group">
                 <label>Telefon {registerRole === "STUDENT" || registerRole === "RESEARCHER" ? "(opsiyonel)" : ""}</label>
-                <input type="tel" value={registerPhone} onChange={(e) => setRegisterPhone(e.target.value)} placeholder="05xx xxx xx xx" />
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={11}
+                  value={registerPhone}
+                  onChange={(e) => setRegisterPhone(digitsOnly(e.target.value, 11))}
+                  placeholder="05555555555"
+                />
               </div>
               <div className="input-group">
                 <label>E-posta</label>
@@ -2475,6 +2856,14 @@ function CateringManagementContent() {
             </section>
           </div>
         </div>
+      </main>
+    );
+  }
+
+  if (isAuthed && !currentUser) {
+    return (
+      <main className="loading-container dashboard-loading-container" aria-label="Profil yükleniyor">
+        <div className="spinner"></div>
       </main>
     );
   }
@@ -2621,7 +3010,8 @@ function CateringManagementContent() {
           <Route
             path="universities"
             element={
-              <>
+              <GuardedCateringView role={currentUser?.role_name} accessKey="universities">
+                <>
                 <header className="content-header">
                   <div>
                     <h1>Üniversiteler</h1>
@@ -2720,14 +3110,16 @@ function CateringManagementContent() {
                     </tbody>
                   </table>
                 </div>
-              </>
+                </>
+              </GuardedCateringView>
             }
           />
 
           <Route
             path="users"
             element={
-              <>
+              <GuardedCateringView role={currentUser?.role_name} accessKey="users">
+                <>
                 <header className="content-header">
                   <div>
                     <h1>Kullanıcı Yönetimi</h1>
@@ -2843,14 +3235,16 @@ function CateringManagementContent() {
                     </tbody>
                   </table>
                 </div>
-              </>
+                </>
+              </GuardedCateringView>
             }
           />
 
           <Route
             path="menu-assignments"
             element={
-              <>
+              <GuardedCateringView role={currentUser?.role_name} accessKey="menuAssignments">
+                <>
                 <header className="content-header">
                   <div>
                     <h1>Menü Atamaları</h1>
@@ -2884,7 +3278,7 @@ function CateringManagementContent() {
                   <table>
                     <thead>
                       <tr>
-                        <th>Menü ID</th>
+                        <th>Haftalık Menü</th>
                         <th>Üniversite</th>
                         <th>Başlangıç Tarihi</th>
                         <th>Bitiş Tarihi</th>
@@ -2910,12 +3304,19 @@ function CateringManagementContent() {
                           const assignerName =
                             users.find((u) => u.id === menu.assigned_by)
                               ?.full_name || "Bilinmiyor";
+                          const assignedWeeklyMenu = weeklyMenusById.get(Number(menu.weekly_menu_id));
+                          const menuLabel = assignedWeeklyMenu
+                            ? formatWeeklyMenuLabel(assignedWeeklyMenu)
+                            : menu.weekly_menu_id
+                              ? `Haftalık menü #${menu.weekly_menu_id}`
+                              : `Eski menü kaydı ${String(menu.menu_id).substring(0, 8)}...`;
                           return (
                             <tr key={menu.id}>
                               <td>
-                                <span className="mono">
-                                  {menu.menu_id.substring(0, 8)}...
-                                </span>
+                                <strong>{menuLabel}</strong>
+                                {menu.weekly_menu_id && (
+                                  <small>Menü #{menu.weekly_menu_id}</small>
+                                )}
                               </td>
                               <td>
                                 <strong>{uName}</strong>
@@ -2986,14 +3387,15 @@ function CateringManagementContent() {
                     </tbody>
                   </table>
                 </div>
-              </>
+                </>
+              </GuardedCateringView>
             }
           />
 
           <Route
             path="companies"
             element={
-              roleCan(currentUser?.role_name, "companies") ? (
+              <GuardedCateringView role={currentUser?.role_name} accessKey="companies">
                 <>
                   <header className="content-header">
                     <div>
@@ -3097,9 +3499,21 @@ function CateringManagementContent() {
                     </table>
                   </div>
                 </>
-              ) : (
-                <Navigate to="/modules/catering-management" replace />
-              )
+              </GuardedCateringView>
+            }
+          />
+
+          <Route
+            path="roles"
+            element={
+              <GuardedCateringView role={currentUser?.role_name} accessKey="roles">
+                <RoleAssignmentsView
+                  users={visibleUsers}
+                  universities={universities}
+                  currentUser={currentUser}
+                  onEditUser={openEditUserModal}
+                />
+              </GuardedCateringView>
             }
           />
         </Route>
@@ -3311,26 +3725,12 @@ function CateringManagementContent() {
                           })
                         }
                       >
-                        {currentUser?.role_name === "SUPER_ADMIN" && (
-                          <option value="SUPER_ADMIN">Süper Admin</option>
-                        )}
-                        {currentUser?.role_name !== "UNIVERSITY_ADMIN" && (
-                          <option value="CATERING_ADMIN">
-                            Catering Yöneticisi
+                        {getAssignableRoles(currentUser?.role_name).map((role) => (
+                          <option key={role} value={role}>
+                            {ROLE_LABELS[role] || role}
                           </option>
-                        )}
-                        <option value="UNIVERSITY_ADMIN">
-                          Üniversite Yöneticisi
-                        </option>
-                        <option value="DIETITIAN">Diyetisyen</option>
-                        <option value="WAREHOUSE_STAFF">Depo Görevlisi</option>
-                        <option value="PURCHASING_STAFF">
-                          Satın Alma Sorumlusu
-                        </option>
-                        {currentUser?.role_name !== "UNIVERSITY_ADMIN" && (
-                          <option value="PARTNER_COMPANY">Partner Firma</option>
-                        )}
-                      </select>
+                        ))}
+                       </select>
                     </div>
                   </div>
                   {userForm.role_name !== "SUPER_ADMIN" &&
@@ -3394,12 +3794,16 @@ function CateringManagementContent() {
                         <label>Firma</label>
                         <select
                           value={menuForm.company_id}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const companyUniversities = universities.filter(
+                              (university) => String(university.company_id) === String(e.target.value),
+                            );
                             setMenuForm({
                               ...menuForm,
                               company_id: e.target.value,
-                            })
-                          }
+                              university_id: companyUniversities[0]?.id || "",
+                            });
+                          }}
                         >
                           {companies.map((c) => (
                             <option key={c.id} value={c.id}>
@@ -3411,17 +3815,34 @@ function CateringManagementContent() {
                     )}
                   {modalType === "add-menu" && (
                     <div className="input-group">
-                      <label>
-                        Menü ID (AI Modülünden Gelen Benzersiz Kimlik)
-                      </label>
-                      <input
-                        type="text"
-                        value={menuForm.menu_id}
-                        onChange={(e) =>
-                          setMenuForm({ ...menuForm, menu_id: e.target.value })
-                        }
-                        placeholder="UUID formatında"
-                      />
+                      <label>Haftalık Menü</label>
+                      <select
+                        value={menuForm.weekly_menu_id}
+                        onChange={(e) => {
+                          const nextMenu = weeklyMenusById.get(Number(e.target.value));
+                          setMenuForm({
+                            ...menuForm,
+                            weekly_menu_id: e.target.value,
+                            start_date: nextMenu?.week_start_date || menuForm.start_date,
+                            end_date: nextMenu
+                              ? addDaysIso(nextMenu.week_start_date, 6)
+                              : menuForm.end_date,
+                          });
+                        }}
+                      >
+                        <option value="">Haftalık menü seçin</option>
+                        {weeklyMenus.map((menu) => (
+                          <option key={menu.id} value={menu.id}>
+                            {formatWeeklyMenuLabel(menu)}
+                          </option>
+                        ))}
+                      </select>
+                      {weeklyMenus.length === 0 && (
+                        <small>Önce AI Menü Planlayıcı üzerinden haftalık menü oluşturun.</small>
+                      )}
+                      {selectedWeeklyMenu && (
+                        <small>Seçilen menü #{selectedWeeklyMenu.id}</small>
+                      )}
                     </div>
                   )}
                   {modalType === "add-menu" && (
@@ -3436,7 +3857,7 @@ function CateringManagementContent() {
                           })
                         }
                       >
-                        {universities.map((u) => (
+                        {menuAssignableUniversities.map((u) => (
                           <option key={u.id} value={u.id}>
                             {u.university_name}
                           </option>

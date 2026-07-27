@@ -1,15 +1,26 @@
 ﻿import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.catering_management.auth import Principal, require_company_scope, require_roles
 from app.catering_management.core.database import get_db
 from app.catering_management.models import Role, University, UniversityMenuAssignment
 from app.catering_management.schemas import MenuAssignmentCreate, MenuAssignmentRead, MenuAssignmentUpdate
-from app.catering_management.services import ensure_active_license
 
 router = APIRouter(prefix="/menu-assignments", tags=["menu-assignments"])
+
+
+def ensure_weekly_menu_exists(db: Session, weekly_menu_id: int) -> None:
+    menu = db.execute(
+        text("select id from weekly_menus where id = :weekly_menu_id"),
+        {"weekly_menu_id": weekly_menu_id},
+    ).first()
+    if menu is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Weekly menu not found",
+        )
 
 
 @router.get("", response_model=list[MenuAssignmentRead])
@@ -22,7 +33,7 @@ def list_menu_assignments(
         return list(db.scalars(query.order_by(UniversityMenuAssignment.created_at.desc())).all())
     
     query = query.where(UniversityMenuAssignment.company_id == principal.company_id)
-    if principal.role == Role.university_admin:
+    if principal.role in {Role.university_admin, Role.student}:
         query = query.where(UniversityMenuAssignment.university_id == principal.university_id)
         
     return list(db.scalars(query.order_by(UniversityMenuAssignment.created_at.desc())).all())
@@ -46,8 +57,7 @@ def create_menu_assignment(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="company_id query parameter is required for super admin")
         target_company_id = company_id
 
-    # Verify active license
-    ensure_active_license(db, target_company_id)
+    ensure_weekly_menu_exists(db, payload.weekly_menu_id)
 
     # Verify university belongs to company
     univ = db.scalar(
@@ -66,7 +76,8 @@ def create_menu_assignment(
         )
 
     assignment = UniversityMenuAssignment(
-        menu_id=payload.menu_id,
+        menu_id=payload.menu_id or uuid.uuid4(),
+        weekly_menu_id=payload.weekly_menu_id,
         university_id=payload.university_id,
         company_id=target_company_id,
         assigned_by=principal.profile.id,
@@ -90,7 +101,7 @@ def get_menu_assignment(
     query = select(UniversityMenuAssignment).where(UniversityMenuAssignment.id == assignment_id)
     if principal.role != Role.super_admin:
         query = query.where(UniversityMenuAssignment.company_id == principal.company_id)
-    if principal.role == Role.university_admin:
+    if principal.role in {Role.university_admin, Role.student}:
         query = query.where(UniversityMenuAssignment.university_id == principal.university_id)
 
     assignment = db.scalar(query)

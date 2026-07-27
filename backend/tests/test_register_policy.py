@@ -27,4 +27,3 @@ class RegisterPolicyTests(unittest.TestCase):
         self.assertNotIn(Role.operations_manager.value, PUBLIC_REGISTER_ROLES)
         self.assertNotIn(Role.warehouse_staff.value, PUBLIC_REGISTER_ROLES)
         self.assertNotIn(Role.purchasing_staff.value, PUBLIC_REGISTER_ROLES)
-        self.assertNotIn(Role.system_support.value, PUBLIC_REGISTER_ROLES)
