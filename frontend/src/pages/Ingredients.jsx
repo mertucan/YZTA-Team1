@@ -19,82 +19,18 @@ import {
   applyAiMinStock,
 } from "../api/ingredients";
 import { todayLocal } from "../utils/date";
+import {
+  MONTHS,
+  a101NeedsVerification,
+  daysUntil,
+  emptyBatchForm,
+  emptyForm,
+  expiryStyle,
+  isInSeason,
+  numericPayloadValue,
+  numericValue,
+} from "../utils/ingredients";
 import LoadingSpinner from "../components/LoadingSpinner";
-
-const MONTHS = [
-  { value: "", label: "—" },
-  { value: 1, label: "Ocak" },
-  { value: 2, label: "Şubat" },
-  { value: 3, label: "Mart" },
-  { value: 4, label: "Nisan" },
-  { value: 5, label: "Mayıs" },
-  { value: 6, label: "Haziran" },
-  { value: 7, label: "Temmuz" },
-  { value: 8, label: "Ağustos" },
-  { value: 9, label: "Eylül" },
-  { value: 10, label: "Ekim" },
-  { value: 11, label: "Kasım" },
-  { value: 12, label: "Aralık" },
-];
-
-const emptyForm = {
-  name: "",
-  unit: "kg",
-  calories: 0,
-  protein: 0,
-  iron: 0,
-  price: 0,
-  is_local: false,
-  origin_region: "",
-  season_start_month: "",
-  season_end_month: "",
-  market_price: "",
-  last_price_checked_at: "",
-  min_stock: "",
-};
-
-const emptyBatchForm = {
-  quantity: "",
-  unit_price: "",
-  purchase_date: todayLocal(),
-  expiry_date: "",
-};
-
-function numericValue(value) {
-  const normalized = String(value)
-    .replace(",", ".")
-    .replace(/[^\d.]/g, "")
-    .replace(/(\..*)\./g, "$1")
-    .replace(/^0+(?=\d)/, "");
-  if (!normalized || normalized === ".") return "";
-  return normalized;
-}
-
-function numericPayloadValue(value) {
-  return value === "" ? 0 : Number(value);
-}
-
-const daysUntil = (dateStr) => {
-  if (!dateStr) return null;
-  const diff = new Date(dateStr) - new Date(new Date().toDateString());
-  return Math.round(diff / 86400000);
-};
-
-const expiryStyle = (days) => {
-  if (days === null) return { color: "var(--text3)", label: "—" };
-  if (days < 0) return { color: "var(--red)", label: "Süresi geçti" };
-  if (days <= 3) return { color: "var(--red)", label: `${days} gün` };
-  if (days <= 7) return { color: "var(--amber)", label: `${days} gün` };
-  return { color: "var(--green)", label: `${days} gün` };
-};
-
-function isInSeason(item) {
-  const start = item.season_start_month;
-  const end = item.season_end_month;
-  if (!start || !end) return false;
-  const m = new Date().getMonth() + 1;
-  return start <= end ? m >= start && m <= end : m >= start || m <= end;
-}
 
 function SeasonalBadge({ item }) {
   const local = item.is_local === true;
@@ -106,26 +42,6 @@ function SeasonalBadge({ item }) {
       {seasonal && <span style={badgeSeason}>Mevsimde</span>}
     </span>
   );
-}
-
-/* Malzeme adı ↔ A101 ürün adı kelime kapsaması. Backend ile aynı mantık: malzeme adının
-   anlamlı kelimelerinden biri ürün adında yoksa (ör. "Tavuk Göğsü" ile "Tavuk Baget"
-   eşleşmesinde 'göğsü' yok) eşleşme şüphelidir ve doğrulama gerekli sayılır. Sayfa yenilense de çalışır. */
-const A101_NOISE = new Set(["g", "gr", "kg", "ml", "l", "lt", "adet", "li", "lu", "x", "ve", "ile", "paket", "kutu"]);
-const trFold = (s) =>
-  (s || "").toLocaleLowerCase("tr-TR")
-    .replace(/ç/g, "c").replace(/ğ/g, "g").replace(/ı/g, "i")
-    .replace(/ö/g, "o").replace(/ş/g, "s").replace(/ü/g, "u");
-function a101NeedsVerification(ingredientName, productName) {
-  if (!productName) return false;
-  const tokens = trFold(ingredientName).split(/[^a-z0-9]+/).filter((w) => w.length >= 2);
-  if (!tokens.length) return false;
-  const words = trFold(productName).split(/[^a-z0-9]+/).filter((w) => w && !A101_NOISE.has(w) && !/^\d+$/.test(w));
-  const matched = (t) =>
-    words.includes(t) ||
-    words.some((w) => w.startsWith(t) && w.length - t.length <= 1) ||
-    (t.length >= 4 && words.some((w) => w.startsWith(t.slice(0, 4))));
-  return tokens.some((t) => !matched(t));
 }
 
 /* ─── A101 Fiyat Hücresi ────────────────────────────────────────────────────── */
