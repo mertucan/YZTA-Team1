@@ -375,8 +375,12 @@ def _register_learned(pattern: str, group: int, note: str) -> None:
 
 
 def _apply_learned(strat: dict, html: str):
+    # Daha önce öğrenilmiş (ve olası riskli) desenleri de sınırla: eşleştirme
+    # girdisini kırp ve statik olarak riskli desenleri atla.
+    if _is_redos_risky(strat.get("pattern", "")):
+        return None
     try:
-        m = re.search(strat["pattern"], html)
+        m = re.search(strat["pattern"], html[:_MAX_HTML_MATCH_LEN])
     except re.error:
         return None
     if m:
@@ -468,6 +472,20 @@ def _heal_heuristic(html: str) -> dict | None:
     return {"pattern": pat, "group": grp, "note": f"heuristic:{note}", "sample": val}
 
 
+# İç içe niceleyici (nested quantifier) taşıyan desenler katastrofik geri izleme
+# (ReDoS) yaratabilir. LLM'in ürettiği regex güvenilmez olduğundan bu tür desenleri
+# derlemeden önce statik olarak reddederiz. Python `re`'nin zaman aşımı olmadığı için
+# eşleştirmede kullanılan HTML boyutunu da sınırlarız.
+_MAX_HTML_MATCH_LEN = 200_000
+_REDOS_RISK = re.compile(r"\([^)]*[+*][^)]*\)\s*[*+{]")
+
+
+def _is_redos_risky(pattern: str) -> bool:
+    """Bir grubun içinde niceleyici olup grubun kendisi de nicelenmişse (ör. (a+)+,
+    (\\d*)*, (x+){2,}) katastrofik geri izleme riski var demektir."""
+    return bool(_REDOS_RISK.search(pattern))
+
+
 def _extract_regex_from_reply(text: str) -> str | None:
     if not text:
         return None
@@ -477,7 +495,7 @@ def _extract_regex_from_reply(text: str) -> str | None:
         text = m.group(1).strip()
     text = text.splitlines()[0].strip() if text else ""
     text = text.strip("`").strip()
-    if "(" in text and len(text) < 400:
+    if "(" in text and len(text) < 400 and not _is_redos_risky(text):
         try:
             re.compile(text)
             return text
@@ -510,7 +528,7 @@ def _heal_gemini(html: str) -> dict | None:
         pat = _extract_regex_from_reply(getattr(resp, "text", "") or "")
         if not pat:
             return None
-        m = re.search(pat, html)
+        m = re.search(pat, html[:_MAX_HTML_MATCH_LEN])
         if m:
             v = _num(m.group(1))
             if _plausible(v):

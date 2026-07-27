@@ -1,3 +1,4 @@
+import logging
 import random
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Query, status
@@ -8,6 +9,8 @@ from app.schemas.tenders import (
     InvoiceRead,
     InvoiceStatusUpdate,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
@@ -64,8 +67,11 @@ def create_invoice(payload: InvoiceCreate):
         if not res.data:
             raise HTTPException(status_code=400, detail="Fatura oluşturulamadı")
         return res.data[0]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Veritabanı hatası: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Fatura oluşturulurken veritabanı hatası")
+        raise HTTPException(status_code=500, detail="Fatura kaydedilemedi. Lütfen tekrar deneyin.")
 
 
 # ----------------------------------------------------
@@ -117,8 +123,11 @@ def auto_generate_invoice(payload: AutoInvoiceGeneratePayload):
         if not res.data:
             raise HTTPException(status_code=400, detail="Otomatik fatura kaydı oluşturulamadı")
         return res.data[0]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Fatura kaydetme hatası: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Otomatik fatura oluşturulurken veritabanı hatası")
+        raise HTTPException(status_code=500, detail="Fatura kaydedilemedi. Lütfen tekrar deneyin.")
 
 
 # ----------------------------------------------------

@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+import os
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.catering_management.core.database import get_db
@@ -29,5 +31,13 @@ def monthly_statistics(year: int, month: int, db: Session = Depends(get_db)):
 
 @router.post("/schema")
 def create_statistics_schema(db: Session = Depends(get_db)):
+    # Bu uç DDL (şema oluşturma/değiştirme) çalıştırır. İnternete açık bir uçtan
+    # DDL tetiklenmesini engellemek için varsayılan olarak kapalıdır; yalnızca
+    # kurulum sırasında ALLOW_SCHEMA_ENDPOINT=1 ortam değişkeni ile açılır.
+    if os.getenv("ALLOW_SCHEMA_ENDPOINT", "").strip().lower() not in {"1", "true", "yes"}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bu uç devre dışı. Kurulum için ALLOW_SCHEMA_ENDPOINT ortam değişkenini etkinleştirin.",
+        )
     ensure_schema(db)
     return {"status": "ok"}

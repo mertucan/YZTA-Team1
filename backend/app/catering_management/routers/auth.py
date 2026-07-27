@@ -1,3 +1,4 @@
+import logging
 import random
 import uuid
 from datetime import date, datetime, timedelta, timezone
@@ -24,6 +25,8 @@ from app.services.brevo_email import (
     send_password_reset_code_email,
     send_welcome_email,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -152,11 +155,12 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
     except HTTPException:
         db.rollback()
         raise
-    except Exception as e:
+    except Exception:
         db.rollback()
+        logger.exception("Kayıt işlemi sırasında beklenmeyen hata")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Kayıt işlemi sırasında bir hata oluştu: {str(e)}",
+            detail="Kayıt işlemi sırasında bir hata oluştu. Lütfen tekrar deneyin.",
         )
 
 

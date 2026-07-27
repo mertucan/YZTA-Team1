@@ -8,6 +8,7 @@ from app.models.order import (
 )
 from app.services.stock import compute_alerts
 from app.services.order_ai import generate_ai_plan
+from app.rate_limit import rate_limit
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -100,7 +101,7 @@ def generate_order(payload: GenerateOrderRequest):
     return order
 
 
-@router.post("/ai-plan")
+@router.post("/ai-plan", dependencies=[rate_limit("orders-ai-plan", 20)])
 def ai_purchase_plan():
     """AI Satın Alma Ajanı: eksikleri + tükeniş tahminini + tedarikçi kataloğunu okur,
     malzemeleri türüne göre doğru tedarikçiye bölüştürür ve HER kalem için gerekçe yazar.

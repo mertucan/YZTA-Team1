@@ -1,7 +1,10 @@
+import logging
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from app.database import get_db
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/sustainability", tags=["sustainability"])
 
@@ -251,8 +254,9 @@ def create_or_update_carbon_factor(payload: CarbonFactorCreate):
             .execute()
         )
         return res.data[0] if res.data else data
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Karbon faktörü kaydı başarısız: {exc}")
+    except Exception:
+        logger.exception("Karbon faktörü kaydı başarısız")
+        raise HTTPException(status_code=500, detail="Karbon faktörü kaydedilemedi. Lütfen tekrar deneyin.")
 
 
 @router.patch("/carbon-factors/{factor_id}")
@@ -272,8 +276,9 @@ def update_carbon_factor(factor_id: int, payload: CarbonFactorUpdate):
         return res.data[0]
     except HTTPException:
         raise
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Güncelleme başarısız: {exc}")
+    except Exception:
+        logger.exception("Karbon faktörü güncelleme başarısız")
+        raise HTTPException(status_code=500, detail="Karbon faktörü güncellenemedi. Lütfen tekrar deneyin.")
 
 
 @router.delete("/carbon-factors/{factor_id}", status_code=204)
@@ -284,5 +289,6 @@ def delete_carbon_factor(factor_id: int):
     db = get_db()
     try:
         db.table("carbon_factors").delete().eq("id", factor_id).execute()
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Silme işlemi başarısız: {exc}")
+    except Exception:
+        logger.exception("Karbon faktörü silme işlemi başarısız")
+        raise HTTPException(status_code=500, detail="Karbon faktörü silinemedi. Lütfen tekrar deneyin.")

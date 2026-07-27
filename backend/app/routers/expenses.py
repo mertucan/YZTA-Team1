@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException
 from app.database import get_db
 from app.models.expense import Expense, ExpenseCreate, ExpenseUpdate
 from app.services.expense_ai import analyze_expenses, material_expense_summary
+from app.rate_limit import rate_limit
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
 
@@ -81,7 +82,7 @@ def budget_check(month: str | None = None):
     }
 
 
-@router.get("/ai-insights")
+@router.get("/ai-insights", dependencies=[rate_limit("expenses-ai-insights", 20)])
 def expense_ai_insights():
     """Yapay zeka gider analizi: kategori/aylık trendden gözlem + tasarruf önerileri.
     Gemini varsa onu, yoksa kural tabanlı analizi kullanır."""

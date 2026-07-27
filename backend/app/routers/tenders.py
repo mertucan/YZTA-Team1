@@ -1,6 +1,9 @@
+import logging
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Query, status
 from app.database import get_db
+
+logger = logging.getLogger(__name__)
 from app.schemas.tenders import (
     CostCalculationPayload,
     CostCalculationResult,
@@ -111,8 +114,11 @@ def create_tender(payload: TenderCreate):
         created = res.data[0]
         created["cost_items"] = []
         return created
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Veritabanı hatası: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("İhale oluşturulurken veritabanı hatası")
+        raise HTTPException(status_code=500, detail="İhale kaydedilemedi. Lütfen tekrar deneyin.")
 
 
 # ----------------------------------------------------
@@ -229,5 +235,8 @@ def add_tender_cost_item(tender_id: int, payload: TenderCostItemCreate):
         if not res.data:
             raise HTTPException(status_code=400, detail="Maliyet kalemi eklenemedi")
         return res.data[0]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Veritabanı hatası: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Maliyet kalemi eklenirken veritabanı hatası")
+        raise HTTPException(status_code=500, detail="Maliyet kalemi eklenemedi. Lütfen tekrar deneyin.")

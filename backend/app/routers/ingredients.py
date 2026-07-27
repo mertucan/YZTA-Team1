@@ -1,7 +1,9 @@
+import logging
 from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, HTTPException
 from app.database import get_db
+from app.rate_limit import rate_limit
 from app.models.ingredient import (
     Ingredient,
     IngredientCreate,
@@ -22,6 +24,8 @@ from app.services.consumption import (
     forecast_depletion,
     suggest_min_stock,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/ingredients", tags=["ingredients"])
 
@@ -55,14 +59,14 @@ def consumption_logs(limit: int = 14):
     ).limit(limit).execute().data
 
 
-@router.get("/forecast")
+@router.get("/forecast", dependencies=[rate_limit("ingredients-forecast", 30)])
 def depletion_forecast():
     """AI Tükeniş Tahmini: tüketim hızı + gelecek menülerden her malzemenin
     tükeniş tarihi ve 'en geç şu gün sipariş ver' önerisi."""
     return forecast_depletion(get_db())
 
 
-@router.post("/ai-min-stock")
+@router.post("/ai-min-stock", dependencies=[rate_limit("ingredients-ai-min-stock", 20)])
 def apply_ai_min_stock():
     """AI Min-Stok: tüketim hızından malzeme bazlı kritik eşik hesaplar ve uygular
     (eşik = günlük tüketim × (teslim süresi + güvenlik payı))."""
@@ -112,13 +116,13 @@ def market_health():
     return diagnose(force_heal=False)
 
 
-@router.post("/market/self-heal")
+@router.post("/market/self-heal", dependencies=[rate_limit("ingredients-self-heal", 10)])
 def market_self_heal():
     """Servisi zorla kontrol eder: JSON alan adları değişmişse tespit eder."""
     return diagnose(force_heal=True)
 
 
-@router.post("/{ingredient_id}/market/fetch")
+@router.post("/{ingredient_id}/market/fetch", dependencies=[rate_limit("ingredients-market-fetch", 30)])
 def fetch_market_price(ingredient_id: int):
     """Migros Fiyat Çek: malzemeyi Migros ürünüyle eşleştirir, güncel fiyatı ve GERÇEK
     birim (kg/lt/adet) fiyatını çıkarır. Zayıf/işlenmiş eşleşme 'güvenilmez' işaretlenir;
@@ -143,7 +147,8 @@ def fetch_market_price(ingredient_id: int):
     except MigrosError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception as exc:  # ağ hatası vb.
-        raise HTTPException(status_code=502, detail=f"Migros'a ulaşılamadı: {exc}") from exc
+        logger.exception("Migros fiyat çekimi sırasında beklenmeyen hata")
+        raise HTTPException(status_code=502, detail="Migros'a şu an ulaşılamıyor. Lütfen tekrar deneyin.") from exc
 
     # LLM ajanı Migros'ta uygun ham ürün BULAMADIYSA (ör. karnabahar/mandalina taze yok):
     # kayıt yazma, malzeme verisine dokunma; frontend'e 'manuel giriş' durumu döndür.

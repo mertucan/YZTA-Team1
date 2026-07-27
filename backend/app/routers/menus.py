@@ -15,6 +15,7 @@ from app.models.menu import (
     SeasonalMenuRevisionResponse,
 )
 from app.services.menu_ai import MenuAIError, generate_weekly_menu, suggest_seasonal_revisions
+from app.rate_limit import rate_limit
 
 router = APIRouter(prefix="/menus", tags=["menus"])
 
@@ -84,7 +85,8 @@ def get_menu(menu_id: int):
     return {**menu_res.data, "items": items_res.data}
 
 
-@router.post("/generate", response_model=WeeklyMenuDetail, status_code=201)
+@router.post("/generate", response_model=WeeklyMenuDetail, status_code=201,
+             dependencies=[rate_limit("menu-generate", 15)])
 def generate_menu(payload: WeeklyMenuGenerate):
     week_start = _monday_of(payload.week_start_date)
     _reject_if_week_taken(week_start)
@@ -373,7 +375,8 @@ def apply_attendance(menu_id: int):
     return {**final.data, "items": items_res.data}
 
 
-@router.get("/{menu_id}/seasonal-revisions", response_model=SeasonalMenuRevisionResponse)
+@router.get("/{menu_id}/seasonal-revisions", response_model=SeasonalMenuRevisionResponse,
+            dependencies=[rate_limit("menu-seasonal", 20)])
 def get_seasonal_revisions(menu_id: int):
     try:
         return suggest_seasonal_revisions(menu_id)
