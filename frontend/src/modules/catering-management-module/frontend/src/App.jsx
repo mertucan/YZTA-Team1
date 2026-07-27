@@ -54,11 +54,21 @@ const ROLE_LABELS = {
   PURCHASING_STAFF: "Satın Alma Sorumlusu",
   RESEARCHER: "Araştırmacı",
   PARTNER_COMPANY: "Partner Firma",
+  SYSTEM_SUPPORT: "Sistem Destek",
 };
 
-const REGISTER_ROLES = Object.entries(ROLE_LABELS).filter(
-  ([role]) => role !== "SUPER_ADMIN",
-);
+const PUBLIC_REGISTER_ROLE_VALUES = [
+  "CATERING_ADMIN",
+  "UNIVERSITY_ADMIN",
+  "STUDENT",
+  "RESEARCHER",
+  "PARTNER_COMPANY",
+];
+
+const FALLBACK_REGISTER_ROLES = PUBLIC_REGISTER_ROLE_VALUES.map((role) => [
+  role,
+  ROLE_LABELS[role],
+]);
 
 const ROLE_ACCESS = {
   dashboard: [
@@ -191,6 +201,59 @@ function getRegisterValidation({
 
   if (companyName.trim().length < 2) errors.push("Firma adını girin.");
   if (fullName.trim().length < 2) errors.push("Ad soyad bilgisini girin.");
+  if (!isValidEmail(email)) errors.push("Geçerli bir e-posta girin.");
+  if (password.length < 6) errors.push("Şifre en az 6 karakter olmalı.");
+  if (strength.score < 2) errors.push("Daha güçlü bir şifre seçin.");
+  if (password !== confirmPassword) errors.push("Şifreler eşleşmiyor.");
+  if (!acceptedTerms) errors.push("Kullanım şartlarını onaylayın.");
+
+  return errors;
+}
+
+function getRoleAwareRegisterValidation({
+  registerRole,
+  companyName,
+  fullName,
+  firstName,
+  lastName,
+  nationalId,
+  age,
+  universityId,
+  phone,
+  organizationName,
+  partnerCompanyName,
+  brandName,
+  email,
+  password,
+  confirmPassword,
+  acceptedTerms,
+}) {
+  const errors = [];
+  const strength = getPasswordStrength(password);
+
+  if (registerRole === "CATERING_ADMIN" && companyName.trim().length < 2) {
+    errors.push("Firma adını girin.");
+  }
+  if (registerRole === "STUDENT") {
+    if (firstName.trim().length < 2) errors.push("Ad bilgisini girin.");
+    if (lastName.trim().length < 2) errors.push("Soyad bilgisini girin.");
+    if (!/^\d{11}$/.test(nationalId.trim())) errors.push("11 haneli T.C. kimlik no girin.");
+    if (!age || Number(age) <= 0) errors.push("Geçerli bir yaş girin.");
+    if (!universityId) errors.push("Üniversite seçin.");
+  } else if (fullName.trim().length < 2) {
+    errors.push("Ad soyad bilgisini girin.");
+  }
+  if (registerRole === "UNIVERSITY_ADMIN" && !universityId) {
+    errors.push("Üniversite seçin.");
+  }
+  if (registerRole === "RESEARCHER") {
+    if (organizationName.trim().length < 2) errors.push("Kurum / üniversite bilgisini girin.");
+  }
+  if (registerRole === "PARTNER_COMPANY") {
+    if (partnerCompanyName.trim().length < 2) errors.push("Partner firma adını girin.");
+    if (brandName.trim().length < 2) errors.push("Marka adını girin.");
+  }
+  if (phone && phone.replace(/\D/g, "").length < 10) errors.push("Telefon numarasını kontrol edin.");
   if (!isValidEmail(email)) errors.push("Geçerli bir e-posta girin.");
   if (password.length < 6) errors.push("Şifre en az 6 karakter olmalı.");
   if (strength.score < 2) errors.push("Daha güçlü bir şifre seçin.");
@@ -982,6 +1045,20 @@ function CateringManagementContent() {
   const [fullName, setFullName] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [registerRole, setRegisterRole] = useState("CATERING_ADMIN");
+  const [registerOptions, setRegisterOptions] = useState({
+    roles: FALLBACK_REGISTER_ROLES.map(([value, label]) => ({ value, label })),
+    universities: [],
+  });
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [nationalId, setNationalId] = useState("");
+  const [studentAge, setStudentAge] = useState("");
+  const [registerUniversityId, setRegisterUniversityId] = useState("");
+  const [registerPhone, setRegisterPhone] = useState("");
+  const [organizationName, setOrganizationName] = useState("");
+  const [partnerCompanyName, setPartnerCompanyName] = useState("");
+  const [brandName, setBrandName] = useState("");
+  const [productCategory, setProductCategory] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
@@ -1003,6 +1080,16 @@ function CateringManagementContent() {
     setFullName("");
     setCompanyName("");
     setRegisterRole("CATERING_ADMIN");
+    setFirstName("");
+    setLastName("");
+    setNationalId("");
+    setStudentAge("");
+    setRegisterUniversityId("");
+    setRegisterPhone("");
+    setOrganizationName("");
+    setPartnerCompanyName("");
+    setBrandName("");
+    setProductCategory("");
     setAcceptedTerms(false);
     setShowLoginPassword(false);
     setShowRegisterPassword(false);
@@ -1094,6 +1181,49 @@ function CateringManagementContent() {
     expire_date: "",
     status: true,
   });
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/auth/register-options`)
+      .then((response) => {
+        if (!response.ok) throw new Error("Register options failed");
+        return response.json();
+      })
+      .then((data) => {
+        const roles = Array.isArray(data.roles) && data.roles.length
+          ? data.roles
+          : FALLBACK_REGISTER_ROLES.map(([value, label]) => ({ value, label }));
+        setRegisterOptions({
+          roles,
+          universities: Array.isArray(data.universities) ? data.universities : [],
+        });
+        if (!roles.some((role) => role.value === registerRole)) {
+          setRegisterRole(roles[0]?.value || "CATERING_ADMIN");
+        }
+      })
+      .catch(() => {
+        setRegisterOptions({
+          roles: FALLBACK_REGISTER_ROLES.map(([value, label]) => ({ value, label })),
+          universities: [],
+        });
+      });
+  }, []);
+
+  useEffect(() => {
+    setError(null);
+    setInfo(null);
+    setCompanyName("");
+    setFullName("");
+    setFirstName("");
+    setLastName("");
+    setNationalId("");
+    setStudentAge("");
+    setRegisterUniversityId("");
+    setRegisterPhone("");
+    setOrganizationName("");
+    setPartnerCompanyName("");
+    setBrandName("");
+    setProductCategory("");
+  }, [registerRole]);
 
   // Init auth check
   useEffect(() => {
@@ -1285,7 +1415,7 @@ function CateringManagementContent() {
     }
   }, [isAuthed, currentUser, location.pathname, navigate]);
 
-  // ── Supabase Realtime subscription ────────────────────────────────────────
+  // Supabase Realtime subscription
   const { status: realtimeStatus } = useRealtimeData({
     enabled: isAuthed && !!currentUser,
     initialUniversities: universities,
@@ -1435,9 +1565,19 @@ function CateringManagementContent() {
     setLoading(true);
     try {
       const normalizedEmail = email.trim().toLowerCase();
-      const validationErrors = getRegisterValidation({
+      const validationErrors = getRoleAwareRegisterValidation({
+        registerRole,
         companyName,
         fullName,
+        firstName,
+        lastName,
+        nationalId,
+        age: studentAge,
+        universityId: registerUniversityId,
+        phone: registerPhone,
+        organizationName,
+        partnerCompanyName,
+        brandName,
         email: normalizedEmail,
         password,
         confirmPassword,
@@ -1446,17 +1586,39 @@ function CateringManagementContent() {
       if (validationErrors.length > 0) {
         throw new Error(validationErrors[0]);
       }
+      const registerPayload = {
+        email: normalizedEmail,
+        password,
+        auth_user_id: crypto.randomUUID(),
+        role_name: registerRole,
+        phone: registerPhone || null,
+      };
+      if (registerRole === "CATERING_ADMIN") {
+        registerPayload.company_name = companyName;
+        registerPayload.full_name = fullName;
+      } else if (registerRole === "UNIVERSITY_ADMIN") {
+        registerPayload.full_name = fullName;
+        registerPayload.university_id = Number(registerUniversityId);
+      } else if (registerRole === "STUDENT") {
+        registerPayload.first_name = firstName;
+        registerPayload.last_name = lastName;
+        registerPayload.national_id = nationalId;
+        registerPayload.age = Number(studentAge);
+        registerPayload.university_id = Number(registerUniversityId);
+      } else if (registerRole === "RESEARCHER") {
+        registerPayload.full_name = fullName;
+        registerPayload.university_id = registerUniversityId ? Number(registerUniversityId) : null;
+        registerPayload.organization_name = organizationName;
+      } else if (registerRole === "PARTNER_COMPANY") {
+        registerPayload.full_name = fullName;
+        registerPayload.partner_company_name = partnerCompanyName;
+        registerPayload.brand_name = brandName;
+        registerPayload.product_category = productCategory || null;
+      }
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          company_name: companyName,
-          full_name: fullName,
-          email: normalizedEmail,
-          password,
-          auth_user_id: crypto.randomUUID(),
-          role_name: registerRole,
-        }),
+        body: JSON.stringify(registerPayload),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -1469,6 +1631,18 @@ function CateringManagementContent() {
       setAcceptedTerms(false);
       setCompanyName("");
       setFullName("");
+      setFirstName("");
+      setLastName("");
+      setNationalId("");
+      setStudentAge("");
+      setRegisterUniversityId("");
+      setRegisterPhone("");
+      setOrganizationName("");
+      setResearchPurpose("");
+      setDataAccessReason("");
+      setPartnerCompanyName("");
+      setBrandName("");
+      setProductCategory("");
       setInfo("Firma kaydı oluşturuldu. Giriş yaparak devam edebilirsiniz.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Bir hata oluştu.");
@@ -1935,9 +2109,19 @@ function CateringManagementContent() {
   }
 
   const normalizedAuthEmail = email.trim().toLowerCase();
-  const registerErrors = getRegisterValidation({
+  const registerErrors = getRoleAwareRegisterValidation({
+    registerRole,
     companyName,
     fullName,
+    firstName,
+    lastName,
+    nationalId,
+    age: studentAge,
+    universityId: registerUniversityId,
+    phone: registerPhone,
+    organizationName,
+    partnerCompanyName,
+    brandName,
     email: normalizedAuthEmail,
     password,
     confirmPassword,
@@ -2118,29 +2302,91 @@ function CateringManagementContent() {
                   value={registerRole}
                   onChange={(e) => setRegisterRole(e.target.value)}
                 >
-                  {REGISTER_ROLES.map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
+                  {registerOptions.roles.map(({ value, label }) => (
+                    <option key={value} value={value}>{ROLE_LABELS[value] || label}</option>
                   ))}
                 </select>
               </div>
               
+              {registerRole === "CATERING_ADMIN" && (
+                <div className="input-group">
+                  <label>Firma Adı</label>
+                  <input
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="Lale Catering A.Ş."
+                  />
+                </div>
+              )}
+
+              {registerRole === "STUDENT" ? (
+                <>
+                  <div className="input-group">
+                    <label>Ad</label>
+                    <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Ahmet" />
+                  </div>
+                  <div className="input-group">
+                    <label>Soyad</label>
+                    <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Yılmaz" />
+                  </div>
+                  <div className="input-group">
+                    <label>T.C. Kimlik No</label>
+                    <input type="text" inputMode="numeric" maxLength={11} value={nationalId} onChange={(e) => setNationalId(e.target.value.replace(/\D/g, "").slice(0, 11))} placeholder="11 haneli kimlik no" />
+                  </div>
+                  <div className="input-group">
+                    <label>Yaş</label>
+                    <input type="number" min="0" value={studentAge} onChange={(e) => setStudentAge(e.target.value)} placeholder="20" />
+                  </div>
+                </>
+              ) : (
+                <div className="input-group">
+                  <label>{registerRole === "PARTNER_COMPANY" ? "Yetkili Ad Soyad" : "Ad Soyad"}</label>
+                  <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Ahmet Yılmaz" />
+                </div>
+              )}
+
+              {["UNIVERSITY_ADMIN", "STUDENT", "RESEARCHER"].includes(registerRole) && (
+                <div className="input-group">
+                  <label>{registerRole === "RESEARCHER" ? "Bağlı Üniversite (opsiyonel)" : "Üniversite"}</label>
+                  <select value={registerUniversityId} onChange={(e) => setRegisterUniversityId(e.target.value)}>
+                    <option value="">Üniversite seçin</option>
+                    {registerOptions.universities.map((university) => (
+                      <option key={university.id} value={university.id}>{university.university_name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {registerRole === "RESEARCHER" && (
+                <>
+                  <div className="input-group">
+                    <label>Kurum / Üniversite</label>
+                    <input type="text" value={organizationName} onChange={(e) => setOrganizationName(e.target.value)} placeholder="Araştırma kurumunuz" />
+                  </div>
+                </>
+              )}
+
+              {registerRole === "PARTNER_COMPANY" && (
+                <>
+                  <div className="input-group">
+                    <label>Partner Firma Adı</label>
+                    <input type="text" value={partnerCompanyName} onChange={(e) => setPartnerCompanyName(e.target.value)} placeholder="Tedarikçi firma" />
+                  </div>
+                  <div className="input-group">
+                    <label>Marka Adı</label>
+                    <input type="text" value={brandName} onChange={(e) => setBrandName(e.target.value)} placeholder="Marka" />
+                  </div>
+                  <div className="input-group">
+                    <label>Ürün Kategorisi (opsiyonel)</label>
+                    <input type="text" value={productCategory} onChange={(e) => setProductCategory(e.target.value)} placeholder="Süt ürünleri, atıştırmalık..." />
+                  </div>
+                </>
+              )}
+
               <div className="input-group">
-                <label>Firma Adı</label>
-                <input
-                  type="text"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="Lale Catering A.Ş."
-                />
-              </div>
-              <div className="input-group">
-                <label>Ad Soyad</label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Ahmet Yılmaz"
-                />
+                <label>Telefon {registerRole === "STUDENT" || registerRole === "RESEARCHER" ? "(opsiyonel)" : ""}</label>
+                <input type="tel" value={registerPhone} onChange={(e) => setRegisterPhone(e.target.value)} placeholder="05xx xxx xx xx" />
               </div>
               <div className="input-group">
                 <label>E-posta</label>
@@ -2176,8 +2422,17 @@ function CateringManagementContent() {
 
               <div className="auth-checklist">
                 {[
-                  ["Firma", companyName.trim().length >= 2],
-                  ["Ad soyad", fullName.trim().length >= 2],
+                  registerRole === "CATERING_ADMIN"
+                    ? ["Firma", companyName.trim().length >= 2]
+                    : registerRole === "STUDENT"
+                      ? ["Öğrenci bilgileri", firstName.trim().length >= 2 && lastName.trim().length >= 2 && /^\d{11}$/.test(nationalId.trim()) && Number(studentAge) > 0]
+                      : registerRole === "RESEARCHER"
+                        ? ["Araştırmacı bilgileri", organizationName.trim().length >= 2]
+                        : registerRole === "PARTNER_COMPANY"
+                          ? ["Partner bilgileri", partnerCompanyName.trim().length >= 2 && brandName.trim().length >= 2]
+                          : ["Üniversite", Boolean(registerUniversityId)],
+                  ["Ad soyad", registerRole === "STUDENT" ? firstName.trim().length >= 2 && lastName.trim().length >= 2 : fullName.trim().length >= 2],
+                  ["Üniversite", !["UNIVERSITY_ADMIN", "STUDENT"].includes(registerRole) || Boolean(registerUniversityId)],
                   ["E-posta", isValidEmail(normalizedAuthEmail)],
                   ["Güçlü şifre", getPasswordStrength(password).score >= 2],
                   ["Şifre eşleşmesi", password && password === confirmPassword],
@@ -3555,3 +3810,4 @@ export default function App() {
     </div>
   );
 }
+

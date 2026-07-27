@@ -94,6 +94,16 @@ class UniversityRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class RegisterOptionRole(BaseModel):
+    value: str
+    label: str
+
+
+class RegisterOptions(BaseModel):
+    roles: list[RegisterOptionRole]
+    universities: list[UniversityRead]
+
+
 class UserCreate(BaseModel):
     auth_user_id: uuid.UUID
     email: EmailStr
@@ -127,12 +137,22 @@ class UserRead(BaseModel):
 
 
 class UserRegister(BaseModel):
-    company_name: str = Field(min_length=2, max_length=150)
-    full_name: str = Field(min_length=2, max_length=120)
+    company_name: str | None = Field(default=None, min_length=2, max_length=150)
+    full_name: str | None = Field(default=None, min_length=2, max_length=120)
     email: EmailStr
     password: str = Field(min_length=6, max_length=128)
     auth_user_id: uuid.UUID
     role_name: str = "CATERING_ADMIN"
+    phone: str | None = Field(default=None, max_length=20)
+    university_id: int | None = None
+    first_name: str | None = Field(default=None, min_length=2, max_length=100)
+    last_name: str | None = Field(default=None, min_length=2, max_length=100)
+    national_id: str | None = Field(default=None, pattern=r"^\d{11}$")
+    age: int | None = Field(default=None, ge=0)
+    organization_name: str | None = Field(default=None, min_length=2, max_length=160)
+    partner_company_name: str | None = Field(default=None, min_length=2, max_length=150)
+    brand_name: str | None = Field(default=None, min_length=2, max_length=120)
+    product_category: str | None = Field(default=None, max_length=80)
 
 
 class UserLogin(BaseModel):
