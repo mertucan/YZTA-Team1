@@ -991,12 +991,10 @@ function WeeklyMenuCalendar({ assignedOnly = false } = {}) {
         ? upcomingIndex
         : cards.length - 1;
 
-    return cards
-      .map((card, index) => ({ ...card, isFocused: index === focusIndex }))
-      .sort((a, b) => {
-        if (a.isFocused !== b.isFocused) return a.isFocused ? -1 : 1;
-        return a.weekStart - b.weekStart;
-      });
+    // Kartlar kronolojik (eskiden yeniye) kalır; odaklanan haftayı başa ÇEKMEYİZ,
+    // yoksa sağa kaydırınca "27 Tem - 2 Ağu" sonra "6-12 Tem" gibi geriye zıplar.
+    // Odaklanan haftaya konumlanmayı zaten aşağıdaki useEffect (scrollToFocusedWeek) yapıyor.
+    return cards.map((card, index) => ({ ...card, isFocused: index === focusIndex }));
   }, [menusDetailed]);
 
   useEffect(() => {
