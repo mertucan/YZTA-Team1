@@ -27,12 +27,50 @@
 
 # 🔗 Proje Repoları
 
+> **Canlı Demo:** [https://tablodot.onrender.com/](https://tablodot.onrender.com/)
+
 | Bölüm | Repository |
 | :--- | :--- |
 | **Web Uygulaması** | [mertucan/YZTA-Team1](https://github.com/mertucan/YZTA-Team1) |
 | **Mobil Uygulama** | [sudenazkalaycik/YZA-Team1-TabloDot](https://github.com/sudenazkalaycik/YZA-Team1-TabloDot) |
 
 > Web ve mobil geliştirme süreçleri ayrı GitHub repoları üzerinden yürütülmektedir.
+
+---
+
+# 🚀 Projeyi Çalıştırma
+
+Bu repo içerisinde web uygulaması backend ve frontend klasörleri altında yer almaktadır.
+
+## Web Uygulaması
+
+Web projesinde backend FastAPI, frontend ise React/Vite ile geliştirilmiştir.
+
+### Backend
+
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+Backend varsayılan olarak `http://127.0.0.1:8000` adresinde çalışır.
+
+### Frontend
+
+Yeni bir terminal açarak:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend varsayılan olarak Vite tarafından verilen local adreste çalışır. Genellikle:
+
+```text
+http://localhost:5173
+```
 
 ---
 
@@ -598,7 +636,8 @@ Sprint 3 kapsamında;
 - Sürdürülebilirlik, sağlık riski, akademik araştırma verisi ve kurumsal kalite raporlaması gibi tamamlayıcı modüller teslim kapsamının ayırt edici parçaları olarak düzenlenmiştir.
 - Kullanıcıların ürünü daha hızlı anlayabilmesi için Sık Sorulan Sorular dokümanı hazırlanmıştır: [`bootcampFiles/sprintThree/SSS.md`](bootcampFiles/sprintThree/SSS.md)
 - Sprint 3 board güncellemeleri, toplantı görselleri ve ürün ekran görüntüleri README içerisine eklenmiştir.
-- Proje teslimine yönelik tüm hedefler tamamlanmıştır.
+- Sprint planlaması kapsamında Bootcamp sonunda toplam **250 Story Point** tamamlanması hedeflenmiştir. Bu doğrultuda **Sprint 1'de 26 Story Point**, **Sprint 2'de 144 Story Point** ve **Sprint 3'te 80 Story Point** başarıyla tamamlanmış; böylece belirlenen **250 Story Point** hedefine ulaşılmıştır. Ekibimiz, sprintler boyunca planlanan geliştirmeleri tamamlayarak proje kapsamını başarıyla sonlandırmış ve ürünü final teslimine hazır hale getirmiştir.
+
 
 ---
 
@@ -772,7 +811,8 @@ Sprint sonunda aşağıdaki kararlar alınmıştır.
 - Görsel içeriklerin README içerisinde ilgili sprint başlıkları altında toplanmasına
 - SSS dokümanının proje tesliminde destekleyici kaynak olarak kullanılmasına
 - Mobil uygulama ve ana web projesi arasındaki bağlantının README'de açık şekilde gösterilmesine
-- Final ürün sunumunda operasyonel fayda, maliyet kontrolü, sürdürülebilirlik etkisi, sağlık uygunluğu ve ölçülebilir başarı metriklerinin öne çıkarılmasına
+- Final ürün sunumunda operasyonel fayda, maliyet kontrolü, sürdürülebilirlik etkisi, sağlık uygunluğu ve ölçülebilir başarı metriklerinin öne çıkarılmasına,
+- Projenin sprintler boyunca geliştirilen tüm modüllerinin entegre edilerek final teslimine hazır hale getirilmesine
 
 karar verilmiştir.
 
