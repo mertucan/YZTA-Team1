@@ -18,11 +18,12 @@
 
 ---
 
-# 💡 Ürün Adı
+<h1 align="center">TabloDot</h1>
 
-**TabloDot**
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintTwo/screenshots/logo.png" alt="TabloDot Logo" width="220">
+</p>
 
----
 
 # 🔗 Proje Bağlantıları
 
@@ -578,9 +579,198 @@ karar verilmiştir.
 ---
 
 <details>
-<summary><h1><strong>🔄 Sprint 3</strong></h1></summary>
+<summary><h1><strong>Sprint 3</strong></h1></summary>
 
-Sprint 3 süreci ve proje teslimine ilişkin bilgiler sprint sonunda eklenecektir.
+## Sprint Notları
+
+Sprint 3 kapsamında;
+
+- Sprint 2 sonunda planlanan final ürün akışı, eksik modül açıklamaları ve teslim dokümantasyonu tamamlanmıştır.
+- TabloDot'un final ürün kapsamı FastAPI backend ve React/Vite frontend üzerinden teslim edilebilir hale getirilmiştir.
+- Mobil uygulama geliştirme süreci ayrı GitHub reposu üzerinden sürdürülmüş ve ana proje dokümantasyonuyla ilişkilendirilmiştir: [sudenazkalaycik/YZA-Team1-TabloDot](https://github.com/sudenazkalaycik/YZA-Team1-TabloDot)
+- Ana web uygulamasında dashboard, öğrenci/devamsızlık, yemek-menü, malzeme-stok, harcama, sipariş, yapay zeka menü planlayıcı, sürdürülebilirlik skoru, sağlık risk analizi, öğrenci sağlık bayrakları, araştırma veri aktarımı, üniversite kalite entegrasyonu, partner ürünleri ve ihale/fatura yönetimi modülleri bir araya getirilmiştir.
+- Google Gemini API destekli menü planlama yaklaşımı, stok gerçekliği, porsiyon, bütçe, besin değeri ve kullanıcı talimatlarını birlikte değerlendiren karar destek yapısı olarak netleştirilmiştir.
+- Satın alma ve maliyet tarafında tedarikçi fiyatları, harcamalar, siparişler, ihale kayıtları ve fatura çıktıları final ürün anlatısına dahil edilmiştir.
+- Sürdürülebilirlik, sağlık riski, akademik araştırma verisi ve kurumsal kalite raporlaması gibi tamamlayıcı modüller teslim kapsamının ayırt edici parçaları olarak düzenlenmiştir.
+- Kullanıcıların ürünü daha hızlı anlayabilmesi için Sık Sorulan Sorular dokümanı hazırlanmıştır: [`bootcampFiles/sprintThree/SSS.md`](bootcampFiles/sprintThree/SSS.md)
+- Sprint 3 board güncellemeleri, toplantı görselleri ve ürün ekran görüntüleri README içerisine eklenmiştir.
+- Proje teslimine yönelik tüm hedefler tamamlanmıştır.
+
+---
+
+## Product Backlog Düzeni
+
+Sprint 3 kapsamında backlog, ürünün çalışır son halini ve teslim dokümantasyonunu tamamlamaya odaklanacak şekilde düzenlenmiştir. Ana uygulama modüllerinin entegrasyonu, catering yönetim akışı, yapay zeka destekli menü planlayıcı, sürdürülebilirlik skoru, sağlık risk analizi, öğrenci sağlık bayrakları, araştırma ve kalite export süreçleri, partner ürünleri, ihale/fatura yönetimi, SSS dokümantasyonu ve final sunum hazırlıkları önceliklendirilmiştir.
+
+Bu sprintte geliştirme görevleri, TabloDot'un yalnızca menü planlayan bir uygulama değil; yemekhane operasyonu, karar destek, maliyet kontrolü, sağlık, sürdürülebilirlik ve kurumsal raporlama süreçlerini birlikte ele alan entegre bir platform olarak teslim edilmesi amacıyla gruplanmıştır.
+
+---
+
+## Daily Scrum
+
+Takım içi günlük iletişim ve ilerleme takibi WhatsApp ve Meets üzerinden asenkron olarak yürütülmektedir.
+
+<details>
+<summary><strong>Daily Scrum Görselleri</strong></summary>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/toplanti7.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/toplanti7.png" alt="Daily Scrum Toplantı 7">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/toplanti8.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/toplanti8.png" alt="Daily Scrum Toplantı 8">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/toplanti9.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/toplanti9.png" alt="Daily Scrum Toplantı 9">
+</a>
+
+</details>
+
+---
+
+## Sprint Board Update
+
+Sprint planlaması ve görev takibi Trello üzerinden yürütülmektedir.
+
+<details>
+<summary><strong>Güncellemeler</strong></summary>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/1.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/1.png" alt="Sprint 3 Board Update 1">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/2.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/2.png" alt="Sprint 3 Board Update 2">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/3.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/3.png" alt="Sprint 3 Board Update 3">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/4.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/4.png" alt="Sprint 3 Board Update 4">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/5.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/5.png" alt="Sprint 3 Board Update 5">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/6.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/6.png" alt="Sprint 3 Board Update 6">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/7.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/7.png" alt="Sprint 3 Board Update 7">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/8.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/8.png" alt="Sprint 3 Board Update 8">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/9.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/9.png" alt="Sprint 3 Board Update 9">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/10.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/BoardUpdate/10.png" alt="Sprint 3 Board Update 10">
+</a>
+
+</details>
+
+---
+
+## Ürün Durumu
+
+Sprint 3 sonunda;
+
+- Backend tarafında FastAPI tabanlı `TabloDot API` yapısı; dashboard, öğrenciler, devamsızlık, yemekler, menüler, malzemeler, siparişler, harcamalar, sürdürülebilirlik, sağlık risk analizi, öğrenci sağlık bayrakları, partner ürünleri, araştırma export'u, üniversite kalite export'u, ihale ve fatura router'larıyla genişletilmiştir.
+- Frontend tarafında React/Vite uygulaması, modüler sayfa yapısıyla yönetici paneli ve karar destek ekranlarını tek arayüz altında toplamıştır.
+- AI Menü Planlayıcı modülü; öğrenci sayısı, bütçe, stok, reçete, porsiyon ve besin değerlerini dikkate alan haftalık menü önerisi yaklaşımıyla final ürüne eklenmiştir.
+- Malzeme ve stok tarafında parti bazlı takip, SKT bilgisi, stok gerçekliği ve menü üretimiyle ilişkili stok kontrolü ürün akışına dahil edilmiştir.
+- Harcama, sipariş, tedarikçi fiyatı, ihale ve fatura yönetimiyle yemekhane operasyonunun mali boyutu daha görünür hale getirilmiştir.
+- Sürdürülebilirlik Skoru modülü; menü ve malzeme bazlı karbon etkisi, yerel/mevsimsel ürün kullanımı ve raporlanabilir çevresel çıktı yaklaşımıyla teslim kapsamına alınmıştır.
+- Sağlık Risk Analizi, Sağlık Takibi ve Öğrenci Sağlık Bayrakları modülleriyle beslenme, alerjen, özel ihtiyaç ve risk değerlendirme başlıkları ürün içinde görünür hale getirilmiştir.
+- Research Export ve University Quality Integration modülleriyle anonimleştirilmiş akademik veri aktarımı ve kurumsal kalite göstergelerine yönelik raporlama hedefi desteklenmiştir.
+- Partner Products modülüyle sağlıklı veya sürdürülebilir ürün sağlayan firmaların ürünlerinin sisteme tanıtılması ve menü önerileriyle ilişkilendirilebilmesi hedeflenmiştir.
+- Catering Management modülüyle catering firmalarının şirket, üniversite, kullanıcı, rol ve menü atama süreçlerini yönetebileceği ayrı bir iş akışı oluşturulmuştur.
+- SSS dokümanı ile ürünün problemi, hedef kitlesi, yapay zeka kullanımı, stok, maliyet, sağlık, sürdürülebilirlik, KVKK yaklaşımı ve başarı metrikleri açıklanmıştır.
+- Mobil uygulama reposu, ana web projesini destekleyen öğrenci tarafı kullanım senaryoları için dokümantasyonda bağlantılı şekilde tutulmuştur.
+
+<details>
+<summary><strong>Ürün Görselleri</strong></summary>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/1.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/1.png" alt="Sprint 3 Ürün Görseli 1">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/2.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/2.png" alt="Sprint 3 Ürün Görseli 2">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/3.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/3.png" alt="Sprint 3 Ürün Görseli 3">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/4.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/4.png" alt="Sprint 3 Ürün Görseli 4">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/5.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/5.png" alt="Sprint 3 Ürün Görseli 5">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/6.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/6.png" alt="Sprint 3 Ürün Görseli 6">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/7.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/7.png" alt="Sprint 3 Ürün Görseli 7">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/8.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/8.png" alt="Sprint 3 Ürün Görseli 8">
+</a>
+
+<a href="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/9.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/Fatmaa35/YZTA-Team1/main/bootcampFiles/sprintThree/screenShots/9.png" alt="Sprint 3 Ürün Görseli 9">
+</a>
+
+</details>
+
+---
+
+## Sprint Review
+
+Sprint sonunda gerçekleştirilen değerlendirme toplantısında;
+
+- Sprint 3 kapsamında TabloDot'un final ürün teslimine uygun seviyede modüler bir web uygulaması ve API yapısına ulaştığı değerlendirilmiştir.
+- Ürünün temel değer önerisinin menü planlama, stok yönetimi, maliyet kontrolü, sağlık kısıtları, sürdürülebilirlik analizi, catering operasyonları ve kurumsal raporlamayı tek platformda birleştirmesi olduğu netleştirilmiştir.
+- Yapay zeka çıktılarının otomatik karar mekanizması değil, yetkili kullanıcıya öneri ve analiz sunan karar destek çıktısı olarak konumlandırılması doğru bulunmuştur.
+- SSS dokümanının ürünün teknik, operasyonel ve etik/veri gizliliği yönlerini açıklamak için README'yi destekleyen ayrı bir kaynak olarak kullanılmasına karar verilmiştir.
+- Final sunumunda ana web uygulaması, backend servisleri, mobil uygulama bağlantısı ve teslim dokümantasyonu birlikte ele alınacak şekilde anlatım yapılması planlanmıştır.
+
+### Katılımcılar
+
+- Fatma Kaplan
+- Mert Uçan
+- Barış Uyumaz
+- Sudenaz Kalaycık
+- Şevval Özer
+
+---
+
+## Sprint Retrospective
+
+Sprint sonunda aşağıdaki kararlar alınmıştır.
+
+- Ürün dokümantasyonunun Sprint 1, Sprint 2 ve Sprint 3 için aynı başlık düzeninde tutulmasına
+- Görsel içeriklerin README içerisinde ilgili sprint başlıkları altında toplanmasına
+- SSS dokümanının proje tesliminde destekleyici kaynak olarak kullanılmasına
+- Mobil uygulama ve ana web projesi arasındaki bağlantının README'de açık şekilde gösterilmesine
+- Final ürün sunumunda operasyonel fayda, maliyet kontrolü, sürdürülebilirlik etkisi, sağlık uygunluğu ve ölçülebilir başarı metriklerinin öne çıkarılmasına
+
+karar verilmiştir.
 
 </details>
 
