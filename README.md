@@ -25,10 +25,14 @@
 </p>
 
 
-# 🔗 Proje Bağlantıları
+# 🔗 Proje Repoları
 
-- **Ana Proje Reposu:** [mertucan/YZTA-Team1](https://github.com/mertucan/YZTA-Team1)
-- **Mobil Uygulama Reposu:** [sudenazkalaycik/YZA-Team1-TabloDot](https://github.com/sudenazkalaycik/YZA-Team1-TabloDot)
+| Bölüm | Repository |
+| :--- | :--- |
+| **Web Uygulaması** | [mertucan/YZTA-Team1](https://github.com/mertucan/YZTA-Team1) |
+| **Mobil Uygulama** | [sudenazkalaycik/YZA-Team1-TabloDot](https://github.com/sudenazkalaycik/YZA-Team1-TabloDot) |
+
+> Web ve mobil geliştirme süreçleri ayrı GitHub repoları üzerinden yürütülmektedir.
 
 ---
 
