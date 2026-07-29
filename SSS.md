@@ -2,7 +2,7 @@
                                                                          
 Bu dosya, **TabloDot projesini uçtan uca anlamak isteyenler** için hazırlanmıştır. Sorular önce ürünün ne olduğunu ve hangi problemi çözdüğünü, ardından **yapay zeka, stok, maliyet, sağlık, gizlilik, sürdürülebilirlik ve başarı ölçümü** gibi temel başlıkları açıklar.
 
-## 1. TabloDot nedir?
+## 1. TabloDot nedir? 
 
 **TabloDot**, üniversite yemekhaneleri için geliştirilen **yapay zeka destekli beslenme, menü, stok ve sürdürülebilirlik yönetim sistemidir**. Platform; menü planlama, malzeme takibi, öğrenci sağlığı, maliyet kontrolü, karbon ayak izi analizi ve kurumsal raporlama süreçlerini tek merkezden yönetmeyi amaçlar.
 
