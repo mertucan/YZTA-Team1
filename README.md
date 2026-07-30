@@ -34,7 +34,7 @@
 | **Web Uygulaması** | [mertucan/YZTA-Team1](https://github.com/mertucan/YZTA-Team1) |
 | **Mobil Uygulama** | [sudenazkalaycik/YZA-Team1-TabloDot](https://github.com/sudenazkalaycik/YZA-Team1-TabloDot) |
 
-> Web ve mobil geliştirme süreçleri ayrı GitHub repoları üzerinden yürütülmektedir.
+> Web ve mobil geliştirme süreçleri ayrı GitHub repoları üzerinden yürütülmüştür.
 
 ---
 
